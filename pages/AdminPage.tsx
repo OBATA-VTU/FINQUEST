@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { MOCK_PENDING_UPLOADS, LEVELS } from '../constants';
 import { db } from '../firebase';
@@ -30,9 +29,9 @@ export const AdminPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
-  // Use a fallback or process.env if available, but for now we rely on the user having set it or manually inputting it here
-  // WARNING: Replace with your actual key if the env var isn't working
-  const GEMINI_API_KEY = process.env.API_KEY || "YOUR_GEMINI_KEY_HERE"; 
+  // Use the key if you have it in vite env, otherwise warn user
+  // Using import.meta.env for Vite compatibility
+  const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_GENAI_API_KEY || "YOUR_GEMINI_KEY_HERE"; 
 
   useEffect(() => {
     if (activeTab === 'pending') {
@@ -48,11 +47,10 @@ export const AdminPage: React.FC = () => {
             const q = query(collection(db, "questions"), where("status", "==", "pending"));
             const snapshot = await getDocs(q);
             const realPending = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setPendingItems([...MOCK_PENDING_UPLOADS, ...realPending]);
+            setPendingItems(realPending);
         } catch (error) {
             console.error("Error fetching pending:", error);
-            // Don't show error notification on first load if it's just empty/permission
-            setPendingItems(MOCK_PENDING_UPLOADS);
+            setPendingItems([]);
         } finally {
             setLoading(false);
         }
@@ -134,7 +132,7 @@ export const AdminPage: React.FC = () => {
     if (!validateForm()) return;
 
     if (!GEMINI_API_KEY || GEMINI_API_KEY.includes("YOUR_GEMINI_KEY")) {
-        showNotification("Gemini API Key is missing. Please configure it in the code.", "error");
+        showNotification("Gemini API Key is missing. Check code configuration.", "error");
         return;
     }
 

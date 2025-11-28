@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { User, Level } from '../types';
 import { auth, db } from '../firebase';
@@ -131,6 +130,10 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             showNotification("Logged in (Profile sync issue)", "info");
         }
     } catch (error: any) {
+        console.error("Google Sign-in Error Full:", error);
+        if (error.code === 'auth/unauthorized-domain') {
+            throw new Error(`Domain not authorized. Go to Firebase Console > Authentication > Settings > Authorized Domains and add '${window.location.hostname}'`);
+        }
         throw error;
     }
   };
@@ -191,8 +194,13 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
               console.log("User document created successfully");
           } catch (dbError: any) {
               console.error("Database creation failed:", dbError);
-              // Show explicit error to user if DB fails, so they know why their profile might be empty
-              showNotification(`Account created, but save account file fail please contact admin: ${dbError.message}`, "error");
+              
+              let msg = dbError.message;
+              if (dbError.code === 'permission-denied') {
+                  msg = "Permission denied. Check Firestore Rules.";
+              }
+              // Show explicit error to user if DB fails
+              showNotification(`Account created, but database save failed: ${msg}. Contact Admin.`, "error");
           }
 
           // Update local state immediately for better UX
