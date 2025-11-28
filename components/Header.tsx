@@ -1,4 +1,3 @@
-
 import React, { useContext, useState } from 'react';
 import { Logo } from './Logo';
 import { AuthContext } from '../contexts/AuthContext';
@@ -43,7 +42,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage }) => {
             <button onClick={() => onNavigate('home')} className="flex items-center gap-3 group">
               <Logo className="h-14 w-14 group-hover:rotate-6 transition-transform duration-500" />
               <div className="hidden md:block text-left">
-                <h1 className="text-lg font-bold text-indigo-900 leading-none">FINSA</h1>
+                <h1 className="text-lg font-bold text-indigo-900 leading-none">FINQUEST</h1>
                 <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase mt-1">AAUA Chapter</p>
               </div>
             </button>
@@ -71,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage }) => {
                     </div>
                     <div className="hidden sm:block text-left mr-1">
                         <span className="block text-sm font-medium text-slate-700 leading-none">{auth.user.name.split(' ')[0]}</span>
-                        <span className="block text-[10px] text-slate-500 uppercase">Student</span>
+                        <span className="block text-[10px] text-slate-500 uppercase">{auth.user.role || 'Student'}</span>
                     </div>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />

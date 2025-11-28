@@ -1,4 +1,3 @@
-
 import React, { useState, useContext, FormEvent, useEffect } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -52,7 +51,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   setUsernameStatus(available ? 'available' : 'taken');
                   
                   if (available) {
-                      showNotification("Username available!", "success");
+                      // showNotification("Username available!", "success"); // Too noisy
                   } else {
                       showNotification("Username taken, try a suggestion", "error");
                       // Generate suggestions
@@ -65,8 +64,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   }
               }
           } catch (e) {
-              console.error(e);
-              setUsernameStatus('idle');
+              console.error("Username check error:", e);
+              // Fail gracefully - allow the user to try to submit, the backend/signup logic might catch it or it might be a permission issue we ignore for now
+              setUsernameStatus('available'); 
           }
       }, 700);
 
@@ -97,11 +97,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         }
         onLoginSuccess();
     } catch (err: any) {
-        console.error(err);
-        let msg = 'Authentication failed.';
+        console.error("Auth error:", err);
+        let msg = 'Authentication failed. Please try again.';
         if (err.code === 'auth/wrong-password') msg = 'Incorrect password.';
         if (err.code === 'auth/user-not-found') msg = 'No account found with this email.';
         if (err.code === 'auth/email-already-in-use') msg = 'Email is already registered.';
+        if (err.code === 'auth/invalid-email') msg = 'Invalid email address.';
+        if (err.code === 'auth/network-request-failed') msg = 'Network error. Check your connection.';
         showNotification(msg, 'error');
     } finally {
         setIsLoading(false);
@@ -111,11 +113,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const handleGoogleLogin = async () => {
       try {
           setIsLoading(true);
-          await auth?.loginWithGoogle();
+          if (!auth) throw new Error("Auth service missing");
+          await auth.loginWithGoogle();
           onLoginSuccess();
-      } catch (err) {
-          console.error(err);
-          showNotification('Google Sign-In failed.', 'error');
+      } catch (err: any) {
+          console.error("Google login error:", err);
+          let msg = 'Google Sign-In failed.';
+          if (err.code === 'auth/popup-closed-by-user') msg = 'Sign-in cancelled.';
+          if (err.code === 'auth/popup-blocked') msg = 'Popup blocked by browser.';
+          showNotification(msg, 'error');
       } finally {
           setIsLoading(false);
       }
@@ -143,7 +149,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <div className="relative z-10">
                     <div className="flex items-center gap-3 mb-8">
                         <Logo className="h-14 w-14 text-white" />
-                        <span className="font-bold text-2xl tracking-tight">FINSA</span>
+                        <span className="font-bold text-2xl tracking-tight">FINQUEST</span>
                     </div>
                     <h2 className="text-4xl font-extrabold mb-6 leading-tight font-serif">
                         {isLogin ? 'Welcome Back, Scholar.' : 'Begin Your Journey.'}

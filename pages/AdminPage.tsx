@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { MOCK_PENDING_UPLOADS, LEVELS } from '../constants';
 import { db } from '../firebase';
@@ -129,11 +128,6 @@ export const AdminPage: React.FC = () => {
   const handleGenerateAI = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
-
-    if (!process.env.API_KEY) {
-        showNotification("Gemini API Key missing in environment variables.", "error");
-        return;
-    }
 
     setIsGenerating(true);
     setGeneratedContent('');

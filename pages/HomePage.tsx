@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Page } from '../types';
 import { MOCK_ANNOUNCEMENTS } from '../constants';
@@ -39,14 +38,14 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         <div className="container mx-auto px-4 relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="text-center lg:text-left">
             <div className="inline-block px-4 py-1.5 mb-6 rounded-full bg-indigo-800/50 border border-indigo-500/30 backdrop-blur-sm text-indigo-200 text-sm font-semibold tracking-wide uppercase">
-              The Official Departmental Portal
+              The Official FINQUEST Portal
             </div>
             <h1 className="text-5xl lg:text-7xl font-extrabold leading-tight mb-6 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">
               Master Your <br />
               <span className="text-white">Finance Degree.</span>
             </h1>
             <p className="text-lg lg:text-xl text-indigo-200 mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-              Access a comprehensive repository of past questions, connect with top lecturers, and stay updated with FINSA AAUA.
+              Access a comprehensive repository of past questions, connect with top lecturers, and stay updated with FINQUEST.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <button
@@ -78,7 +77,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                     <div className="w-3 h-3 rounded-full bg-red-500"></div>
                     <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                     <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    <div className="ml-auto text-xs text-indigo-200 font-mono">FINSA_PORTAL_V1.0</div>
+                    <div className="ml-auto text-xs text-indigo-200 font-mono">FINQUEST_V1.0</div>
                 </div>
                 <div className="space-y-4">
                     <div className="flex items-center justify-between text-indigo-200 text-sm">
@@ -182,7 +181,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-       {/* Feature Section: Why Choose FINSA Portal */}
+       {/* Feature Section: Why Choose FINQUEST */}
        <div className="py-20 bg-white">
         <div className="container mx-auto px-4">
             <div className="flex flex-col lg:flex-row items-center gap-16">

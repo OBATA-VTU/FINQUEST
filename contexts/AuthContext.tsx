@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { User, Level } from '../types';
 import { auth, db } from '../firebase';
@@ -31,6 +30,13 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const { showNotification } = useNotification();
 
   useEffect(() => {
+    // If Auth isn't initialized correctly due to env vars, stop loading and warn
+    if (!auth) {
+        console.error("Firebase Auth not initialized");
+        setLoading(false);
+        return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
@@ -51,23 +57,31 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     avatarUrl: userData.avatarUrl || firebaseUser.photoURL
                 });
             } else {
-                // Handle case where user exists in Auth but not in Firestore (e.g. newly google created)
-                const generatedUsername = firebaseUser.email?.split('@')[0] || `user_${Math.floor(Math.random() * 1000)}`;
+                // Handle case where user exists in Auth but not in Firestore (e.g. incomplete signup or fresh google login)
+                // We don't automatically create doc here to avoid overwriting pending creation logic
+                // But we set a minimal user state so they aren't stuck in "loading" or "logged out"
                 const newUser = {
                     id: firebaseUser.uid,
                     email: firebaseUser.email || '',
                     name: firebaseUser.displayName || 'User',
-                    username: generatedUsername,
+                    username: firebaseUser.email?.split('@')[0] || 'user',
                     role: 'student' as const,
                     level: 100 as Level,
                     avatarUrl: firebaseUser.photoURL || undefined
                 };
                 setUser(newUser);
-                // Optionally create the doc here if desired, otherwise Login logic handles it
             }
         } catch (error) {
             console.error("Error fetching user profile:", error);
-            showNotification("Failed to load user profile", "error");
+            // Even if firestore fails, we have auth. Allow minimal access.
+             setUser({
+                    id: firebaseUser.uid,
+                    email: firebaseUser.email || '',
+                    name: firebaseUser.displayName || 'User',
+                    username: 'error_loading_profile',
+                    role: 'student',
+                    level: 100
+                });
         }
       } else {
         setUser(null);
@@ -93,11 +107,13 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         const result = await signInWithPopup(auth, provider);
         const firebaseUser = result.user;
         
+        // Check if doc exists
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         const userDoc = await getDoc(userDocRef);
         
         if (!userDoc.exists()) {
-           // New Google User
+           // New Google User - Create Doc
+           // Note: We don't have Matric Number here, so it's omitted
            await setDoc(doc(db, 'users', firebaseUser.uid), {
             name: firebaseUser.displayName || 'User',
             email: firebaseUser.email,
@@ -117,16 +133,26 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
 
   const checkUsernameAvailability = async (username: string): Promise<boolean> => {
       if (!username || username.length < 3) return false;
-      const q = query(collection(db, 'users'), where('username', '==', username));
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.empty;
+      try {
+        const q = query(collection(db, 'users'), where('username', '==', username));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.empty;
+      } catch (error) {
+          console.warn("Username check failed (likely permission issue for unauth users):", error);
+          // If we can't check, we optimistically say it's available and let the actual write fail or handle collision later
+          return true; 
+      }
   };
 
   const signup = async (data: { name: string; email: string; pass: string; level: Level; username: string; matricNumber: string }) => {
       try {
-          const isAvailable = await checkUsernameAvailability(data.username);
-          if (!isAvailable) {
-              throw new Error("Username is already taken");
+          // Attempt check again, but proceed if it fails silently
+          try {
+             const isAvailable = await checkUsernameAvailability(data.username);
+             if (!isAvailable) throw new Error("Username is already taken");
+          } catch (e: any) {
+              if (e.message === "Username is already taken") throw e;
+              // Ignore other errors (permissions) and proceed to creation
           }
 
           const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.pass);
@@ -148,7 +174,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             createdAt: new Date().toISOString()
           });
 
-          // Update local state
+          // Update local state immediately for better UX
           setUser(newUser);
           showNotification("Account created successfully!", "success");
       } catch (error: any) {

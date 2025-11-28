@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Logo } from './Logo';
 import { Page } from '../types';
@@ -15,7 +14,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <div className="flex flex-col items-center md:items-start">
             <div className="flex items-center space-x-2 mb-4">
               <Logo className="h-12 w-12" />
-              <span className="font-bold text-lg">FINSA AAUA</span>
+              <span className="font-bold text-lg">FINQUEST</span>
             </div>
             <p className="text-sm text-indigo-200">
               Motto: Breeding Financial Experts
@@ -41,7 +40,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           </div>
         </div>
         <div className="border-t border-indigo-800 mt-8 pt-6 text-center text-sm text-indigo-300">
-          <p>&copy; {new Date().getFullYear()} FINSA AAUA Chapter. All Rights Reserved.</p>
+          <p>&copy; {new Date().getFullYear()} FINQUEST (AAUA Chapter). All Rights Reserved.</p>
         </div>
       </div>
     </footer>
