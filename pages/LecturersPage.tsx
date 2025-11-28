@@ -7,7 +7,7 @@ export const LecturersPage: React.FC = () => {
     <div className="bg-white min-h-screen">
        <div className="bg-slate-50 border-b border-slate-200 py-16">
          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-4xl font-serif text-slate-900 mb-4">Faculty Directory</h1>
+            <h1 className="text-4xl font-serif text-slate-900 mb-4">Department Lecturers</h1>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
                 Distinguished scholars and industry experts shaping the future of finance at Adekunle Ajasin University.
             </p>

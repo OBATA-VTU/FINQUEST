@@ -1,6 +1,7 @@
 
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Header } from './components/Header';
+import { Sidebar } from './components/Sidebar';
 import { Footer } from './components/Footer';
 import { HomePage } from './pages/HomePage';
 import { PastQuestionsPage } from './pages/PastQuestionsPage';
@@ -14,10 +15,53 @@ import { CommunityPage } from './pages/CommunityPage';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { Page } from './types';
+import { Logo } from './components/Logo';
+
+// Custom Loading Screen Component
+const LoadingScreen = () => (
+  <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 animate-fade-in">
+      <div className="relative mb-6">
+          <Logo className="h-24 w-24 animate-pulse" />
+          <div className="absolute inset-0 bg-indigo-500 rounded-full opacity-10 animate-ping"></div>
+      </div>
+      <h2 className="text-2xl font-bold text-indigo-900 tracking-widest mb-2">FINQUEST</h2>
+      <div className="flex gap-1">
+        <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"></div>
+        <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce animation-delay-2000" style={{ animationDelay: '0.1s' }}></div>
+        <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce animation-delay-4000" style={{ animationDelay: '0.2s' }}></div>
+      </div>
+  </div>
+);
 
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('home');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const auth = useContext(AuthContext);
+
+  // Auth Redirect Logic
+  useEffect(() => {
+    // If user attempts to access protected routes while logged out
+    if (!auth?.loading && !auth?.user) {
+        if (['questions', 'profile', 'admin', 'community'].includes(currentPage)) {
+            setCurrentPage('login');
+        }
+    }
+    // If logged in and on login page, redirect home
+    if (!auth?.loading && auth?.user && currentPage === 'login') {
+        setCurrentPage('home');
+    }
+    // Scroll to top on page change
+    window.scrollTo(0, 0);
+  }, [auth?.user, auth?.loading, currentPage]);
+
+  if (auth?.loading) {
+      return <LoadingScreen />;
+  }
+
+  // Login Page takes full screen (no sidebar)
+  if (currentPage === 'login') {
+      return <LoginPage onLoginSuccess={() => setCurrentPage('home')} />;
+  }
 
   const renderPage = () => {
     switch (currentPage) {
@@ -33,10 +77,7 @@ const AppContent: React.FC = () => {
         return <AnnouncementsPage />;
       case 'community':
         return <CommunityPage />;
-      case 'login':
-        return <LoginPage onLoginSuccess={() => setCurrentPage('home')} />;
       case 'admin':
-        // Protected Admin Route
         if (auth?.user?.role === 'admin') {
             return <AdminPage />;
         } else {
@@ -59,12 +100,30 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
-      <Header currentPage={currentPage} onNavigate={setCurrentPage} />
-      <main className="flex-grow">
-        {renderPage()}
-      </main>
-      <Footer onNavigate={setCurrentPage}/>
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex font-sans">
+      {/* Sidebar for Desktop & Mobile */}
+      <Sidebar 
+        currentPage={currentPage} 
+        onNavigate={setCurrentPage} 
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
+      
+      <div className="flex-1 flex flex-col min-h-screen min-w-0">
+        {/* Header for Mobile (Triggers Sidebar) */}
+        <Header 
+            currentPage={currentPage} 
+            onNavigate={setCurrentPage} 
+            onOpenSidebar={() => setIsSidebarOpen(true)}
+        />
+        
+        {/* Main Content with Fade Animation */}
+        <main className="flex-grow animate-fade-in">
+            {renderPage()}
+        </main>
+        
+        <Footer onNavigate={setCurrentPage}/>
+      </div>
     </div>
   );
 };

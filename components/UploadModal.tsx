@@ -1,3 +1,4 @@
+
 import React, { useState, FormEvent, useRef, useEffect, useContext } from 'react';
 import { PastQuestion, Level } from '../types';
 import { LEVELS } from '../constants';
@@ -20,6 +21,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
     const [year, setYear] = useState(new Date().getFullYear());
     const [file, setFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     
     const modalRef = useRef<HTMLDivElement>(null);
 
@@ -40,9 +42,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
 
         try {
             setIsUploading(true);
+            setUploadProgress(0);
             
-            // 1. Upload File
-            const downloadUrl = await uploadFile(file);
+            // 1. Upload File with Progress Callback
+            const downloadUrl = await uploadFile(file, 'past_questions', (progress) => {
+                setUploadProgress(Math.round(progress));
+            });
 
             // 2. Create Data Object
             const questionData = {
@@ -71,6 +76,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
             setLevel(100);
             setYear(new Date().getFullYear());
             setFile(null);
+            setUploadProgress(0);
             onClose();
 
         } catch (error) {
@@ -78,6 +84,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
             alert("Failed to upload. Please try again.");
         } finally {
             setIsUploading(false);
+            setUploadProgress(0);
         }
     };
     
@@ -130,7 +137,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700">File (PDF, Image, Doc)</label>
-                        <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md">
+                        <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md relative">
                             <div className="space-y-1 text-center">
                                 <svg className="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
                                     <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -145,12 +152,26 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                                 {file ? <p className="text-xs text-slate-500">{file.name}</p> : <p className="text-xs text-slate-500">PDF, Docs, Images up to 10MB</p>}
                             </div>
                         </div>
+                        {/* Progress Bar */}
+                        {isUploading && (
+                             <div className="mt-4">
+                                <div className="flex justify-between text-xs font-medium text-slate-500 mb-1">
+                                    <span>Uploading...</span>
+                                    <span>{uploadProgress}%</span>
+                                </div>
+                                <div className="w-full bg-slate-200 rounded-full h-2.5">
+                                    <div 
+                                        className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" 
+                                        style={{ width: `${uploadProgress}%` }}
+                                    ></div>
+                                </div>
+                             </div>
+                        )}
                     </div>
                     <div className="flex justify-end pt-4">
                         <button type="button" onClick={onClose} disabled={isUploading} className="bg-white py-2 px-4 border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">Cancel</button>
                         <button type="submit" disabled={isUploading} className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 flex items-center">
-                            {isUploading && <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                            {isUploading ? 'Uploading...' : 'Upload'}
+                            {isUploading ? 'Processing...' : 'Upload'}
                         </button>
                     </div>
                 </form>

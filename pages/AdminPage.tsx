@@ -29,10 +29,6 @@ export const AdminPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
-  // Use the key if you have it in vite env, otherwise warn user
-  // Using import.meta.env for Vite compatibility
-  const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_GENAI_API_KEY || "YOUR_GEMINI_KEY_HERE"; 
-
   useEffect(() => {
     if (activeTab === 'pending') {
         fetchPending();
@@ -131,16 +127,11 @@ export const AdminPage: React.FC = () => {
     e.preventDefault();
     if (!validateForm()) return;
 
-    if (!GEMINI_API_KEY || GEMINI_API_KEY.includes("YOUR_GEMINI_KEY")) {
-        showNotification("Gemini API Key is missing. Check code configuration.", "error");
-        return;
-    }
-
     setIsGenerating(true);
     setGeneratedContent('');
 
     try {
-        const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const prompt = `Create a comprehensive university examination past question paper for the course code ${aiCourseCode} titled "${aiCourseTitle}". Level: ${aiLevel}. The year is ${aiYear}.
         
         The specific topic to focus on is: ${aiTopic}.
