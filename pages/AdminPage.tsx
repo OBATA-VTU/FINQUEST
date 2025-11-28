@@ -12,6 +12,9 @@ export const AdminPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const auth = useContext(AuthContext);
 
+  // Confirmation State
+  const [confirmDialog, setConfirmDialog] = useState<{ id: string, action: 'approve' | 'reject', title: string } | null>(null);
+
   // AI Generator State
   const [aiCourseCode, setAiCourseCode] = useState('');
   const [aiCourseTitle, setAiCourseTitle] = useState('');
@@ -21,6 +24,7 @@ export const AdminPage: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     if (activeTab === 'pending') {
@@ -46,9 +50,21 @@ export const AdminPage: React.FC = () => {
         }
     };
 
-  const handleAction = async (id: string, action: 'approve' | 'reject') => {
+  const requestAction = (item: any, action: 'approve' | 'reject') => {
+      setConfirmDialog({
+          id: item.id,
+          action,
+          title: `${item.courseCode} - ${item.courseTitle}`
+      });
+  };
+
+  const executeAction = async () => {
+      if (!confirmDialog) return;
+      const { id, action } = confirmDialog;
+
       // Optimistic Update
       setPendingItems(prev => prev.filter(item => item.id !== id));
+      setConfirmDialog(null);
 
       if (id.startsWith('pq')) return; // Don't try to update mocks
 
@@ -62,11 +78,25 @@ export const AdminPage: React.FC = () => {
       } catch (error) {
           console.error("Action failed:", error);
           alert("Failed to update database.");
+          fetchPending(); // Revert on failure
       }
+  };
+
+  const validateForm = () => {
+      const errors: { [key: string]: string } = {};
+      if (!aiCourseCode.trim()) errors.code = "Course Code is required";
+      if (!aiCourseTitle.trim()) errors.title = "Course Title is required";
+      if (!aiTopic.trim()) errors.topic = "Topic is required";
+      if (!aiYear || aiYear < 2000 || aiYear > 2100) errors.year = "Please enter a valid year";
+      
+      setFormErrors(errors);
+      return Object.keys(errors).length === 0;
   };
 
   const handleGenerateAI = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     if (!process.env.API_KEY) {
         alert("API Key missing. Cannot generate.");
         return;
@@ -93,11 +123,15 @@ export const AdminPage: React.FC = () => {
             contents: prompt,
         });
 
-        setGeneratedContent(response.text);
+        if (response.text) {
+             setGeneratedContent(response.text);
+        } else {
+            throw new Error("Empty response from AI");
+        }
 
     } catch (error) {
         console.error("AI Generation Error:", error);
-        alert("Failed to generate content. Please try again.");
+        alert("Failed to generate content. Please try again later.");
     } finally {
         setIsGenerating(false);
     }
@@ -128,6 +162,7 @@ export const AdminPage: React.FC = () => {
         setGeneratedContent('');
         setAiCourseTitle('');
         setAiCourseCode('');
+        setFormErrors({});
     } catch (error) {
         console.error("Save Error:", error);
         alert("Failed to save to database.");
@@ -137,7 +172,34 @@ export const AdminPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12">
+    <div className="min-h-screen bg-slate-50 py-12 relative">
+      {/* Confirmation Modal */}
+      {confirmDialog && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-fade-in-down">
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">Confirm Action</h3>
+                  <p className="text-slate-600 mb-6">
+                      Are you sure you want to <span className={`font-bold ${confirmDialog.action === 'reject' ? 'text-rose-600' : 'text-emerald-600'}`}>{confirmDialog.action.toUpperCase()}</span> the upload: <br/> 
+                      <span className="italic">"{confirmDialog.title}"</span>?
+                  </p>
+                  <div className="flex justify-end gap-3">
+                      <button 
+                          onClick={() => setConfirmDialog(null)}
+                          className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition"
+                      >
+                          Cancel
+                      </button>
+                      <button 
+                          onClick={executeAction}
+                          className={`px-4 py-2 text-white font-bold rounded-lg shadow-md transition ${confirmDialog.action === 'reject' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                      >
+                          Confirm
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       <div className="container mx-auto px-4">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">Admin Dashboard</h1>
         <p className="text-slate-600 mb-8">Manage content, approve uploads, and oversee the portal.</p>
@@ -164,45 +226,54 @@ export const AdminPage: React.FC = () => {
              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
                  <h2 className="text-lg font-bold text-slate-800">Pending Question Uploads</h2>
-                 <button onClick={fetchPending} className="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+                 <button onClick={fetchPending} className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                     </svg>
                      Refresh
                  </button>
              </div>
              
              {loading ? (
-                 <div className="p-12 text-center">Loading...</div>
+                 <div className="p-12 text-center flex justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                 </div>
              ) : pendingItems.length > 0 ? (
                  <div className="overflow-x-auto">
                      <table className="w-full text-left">
                          <thead className="bg-slate-50 text-slate-600 text-xs uppercase font-semibold">
                              <tr>
                                  <th className="px-6 py-4">Course</th>
-                                 <th className="px-6 py-4">Title</th>
+                                 <th className="px-6 py-4">Details</th>
                                  <th className="px-6 py-4">Level</th>
-                                 <th className="px-6 py-4">Submitted By</th>
-                                 <th className="px-6 py-4">Date</th>
+                                 <th className="px-6 py-4">Uploader Info</th>
                                  <th className="px-6 py-4 text-right">Actions</th>
                              </tr>
                          </thead>
                          <tbody className="divide-y divide-slate-100">
                              {pendingItems.map((item) => (
                                  <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                                     <td className="px-6 py-4 font-medium text-slate-900">{item.courseCode}</td>
-                                     <td className="px-6 py-4 text-slate-600">{item.courseTitle}</td>
+                                     <td className="px-6 py-4">
+                                         <div className="font-bold text-slate-900">{item.courseCode}</div>
+                                         <div className="text-xs text-slate-500">{item.year}</div>
+                                     </td>
+                                     <td className="px-6 py-4 text-slate-600 font-medium">{item.courseTitle}</td>
                                      <td className="px-6 py-4">
                                          <span className="px-2 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">{item.level}</span>
                                      </td>
-                                     <td className="px-6 py-4 text-slate-600 text-sm">{item.submittedByEmail || item.submittedBy}</td>
-                                     <td className="px-6 py-4 text-slate-500 text-sm">{item.submittedAt ? new Date(item.submittedAt).toLocaleDateString() : 'N/A'}</td>
+                                     <td className="px-6 py-4">
+                                         <div className="text-sm text-slate-900 font-medium">{item.submittedByEmail || 'Unknown'}</div>
+                                         <div className="text-xs text-slate-500">{item.submittedAt ? new Date(item.submittedAt).toLocaleString() : 'Date N/A'}</div>
+                                     </td>
                                      <td className="px-6 py-4 text-right space-x-2">
                                          <button 
-                                             onClick={() => handleAction(item.id, 'approve')}
+                                             onClick={() => requestAction(item, 'approve')}
                                              className="text-emerald-600 hover:text-emerald-800 font-medium text-sm border border-emerald-200 bg-emerald-50 px-3 py-1 rounded hover:bg-emerald-100 transition-colors"
                                          >
                                              Approve
                                          </button>
                                          <button 
-                                             onClick={() => handleAction(item.id, 'reject')}
+                                             onClick={() => requestAction(item, 'reject')}
                                              className="text-rose-600 hover:text-rose-800 font-medium text-sm border border-rose-200 bg-rose-50 px-3 py-1 rounded hover:bg-rose-100 transition-colors"
                                          >
                                              Reject
@@ -225,7 +296,7 @@ export const AdminPage: React.FC = () => {
         ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* AI Form */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
                     <h2 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2">
                         <svg className="w-6 h-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                         AI Question Generator
@@ -235,45 +306,64 @@ export const AdminPage: React.FC = () => {
                     <form onSubmit={handleGenerateAI} className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                              <div>
-                                <label className="block text-sm font-medium text-slate-700">Course Code</label>
-                                <input required type="text" value={aiCourseCode} onChange={e => setAiCourseCode(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="FIN 402" />
+                                <label className="block text-sm font-medium text-slate-700">Course Code <span className="text-red-500">*</span></label>
+                                <input type="text" value={aiCourseCode} onChange={e => setAiCourseCode(e.target.value)} className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${formErrors.code ? 'border-red-300' : 'border-slate-300'}`} placeholder="FIN 402" />
+                                {formErrors.code && <p className="text-xs text-red-500 mt-1">{formErrors.code}</p>}
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700">Level</label>
+                                <label className="block text-sm font-medium text-slate-700">Level <span className="text-red-500">*</span></label>
                                 <select value={aiLevel} onChange={e => setAiLevel(Number(e.target.value) as Level)} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                                     {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
                                 </select>
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700">Course Title</label>
-                            <input required type="text" value={aiCourseTitle} onChange={e => setAiCourseTitle(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Advanced Financial Management" />
+                            <label className="block text-sm font-medium text-slate-700">Course Title <span className="text-red-500">*</span></label>
+                            <input type="text" value={aiCourseTitle} onChange={e => setAiCourseTitle(e.target.value)} className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${formErrors.title ? 'border-red-300' : 'border-slate-300'}`} placeholder="Advanced Financial Management" />
+                            {formErrors.title && <p className="text-xs text-red-500 mt-1">{formErrors.title}</p>}
                         </div>
                          <div>
-                            <label className="block text-sm font-medium text-slate-700">Year</label>
-                            <input required type="number" value={aiYear} onChange={e => setAiYear(Number(e.target.value))} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                            <label className="block text-sm font-medium text-slate-700">Year <span className="text-red-500">*</span></label>
+                            <input type="number" value={aiYear} onChange={e => setAiYear(Number(e.target.value))} className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${formErrors.year ? 'border-red-300' : 'border-slate-300'}`} />
+                            {formErrors.year && <p className="text-xs text-red-500 mt-1">{formErrors.year}</p>}
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700">Topic/Focus Area</label>
-                            <textarea required rows={3} value={aiTopic} onChange={e => setAiTopic(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Capital Budgeting Techniques, NPV vs IRR, Risk Analysis..."></textarea>
+                            <label className="block text-sm font-medium text-slate-700">Topic/Focus Area <span className="text-red-500">*</span></label>
+                            <textarea rows={3} value={aiTopic} onChange={e => setAiTopic(e.target.value)} className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${formErrors.topic ? 'border-red-300' : 'border-slate-300'}`} placeholder="e.g., Capital Budgeting Techniques, NPV vs IRR, Risk Analysis..."></textarea>
+                            {formErrors.topic && <p className="text-xs text-red-500 mt-1">{formErrors.topic}</p>}
                         </div>
-                        <button type="submit" disabled={isGenerating} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-all">
+                        <button type="submit" disabled={isGenerating} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-all items-center gap-2">
+                             {isGenerating && <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
                              {isGenerating ? 'Generating...' : 'Generate Exam Content'}
                         </button>
                     </form>
                 </div>
 
                 {/* Preview */}
-                <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 flex flex-col h-full max-h-[600px]">
+                <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 flex flex-col h-full max-h-[700px]">
                     <h3 className="text-lg font-bold text-slate-800 mb-2">Content Preview</h3>
-                    <div className="flex-grow bg-white border border-slate-200 rounded-lg p-4 overflow-y-auto font-mono text-sm text-slate-700 whitespace-pre-wrap mb-4">
-                        {generatedContent || <span className="text-slate-400 italic">Generated content will appear here...</span>}
+                    <div className="flex-grow bg-white border border-slate-200 rounded-lg p-4 overflow-y-auto font-mono text-sm text-slate-700 whitespace-pre-wrap mb-4 shadow-inner min-h-[300px]">
+                        {generatedContent ? (
+                            <div className="animate-fade-in-down">{generatedContent}</div>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                                {isGenerating ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-400 mb-2"></div>
+                                        <span className="italic">Thinking...</span>
+                                    </>
+                                ) : (
+                                    <span className="italic">Generated content will appear here...</span>
+                                )}
+                            </div>
+                        )}
                     </div>
                     <button 
                         onClick={handleSaveGenerated}
                         disabled={!generatedContent || isSaving}
-                        className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
                     >
+                        {isSaving && <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
                         {isSaving ? 'Saving...' : 'Save to Database (No Storage Cost)'}
                     </button>
                 </div>
