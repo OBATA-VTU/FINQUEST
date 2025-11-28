@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { MOCK_PENDING_UPLOADS, LEVELS } from '../constants';
 import { db } from '../firebase';
@@ -29,6 +30,10 @@ export const AdminPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
+  // Use a fallback or process.env if available, but for now we rely on the user having set it or manually inputting it here
+  // WARNING: Replace with your actual key if the env var isn't working
+  const GEMINI_API_KEY = process.env.API_KEY || "YOUR_GEMINI_KEY_HERE"; 
+
   useEffect(() => {
     if (activeTab === 'pending') {
         fetchPending();
@@ -46,7 +51,7 @@ export const AdminPage: React.FC = () => {
             setPendingItems([...MOCK_PENDING_UPLOADS, ...realPending]);
         } catch (error) {
             console.error("Error fetching pending:", error);
-            showNotification("Failed to fetch pending items", "error");
+            // Don't show error notification on first load if it's just empty/permission
             setPendingItems(MOCK_PENDING_UPLOADS);
         } finally {
             setLoading(false);
@@ -61,7 +66,7 @@ export const AdminPage: React.FC = () => {
           setUsers(fetchedUsers);
       } catch (error) {
           console.error("Error fetching users:", error);
-          showNotification("Failed to fetch users", "error");
+          showNotification("Failed to fetch users (Check permissions)", "error");
       } finally {
           setLoading(false);
       }
@@ -128,11 +133,16 @@ export const AdminPage: React.FC = () => {
     e.preventDefault();
     if (!validateForm()) return;
 
+    if (!GEMINI_API_KEY || GEMINI_API_KEY.includes("YOUR_GEMINI_KEY")) {
+        showNotification("Gemini API Key is missing. Please configure it in the code.", "error");
+        return;
+    }
+
     setIsGenerating(true);
     setGeneratedContent('');
 
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
         const prompt = `Create a comprehensive university examination past question paper for the course code ${aiCourseCode} titled "${aiCourseTitle}". Level: ${aiLevel}. The year is ${aiYear}.
         
         The specific topic to focus on is: ${aiTopic}.

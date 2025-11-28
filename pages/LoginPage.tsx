@@ -1,3 +1,4 @@
+
 import React, { useState, useContext, FormEvent, useEffect } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -50,9 +51,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   const available = await auth.checkUsernameAvailability(username);
                   setUsernameStatus(available ? 'available' : 'taken');
                   
-                  if (available) {
-                      // showNotification("Username available!", "success"); // Too noisy
-                  } else {
+                  if (!available) {
                       showNotification("Username taken, try a suggestion", "error");
                       // Generate suggestions
                       const random = Math.floor(Math.random() * 1000);
@@ -98,12 +97,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         onLoginSuccess();
     } catch (err: any) {
         console.error("Auth error:", err);
-        let msg = 'Authentication failed. Please try again.';
+        // Show actual error if available, otherwise fallback
+        let msg = err.message || 'Authentication failed. Please try again.';
+        
+        // Clean up common firebase errors for better UX
         if (err.code === 'auth/wrong-password') msg = 'Incorrect password.';
         if (err.code === 'auth/user-not-found') msg = 'No account found with this email.';
         if (err.code === 'auth/email-already-in-use') msg = 'Email is already registered.';
         if (err.code === 'auth/invalid-email') msg = 'Invalid email address.';
         if (err.code === 'auth/network-request-failed') msg = 'Network error. Check your connection.';
+        
         showNotification(msg, 'error');
     } finally {
         setIsLoading(false);
@@ -118,7 +121,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           onLoginSuccess();
       } catch (err: any) {
           console.error("Google login error:", err);
-          let msg = 'Google Sign-In failed.';
+          let msg = err.message || 'Google Sign-In failed.';
           if (err.code === 'auth/popup-closed-by-user') msg = 'Sign-in cancelled.';
           if (err.code === 'auth/popup-blocked') msg = 'Popup blocked by browser.';
           showNotification(msg, 'error');

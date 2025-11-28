@@ -1,7 +1,8 @@
+
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
 
-const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY;
+const IMGBB_API_KEY = "a4aa97ad337019899bb59b4e94b149e0";
 
 /**
  * Uploads an image file to ImgBB.
