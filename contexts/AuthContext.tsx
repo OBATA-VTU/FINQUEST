@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { User, Level } from '../types';
 import { auth, db } from '../firebase';
@@ -7,7 +8,8 @@ import {
   signOut, 
   onAuthStateChanged,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  updateProfile
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useNotification } from './NotificationContext';
@@ -42,7 +44,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                 setUser({
                     id: firebaseUser.uid,
                     email: firebaseUser.email || '',
-                    name: userData.name || 'User',
+                    name: userData.name || firebaseUser.displayName || 'User',
                     username: userData.username || '',
                     matricNumber: userData.matricNumber || '',
                     role: userData.role || 'student',
@@ -50,7 +52,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     avatarUrl: userData.avatarUrl || firebaseUser.photoURL
                 });
             } else {
-                // Handle case where user exists in Auth but not in Firestore (e.g., initial google sign in)
+                // Handle case where user exists in Auth but not in Firestore
                 const newUser = {
                     id: firebaseUser.uid,
                     email: firebaseUser.email || '',
@@ -105,14 +107,17 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             
             if (!userDoc.exists()) {
                // New Google User - Create Doc
-               await setDoc(doc(db, 'users', firebaseUser.uid), {
+               // Sanitize data to ensure no undefined values
+               const cleanData = JSON.parse(JSON.stringify({
                 name: firebaseUser.displayName || 'User',
                 email: firebaseUser.email,
                 role: 'student', // Default role
                 level: 100,
                 username: firebaseUser.email?.split('@')[0].substring(0, 30) || `user${Math.floor(Math.random() * 1000)}`,
                 createdAt: new Date().toISOString()
-              });
+              }));
+
+              await setDoc(doc(db, 'users', firebaseUser.uid), cleanData);
               showNotification("Account created with Google!", "success");
             } else {
               showNotification("Welcome back!", "success");
@@ -153,6 +158,12 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
           const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.pass);
           const firebaseUser = userCredential.user;
 
+          // CRITICAL: Update the Auth Profile Display Name immediately
+          // This ensures the name shows up even if Firestore fails
+          await updateProfile(firebaseUser, {
+              displayName: data.name
+          });
+
           const newUser: User = {
             id: firebaseUser.uid,
             email: data.email,
@@ -160,20 +171,23 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             role: 'student', // ALWAYS DEFAULT TO STUDENT
             level: data.level,
             username: data.username,
-            matricNumber: data.matricNumber
+            matricNumber: data.matricNumber || '' // Ensure string, never undefined
           };
 
           // Create user document in Firestore
+          // We use JSON.parse(JSON.stringify(...)) as a quick way to strip 'undefined' values which crash Firestore
           try {
-              await setDoc(doc(db, 'users', firebaseUser.uid), {
+              const cleanData = JSON.parse(JSON.stringify({
                 ...newUser,
                 createdAt: new Date().toISOString()
-              });
+              }));
+              
+              await setDoc(doc(db, 'users', firebaseUser.uid), cleanData);
               console.log("User document created successfully");
           } catch (dbError) {
               console.error("Database creation failed:", dbError);
               // Do NOT throw here. The user is Auth'd. Let them in, deal with profile later.
-              showNotification("Account created, but profile save failed. Contact admin.", "info");
+              // showNotification("Account created, but profile save failed.", "info");
           }
 
           // Update local state immediately for better UX
