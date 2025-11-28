@@ -1,15 +1,12 @@
-
 import React from 'react';
 import { Logo } from './Logo';
-import { Page } from '../types';
+import { Link } from 'react-router-dom';
 
 interface HeaderProps {
-  onNavigate: (page: Page) => void;
-  currentPage: Page;
   onOpenSidebar: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, onOpenSidebar }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
   return (
     <header className="xl:hidden bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-30 border-b border-slate-100">
       <div className="container mx-auto px-4">
@@ -22,12 +19,12 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, onOpenS
                 </svg>
              </button>
 
-            <button onClick={() => onNavigate('home')} className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2">
               <Logo className="h-8 w-8" />
               <div>
                 <h1 className="text-lg font-bold text-indigo-900 leading-none">FINQUEST</h1>
               </div>
-            </button>
+            </Link>
           </div>
         </div>
       </div>

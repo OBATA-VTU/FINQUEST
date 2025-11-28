@@ -1,12 +1,8 @@
 import React from 'react';
 import { Logo } from './Logo';
-import { Page } from '../types';
+import { Link } from 'react-router-dom';
 
-interface FooterProps {
-    onNavigate: (page: Page) => void;
-}
-
-export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
+export const Footer: React.FC = () => {
   return (
     <footer className="bg-indigo-900 text-white mt-16">
       <div className="container mx-auto px-4 py-8">
@@ -23,9 +19,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <div>
             <h3 className="font-bold mb-4">Quick Links</h3>
             <ul className="space-y-2 text-sm">
-              <li><button onClick={() => onNavigate('home')} className="hover:text-rose-400 transition-colors">Home</button></li>
-              <li><button onClick={() => onNavigate('questions')} className="hover:text-rose-400 transition-colors">Past Questions</button></li>
-              <li><button onClick={() => onNavigate('announcements')} className="hover:text-rose-400 transition-colors">Announcements</button></li>
+              <li><Link to="/" className="hover:text-rose-400 transition-colors">Home</Link></li>
+              <li><Link to="/questions" className="hover:text-rose-400 transition-colors">Past Questions</Link></li>
+              <li><Link to="/announcements" className="hover:text-rose-400 transition-colors">Announcements</Link></li>
             </ul>
           </div>
           <div>

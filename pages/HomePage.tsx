@@ -1,247 +1,284 @@
-
-import React from 'react';
-import { Page } from '../types';
-import { MOCK_ANNOUNCEMENTS } from '../constants';
-
-interface HomePageProps {
-  onNavigate: (page: Page) => void;
-}
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Announcement } from '../types';
+import { db } from '../firebase';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
 const LEVEL_IMAGES: Record<number, string> = {
-    100: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=800&q=80", 
-    200: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=800&q=80", 
-    300: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80", 
-    400: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=800&q=80" 
+    100: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80", 
+    200: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80", 
+    300: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80", 
+    400: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" 
 };
 
-export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
+// Hook for scroll animations
+const useScrollReveal = () => {
+    useEffect(() => {
+        const reveals = document.querySelectorAll('.reveal');
+        const handleScroll = () => {
+            const windowHeight = window.innerHeight;
+            const elementVisible = 150;
+            reveals.forEach((reveal) => {
+                const elementTop = reveal.getBoundingClientRect().top;
+                if (elementTop < windowHeight - elementVisible) {
+                    reveal.classList.add('active');
+                }
+            });
+        };
+        window.addEventListener('scroll', handleScroll);
+        handleScroll(); // Trigger once on load
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+};
+
+export const HomePage: React.FC = () => {
+  const navigate = useNavigate();
+  useScrollReveal();
+  
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+
+  useEffect(() => {
+    const fetchNews = async () => {
+        try {
+            const q = query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(3));
+            const snapshot = await getDocs(q);
+            const news = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement));
+            setAnnouncements(news);
+        } catch (error) {
+            console.error("Failed to fetch news", error);
+        }
+    };
+    fetchNews();
+  }, []);
+
   return (
-    <div className="font-sans overflow-x-hidden">
-      {/* Hero Section */}
-      <div className="relative bg-slate-900 text-white min-h-[500px] lg:min-h-[600px] flex items-center overflow-hidden py-12 lg:py-0">
-        {/* Background Image */}
+    <div className="font-sans overflow-x-hidden bg-white text-slate-800">
+      
+      {/* 1. HERO SECTION: Institutional & Grand */}
+      <div className="relative h-screen min-h-[600px] flex items-center justify-center overflow-hidden">
+        {/* Background Slider Effect */}
         <div className="absolute inset-0 z-0">
              <img 
                 src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" 
-                alt="University Campus" 
-                className="w-full h-full object-cover opacity-30"
+                alt="AAUA Campus" 
+                className="w-full h-full object-cover scale-105 animate-[blob_20s_infinite_alternate]"
              />
-             <div className="absolute inset-0 bg-gradient-to-r from-indigo-950 via-purple-950/90 to-indigo-900/80"></div>
+             <div className="absolute inset-0 bg-slate-900/70"></div>
+             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-900/20 to-slate-900"></div>
         </div>
 
-        {/* Abstract Background Shapes */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden opacity-20 pointer-events-none z-0">
-            <div className="absolute -top-24 -left-24 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
-            <div className="absolute top-0 -right-4 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div className="text-center lg:text-left mt-8 lg:mt-0">
-            <div className="inline-block px-3 py-1 mb-4 lg:mb-6 rounded-full bg-indigo-800/50 border border-indigo-500/30 backdrop-blur-sm text-indigo-200 text-xs lg:text-sm font-semibold tracking-wide uppercase">
-              The Official FINQUEST Portal
-            </div>
-            <h1 className="text-4xl md:text-5xl lg:text-7xl font-extrabold leading-tight mb-4 lg:mb-6 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">
-              Master Your <br />
-              <span className="text-white">Finance Degree.</span>
-            </h1>
-            <p className="text-base md:text-lg lg:text-xl text-indigo-200 mb-6 lg:mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-              Access a comprehensive repository of past questions, connect with top lecturers, and stay updated with FINQUEST.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-              <button
-                onClick={() => onNavigate('questions')}
-                className="px-6 py-3.5 bg-white text-indigo-900 font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 text-sm md:text-base"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
-                </svg>
-                Browse Questions
-              </button>
-              <button
-                onClick={() => onNavigate('community')}
-                className="px-6 py-3.5 bg-indigo-700/50 backdrop-blur-sm border border-indigo-500/50 text-white font-bold rounded-xl hover:bg-indigo-700 hover:border-indigo-500 transition-all duration-300 text-sm md:text-base"
-              >
-                Join Community
-              </button>
-            </div>
-          </div>
-          
-          <div className="hidden lg:block relative">
-            <div className="relative bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 p-8 shadow-2xl transform rotate-3 hover:rotate-0 transition-transform duration-500 group">
-                <div className="absolute inset-0 rounded-2xl overflow-hidden -z-10">
-                     <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80" alt="Analytics" className="w-full h-full object-cover opacity-20" />
-                </div>
-                <div className="flex items-center gap-4 mb-6 border-b border-white/10 pb-4">
-                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    <div className="ml-auto text-xs text-indigo-200 font-mono">FINQUEST_V1.0</div>
-                </div>
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between text-indigo-200 text-sm">
-                        <span>Market Analysis</span>
-                        <span className="text-green-400">+24.5%</span>
-                    </div>
-                    <div className="h-24 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-lg flex items-end p-2 gap-2">
-                         <div className="w-1/5 h-[40%] bg-indigo-400 rounded-sm"></div>
-                         <div className="w-1/5 h-[60%] bg-indigo-400 rounded-sm"></div>
-                         <div className="w-1/5 h-[30%] bg-indigo-400 rounded-sm"></div>
-                         <div className="w-1/5 h-[80%] bg-indigo-300 rounded-sm"></div>
-                         <div className="w-1/5 h-[65%] bg-indigo-400 rounded-sm"></div>
-                    </div>
+        <div className="container mx-auto px-4 relative z-10 text-center text-white mt-16">
+            <div className="animate-fade-in-down">
+                <span className="inline-block py-1 px-3 border border-indigo-400/50 rounded-full bg-indigo-900/30 backdrop-blur-md text-indigo-200 text-xs font-bold tracking-[0.2em] uppercase mb-6">
+                    Adekunle Ajasin University, Akungba-Akoko
+                </span>
+                <h1 className="text-5xl md:text-7xl lg:text-8xl font-serif font-bold leading-tight mb-6">
+                    Department of <br/>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-white to-indigo-200">Finance</span>
+                </h1>
+                <p className="text-lg md:text-2xl text-slate-200 max-w-3xl mx-auto font-light leading-relaxed mb-10">
+                    Fostering a culture of academic excellence, ethical leadership, and global financial expertise since inception.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button onClick={() => navigate('/login')} className="px-8 py-4 bg-white text-indigo-900 font-bold rounded-sm shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:bg-indigo-50 transition-all uppercase tracking-widest text-sm">
+                        Student Portal
+                    </button>
+                    <button onClick={() => navigate('/announcements')} className="px-8 py-4 border border-white text-white font-bold rounded-sm hover:bg-white/10 transition-all uppercase tracking-widest text-sm">
+                        Latest News
+                    </button>
                 </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Strip */}
-      <div className="bg-white border-b border-slate-100 relative -mt-8 mx-4 md:mx-auto max-w-6xl rounded-xl shadow-lg p-6 md:p-8 z-20">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center divide-x-0 md:divide-x divide-slate-100">
-            <div className="pb-4 md:pb-0 border-b md:border-b-0 border-slate-50">
-                <p className="text-2xl md:text-4xl font-bold text-indigo-600">500+</p>
-                <p className="text-[10px] md:text-sm text-slate-500 font-medium uppercase tracking-wide mt-1">Past Questions</p>
-            </div>
-            <div className="pb-4 md:pb-0 border-b md:border-b-0 border-slate-50">
-                <p className="text-2xl md:text-4xl font-bold text-purple-600">4</p>
-                <p className="text-[10px] md:text-sm text-slate-500 font-medium uppercase tracking-wide mt-1">Academic Levels</p>
-            </div>
-            <div>
-                <p className="text-2xl md:text-4xl font-bold text-rose-600">20+</p>
-                <p className="text-[10px] md:text-sm text-slate-500 font-medium uppercase tracking-wide mt-1">Lecturers</p>
-            </div>
-            <div className="border-none">
-                <p className="text-2xl md:text-4xl font-bold text-emerald-600">24/7</p>
-                <p className="text-[10px] md:text-sm text-slate-500 font-medium uppercase tracking-wide mt-1">Access</p>
-            </div>
-        </div>
-      </div>
-
-      {/* Quick Access Section */}
-      <div className="py-12 md:py-20 container mx-auto px-4">
-        <div className="text-center mb-10 md:mb-16">
-            <h2 className="text-2xl md:text-4xl font-bold text-slate-900 mb-3">Quick Access by Level</h2>
-            <p className="text-sm md:text-base text-slate-600 max-w-2xl mx-auto px-4">Select your level to instantly filter course materials, past questions, and resources tailored for you.</p>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-            {[100, 200, 300, 400].map((level) => (
-                <div key={level} onClick={() => onNavigate('questions')} className="group cursor-pointer">
-                    <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden shadow-md transition-all duration-300 group-hover:shadow-2xl group-hover:-translate-y-2">
-                        {/* Background Image */}
-                        <div className="absolute inset-0">
-                            <img 
-                                src={LEVEL_IMAGES[level]} 
-                                alt={`${level} Level`} 
-                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                            />
-                            <div className={`absolute inset-0 bg-gradient-to-t opacity-90 transition-opacity ${
-                                level === 100 ? 'from-blue-900/95 to-blue-600/40' : 
-                                level === 200 ? 'from-indigo-900/95 to-indigo-600/40' :
-                                level === 300 ? 'from-purple-900/95 to-purple-600/40' :
-                                'from-rose-900/95 to-rose-600/40'
-                            }`}></div>
-                        </div>
-
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-6 z-10">
-                            <span className="text-5xl md:text-6xl font-black opacity-20 group-hover:opacity-40 transition-opacity duration-300 transform translate-y-4">{level}</span>
-                            <h3 className="text-2xl md:text-3xl font-bold mt-2 shadow-sm">{level} Level</h3>
-                            <p className="text-white/90 mt-2 text-xs md:text-sm text-center font-medium">
-                                {level === 100 ? 'Foundational Courses' : 
-                                 level === 200 ? 'Core Finance Principles' : 
-                                 level === 300 ? 'Advanced Analysis' : 'Professional Application'}
-                            </p>
-                            <span className="mt-6 md:mt-8 px-5 py-2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-xs md:text-sm font-bold group-hover:bg-white group-hover:text-slate-900 transition-colors flex items-center gap-2">
-                                View Materials 
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            ))}
+        {/* Scroll Indicator */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce text-white/50">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
         </div>
       </div>
 
-       {/* Feature Section: Why Choose FINQUEST */}
-       <div className="py-12 md:py-20 bg-white">
-        <div className="container mx-auto px-4">
-            <div className="flex flex-col lg:flex-row items-center gap-10 md:gap-16">
-                <div className="lg:w-1/2 relative order-2 lg:order-1">
-                    <div className="absolute -top-4 -left-4 w-full h-full bg-indigo-100 rounded-2xl"></div>
-                    <img 
-                        src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" 
-                        alt="Financial Planning" 
-                        className="relative rounded-2xl shadow-xl w-full h-auto object-cover"
-                    />
-                </div>
-                <div className="lg:w-1/2 order-1 lg:order-2">
-                    <span className="text-indigo-600 font-bold uppercase tracking-wider text-xs md:text-sm">Why Use This Portal?</span>
-                    <h2 className="text-2xl md:text-4xl font-bold text-slate-900 mt-2 mb-4">Built for the Modern Finance Student</h2>
-                    <p className="text-slate-600 text-base md:text-lg leading-relaxed mb-6">
-                        We understand the rigors of the department. This platform bridges the gap between students and resources, ensuring you have the tools to excel in every semester.
-                    </p>
-                    
-                    <ul className="space-y-4">
-                        <li className="flex items-start gap-3">
-                            <div className="mt-1 w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
-                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
-                            </div>
-                            <div>
-                                <h4 className="font-bold text-slate-800 text-sm md:text-base">Organized Archives</h4>
-                                <p className="text-xs md:text-sm text-slate-500">No more asking seniors for PDFs. Everything is categorized by level and course code.</p>
-                            </div>
-                        </li>
-                        <li className="flex items-start gap-3">
-                            <div className="mt-1 w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
-                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
-                            </div>
-                            <div>
-                                <h4 className="font-bold text-slate-800 text-sm md:text-base">Community Driven</h4>
-                                <p className="text-xs md:text-sm text-slate-500">Upload your own resources to help juniors and peers. It's a collective effort.</p>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-       </div>
+      {/* 2. HOD WELCOME: Official Message */}
+      <section className="py-20 md:py-28 bg-white reveal">
+          <div className="container mx-auto px-4">
+              <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+                  <div className="lg:w-1/2 relative">
+                      <div className="absolute top-4 left-4 w-full h-full border-2 border-indigo-100 rounded-sm -z-10"></div>
+                      <img 
+                        src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" 
+                        alt="Head of Department" 
+                        className="w-full h-auto rounded-sm shadow-xl grayscale hover:grayscale-0 transition-all duration-700"
+                      />
+                      <div className="absolute bottom-0 left-0 bg-indigo-900 text-white p-6 max-w-xs">
+                          <p className="font-serif text-xl font-bold">Dr. A. A. Adebayo</p>
+                          <p className="text-xs text-indigo-300 uppercase tracking-widest mt-1">Head of Department</p>
+                      </div>
+                  </div>
+                  <div className="lg:w-1/2">
+                      <h2 className="text-indigo-600 font-bold tracking-widest uppercase text-sm mb-4">Welcome Message</h2>
+                      <h3 className="text-4xl md:text-5xl font-serif font-bold text-slate-900 mb-6 leading-tight">Breeding the Next Generation of Financial Experts.</h3>
+                      <p className="text-slate-600 text-lg leading-relaxed mb-6">
+                          "Welcome to the Department of Finance at AAUA. Our curriculum is designed not just to teach market theories, but to instill the critical thinking and ethical grounding necessary for the modern financial landscape."
+                      </p>
+                      <p className="text-slate-600 text-lg leading-relaxed mb-8">
+                          "Through FINQUEST, we are bridging the gap between traditional learning and digital accessibility, ensuring every student has the resources to thrive."
+                      </p>
+                      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Signature_sample.svg/1200px-Signature_sample.svg.png" alt="Signature" className="h-12 opacity-60" />
+                  </div>
+              </div>
+          </div>
+      </section>
 
-      {/* Latest Announcements */}
-      <div className="bg-slate-50 py-12 md:py-20">
-        <div className="container mx-auto px-4">
-            <div className="flex justify-between items-end mb-8 md:mb-12">
-                <div>
-                    <h2 className="text-2xl md:text-3xl font-bold text-slate-900">Latest Updates</h2>
-                    <p className="text-sm md:text-base text-slate-600 mt-2">What's happening in the Finance Department.</p>
-                </div>
-                <button onClick={() => onNavigate('announcements')} className="text-indigo-600 font-semibold hover:text-indigo-800 text-sm hidden md:block">View All News &rarr;</button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {MOCK_ANNOUNCEMENTS.slice(0, 3).map((news) => (
-                    <div key={news.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-lg transition-shadow">
-                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">{news.date}</span>
-                        <h3 className="text-lg font-bold text-slate-800 mt-3 mb-2 line-clamp-2">{news.title}</h3>
-                        <p className="text-slate-500 text-sm line-clamp-3 mb-4">{news.content}</p>
-                        <button onClick={() => onNavigate('announcements')} className="text-sm font-medium text-slate-900 hover:text-indigo-600 underline decoration-slate-300 underline-offset-4">Read more</button>
-                    </div>
-                ))}
-            </div>
-             <div className="mt-8 text-center md:hidden">
-                <button onClick={() => onNavigate('announcements')} className="text-indigo-600 font-bold text-sm">View All News &rarr;</button>
-             </div>
-        </div>
-      </div>
+      {/* 3. FINQUEST HUB: The Tools */}
+      <section className="py-20 bg-slate-900 text-white relative overflow-hidden reveal">
+          <div className="absolute top-0 right-0 w-1/2 h-full bg-slate-800/50 skew-x-12 transform origin-top-right"></div>
+          
+          <div className="container mx-auto px-4 relative z-10">
+              <div className="text-center max-w-3xl mx-auto mb-16">
+                  <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">The FINQUEST Digital Hub</h2>
+                  <p className="text-slate-400 text-lg">Centralized academic resources tailored for your success at every level.</p>
+              </div>
 
-      {/* Mission Section */}
-      <div className="py-16 md:py-20 bg-indigo-900 text-white relative overflow-hidden">
-        <div className="container mx-auto px-4 text-center relative z-10">
-            <h2 className="text-2xl md:text-3xl font-bold mb-6">Our Mission</h2>
-            <p className="text-lg md:text-3xl font-serif italic text-indigo-200 max-w-4xl mx-auto leading-relaxed">
-                "To breed financial experts equipped with the knowledge, integrity, and skills to dominate the global financial landscape."
-            </p>
-        </div>
-      </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {/* Card 1 */}
+                  <div onClick={() => navigate('/questions')} className="group bg-white/5 border border-white/10 p-8 hover:bg-indigo-600 transition-colors duration-300 cursor-pointer rounded-sm">
+                      <div className="w-14 h-14 bg-indigo-500/20 rounded-full flex items-center justify-center mb-6 group-hover:bg-white group-hover:text-indigo-600 transition-colors">
+                          <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                      </div>
+                      <h3 className="text-xl font-bold mb-3">Past Question Archive</h3>
+                      <p className="text-slate-400 group-hover:text-indigo-100 text-sm leading-relaxed">
+                          Access thousands of verified past questions sorted by course code and year.
+                      </p>
+                  </div>
+                  
+                  {/* Card 2 */}
+                  <div onClick={() => navigate('/community')} className="group bg-white/5 border border-white/10 p-8 hover:bg-rose-600 transition-colors duration-300 cursor-pointer rounded-sm">
+                      <div className="w-14 h-14 bg-rose-500/20 rounded-full flex items-center justify-center mb-6 group-hover:bg-white group-hover:text-rose-600 transition-colors">
+                          <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                      </div>
+                      <h3 className="text-xl font-bold mb-3">Student Community</h3>
+                      <p className="text-slate-400 group-hover:text-rose-100 text-sm leading-relaxed">
+                          Join study groups, discussion forums, and connect with peers across levels.
+                      </p>
+                  </div>
+
+                  {/* Card 3 */}
+                  <div onClick={() => navigate('/lecturers')} className="group bg-white/5 border border-white/10 p-8 hover:bg-emerald-600 transition-colors duration-300 cursor-pointer rounded-sm">
+                      <div className="w-14 h-14 bg-emerald-500/20 rounded-full flex items-center justify-center mb-6 group-hover:bg-white group-hover:text-emerald-600 transition-colors">
+                          <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                      </div>
+                      <h3 className="text-xl font-bold mb-3">Faculty Directory</h3>
+                      <p className="text-slate-400 group-hover:text-emerald-100 text-sm leading-relaxed">
+                          Meet your lecturers, view their specializations, and access research publications.
+                      </p>
+                  </div>
+              </div>
+          </div>
+      </section>
+
+      {/* 4. ACADEMIC LEVELS: Visual Grid */}
+      <section className="py-20 bg-slate-50 reveal">
+          <div className="container mx-auto px-4">
+              <div className="flex flex-col md:flex-row justify-between items-end mb-12">
+                  <div className="max-w-xl">
+                      <h2 className="text-3xl font-serif font-bold text-slate-900 mb-4">Academic Programs</h2>
+                      <p className="text-slate-600">Tailored resources for every stage of your undergraduate journey. Select your level to access specific course materials.</p>
+                  </div>
+                  <button onClick={() => navigate('/questions')} className="hidden md:block text-indigo-700 font-bold border-b-2 border-indigo-700 pb-1 hover:text-indigo-900">View All Levels &rarr;</button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[100, 200, 300, 400].map((level) => (
+                      <div key={level} onClick={() => navigate('/questions')} className="group relative h-96 cursor-pointer overflow-hidden rounded-sm">
+                          <img 
+                            src={LEVEL_IMAGES[level]} 
+                            alt={`${level} Level`} 
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          />
+                          <div className="absolute inset-0 bg-slate-900/40 group-hover:bg-slate-900/60 transition-colors"></div>
+                          <div className="absolute inset-0 p-8 flex flex-col justify-end text-white">
+                              <span className="text-6xl font-serif font-bold opacity-30 absolute top-4 right-4">{level}</span>
+                              <h3 className="text-2xl font-bold mb-2">{level} Level</h3>
+                              <p className="text-sm text-slate-200 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                                  {level === 100 ? "Introduction to Financial Principles" :
+                                   level === 200 ? "Core Micro & Macro Economics" :
+                                   level === 300 ? "Advanced Investment Analysis" :
+                                   "Professional Ethics & Project"}
+                              </p>
+                              <span className="mt-4 text-xs font-bold uppercase tracking-widest border-b border-white inline-block w-max pb-1">Enter Portal</span>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+          </div>
+      </section>
+
+      {/* 5. NEWS & EVENTS TICKER */}
+      <section className="py-20 bg-white border-y border-slate-100 reveal">
+          <div className="container mx-auto px-4">
+              <div className="flex flex-col lg:flex-row gap-12">
+                  <div className="lg:w-1/3">
+                      <h2 className="text-3xl font-serif font-bold text-slate-900 mb-6">Latest News</h2>
+                      <p className="text-slate-600 mb-8">Stay updated with departmental announcements, exam schedules, and scholarship opportunities.</p>
+                      <button onClick={() => navigate('/announcements')} className="px-6 py-3 bg-indigo-900 text-white font-bold rounded-sm hover:bg-indigo-800 transition">View All Updates</button>
+                  </div>
+                  <div className="lg:w-2/3">
+                      <div className="space-y-6">
+                          {announcements.length > 0 ? (
+                              announcements.map((news) => (
+                                  <div key={news.id} className="flex flex-col sm:flex-row gap-6 pb-6 border-b border-slate-100 last:border-0 group cursor-pointer" onClick={() => navigate('/announcements')}>
+                                      <div className="w-full sm:w-32 shrink-0">
+                                          <span className="block text-3xl font-serif font-bold text-slate-300 group-hover:text-indigo-600 transition-colors">{new Date(news.date).getDate()}</span>
+                                          <span className="text-xs font-bold uppercase text-slate-400">{new Date(news.date).toLocaleDateString(undefined, {month: 'long'})}</span>
+                                      </div>
+                                      <div>
+                                          <h3 className="text-xl font-bold text-slate-800 mb-2 group-hover:text-indigo-700 transition-colors">{news.title}</h3>
+                                          <p className="text-slate-600 text-sm line-clamp-2">{news.content}</p>
+                                      </div>
+                                  </div>
+                              ))
+                          ) : (
+                              <div className="text-slate-400 italic">No recent announcements found.</div>
+                          )}
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </section>
+
+      {/* 6. STUDENT LIFE GALLERY */}
+      <section className="py-20 bg-slate-50 reveal">
+          <div className="container mx-auto px-4 text-center mb-12">
+              <span className="text-indigo-600 font-bold uppercase tracking-widest text-xs">Campus Experience</span>
+              <h2 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 mt-2">Life at FINSA</h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 h-96 md:h-[500px]">
+              <div className="col-span-1 md:col-span-2 row-span-2 relative group overflow-hidden">
+                  <img src="https://images.unsplash.com/photo-1523580494863-6f3031224c94?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Students" />
+                  <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors"></div>
+                  <div className="absolute bottom-4 left-4 text-white font-bold">Annual Dinner</div>
+              </div>
+              <div className="relative group overflow-hidden">
+                   <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Lecture" />
+              </div>
+              <div className="relative group overflow-hidden">
+                   <img src="https://images.unsplash.com/photo-1571260899304-425eee4c7efc?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Library" />
+              </div>
+              <div className="col-span-2 row-span-1 relative group overflow-hidden">
+                   <img src="https://images.unsplash.com/photo-1427504743055-b72976e3d716?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Group Study" />
+              </div>
+          </div>
+      </section>
+
+      {/* 7. FOOTER CTA */}
+      <section className="py-20 bg-indigo-900 text-white text-center reveal">
+          <div className="container mx-auto px-4 max-w-3xl">
+              <h2 className="text-3xl md:text-4xl font-serif font-bold mb-6">Ready to Excel?</h2>
+              <p className="text-indigo-200 text-lg mb-10">Join the thousands of students using FINQUEST to master their finance degree.</p>
+              <button onClick={() => navigate('/login')} className="px-10 py-4 bg-white text-indigo-900 font-bold rounded-sm hover:bg-indigo-50 transition shadow-xl uppercase tracking-widest text-sm">
+                  Access Portal Now
+              </button>
+          </div>
+      </section>
+
     </div>
   );
 };

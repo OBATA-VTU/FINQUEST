@@ -1,4 +1,3 @@
-
 import React, { useState, useContext, FormEvent, useEffect } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -9,10 +8,7 @@ import { uploadToImgBB } from '../utils/api';
 import { updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { auth as firebaseAuth, db } from '../firebase';
-
-interface LoginPageProps {
-    onLoginSuccess: () => void;
-}
+import { useNavigate } from 'react-router-dom';
 
 const getFriendlyErrorMessage = (error: any): string => {
     const code = error.code || '';
@@ -34,9 +30,9 @@ const getFriendlyErrorMessage = (error: any): string => {
     return error.message || 'An unexpected error occurred.';
 };
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+export const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
-  // viewState controls the flow: 'auth' (login/signup), 'upload_photo' (post-signup), 'google_setup' (missing matric/level)
   const [viewState, setViewState] = useState<'auth' | 'upload_photo' | 'google_setup'>('auth');
   const auth = useContext(AuthContext);
   const { showNotification } = useNotification();
@@ -56,8 +52,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'short'>('idle');
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   
+  useEffect(() => {
+    // If already logged in, redirect home
+    if (auth?.user && viewState === 'auth') {
+        navigate('/');
+    }
+  }, [auth?.user, navigate, viewState]);
+
   // Debounce username check
   useEffect(() => {
       if (isLogin || !username || viewState !== 'auth') {
@@ -85,12 +87,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   
                   if (!available) {
                       showNotification("Username taken, try a suggestion", "error");
-                      const random = Math.floor(Math.random() * 1000);
-                      setSuggestions([
-                          `${cleanUsername}${random}`,
-                          `${cleanUsername}_aa`,
-                          `fin_${cleanUsername}`
-                      ]);
                   }
               }
           } catch (e) {
@@ -149,11 +145,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           await updateDoc(userRef, updates);
 
           showNotification("Setup complete! Welcome to FINQUEST.", "success");
-          onLoginSuccess();
+          navigate('/');
       } catch (error) {
           console.error("Setup failed:", error);
           showNotification("Failed to update profile, but account is ready.", "info");
-          onLoginSuccess();
+          navigate('/');
       } finally {
           setIsLoading(false);
       }
@@ -173,7 +169,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     try {
         if (isLogin) {
             await auth.login(email, password);
-            onLoginSuccess();
+            navigate('/');
         } else {
             // Strict check before submit
             if (usernameStatus === 'taken' || usernameStatus === 'short') {
@@ -218,7 +214,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               setViewState('google_setup');
               setIsLoading(false); // Stop loading to show setup form
           } else {
-              onLoginSuccess();
+              navigate('/');
           }
       } catch (err: any) {
           console.error("Google login error:", err);

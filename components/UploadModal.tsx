@@ -1,4 +1,3 @@
-
 import React, { useState, FormEvent, useRef, useEffect, useContext } from 'react';
 import { PastQuestion, Level } from '../types';
 import { LEVELS } from '../constants';
@@ -6,6 +5,7 @@ import { uploadFile } from '../utils/api';
 import { db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { AuthContext } from '../contexts/AuthContext';
+import { useNotification } from '../contexts/NotificationContext';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -15,6 +15,7 @@ interface UploadModalProps {
 
 export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpload }) => {
     const auth = useContext(AuthContext);
+    const { showNotification } = useNotification();
     const [courseCode, setCourseCode] = useState('');
     const [courseTitle, setCourseTitle] = useState('');
     const [level, setLevel] = useState<Level>(100);
@@ -36,7 +37,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!courseCode || !courseTitle || !file || !auth?.user) {
-            alert('Please fill all fields.');
+            showNotification('Please fill all fields.', 'error');
             return;
         }
 
@@ -68,7 +69,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
             // 4. Notify Parent
             onUpload({ ...questionData, id: docRef.id });
 
-            alert('Upload successful! It will appear after admin approval.');
+            showNotification('Upload successful! Awaiting admin approval.', 'success');
 
             // Reset
             setCourseCode('');
@@ -81,7 +82,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
 
         } catch (error) {
             console.error("Upload error:", error);
-            alert("Failed to upload. Please try again.");
+            showNotification("Failed to upload. Please try again.", "error");
         } finally {
             setIsUploading(false);
             setUploadProgress(0);
@@ -90,7 +91,33 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
     
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files[0]) {
-        setFile(e.target.files[0]);
+        const selectedFile = e.target.files[0];
+        
+        // Define allowed MIME types
+        const allowedTypes = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'image/jpeg',
+            'image/png',
+            'image/jpg'
+        ];
+
+        if (!allowedTypes.includes(selectedFile.type)) {
+            showNotification("Invalid file type. Please upload a PDF, Word Document, or Image.", "error");
+            e.target.value = ''; // Reset input
+            setFile(null);
+            return;
+        }
+
+        if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit check repeated for UX
+             showNotification("File size exceeds 10MB limit.", "error");
+             e.target.value = '';
+             setFile(null);
+             return;
+        }
+
+        setFile(selectedFile);
       }
     };
 
@@ -149,7 +176,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                                     </label>
                                     <p className="pl-1">or drag and drop</p>
                                 </div>
-                                {file ? <p className="text-xs text-slate-500">{file.name}</p> : <p className="text-xs text-slate-500">PDF, Docs, Images up to 10MB</p>}
+                                {file ? <p className="text-xs text-indigo-600 font-semibold">{file.name}</p> : <p className="text-xs text-slate-500">PDF, Docs, Images up to 10MB</p>}
                             </div>
                         </div>
                         {/* Progress Bar */}
