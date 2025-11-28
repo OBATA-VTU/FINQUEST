@@ -1,3 +1,4 @@
+
 import React, { useState, useContext, FormEvent, useEffect } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -8,7 +9,7 @@ import { uploadToImgBB } from '../utils/api';
 import { updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { auth as firebaseAuth, db } from '../firebase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const getFriendlyErrorMessage = (error: any): string => {
     const code = error.code || '';
@@ -140,7 +141,11 @@ export const LoginPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
+        <Link to="/" className="absolute top-6 left-6 flex items-center gap-2 text-indigo-900 font-bold hover:text-indigo-700 transition z-50">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            <span>Back to Home</span>
+        </Link>
         <div className="max-w-5xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px]">
             <div className="hidden md:flex md:w-5/12 bg-indigo-950 relative flex-col justify-between p-12 text-white">
                 <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1621640786029-22ad596541f9?q=80&w=1974')] bg-cover bg-center opacity-30 mix-blend-overlay"></div>

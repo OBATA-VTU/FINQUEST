@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Announcement } from '../types';
+import { Announcement, GalleryItem } from '../types';
 import { db } from '../firebase';
 import { collection, query, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore';
 
@@ -11,32 +12,28 @@ const LEVEL_IMAGES: Record<number, string> = {
     400: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" 
 };
 
-// Hook for scroll animations
-const useScrollReveal = () => {
-    useEffect(() => {
-        const reveals = document.querySelectorAll('.reveal');
-        const handleScroll = () => {
-            const windowHeight = window.innerHeight;
-            const elementVisible = 150;
-            reveals.forEach((reveal) => {
-                const elementTop = reveal.getBoundingClientRect().top;
-                if (elementTop < windowHeight - elementVisible) {
-                    reveal.classList.add('active');
-                }
-            });
-        };
-        window.addEventListener('scroll', handleScroll);
-        handleScroll(); // Trigger once on load
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
-};
-
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  useScrollReveal();
   
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [galleryImages, setGalleryImages] = useState<GalleryItem[]>([]);
   const [hodData, setHodData] = useState<any>(null);
+
+  // Optimized Scroll Reveal using IntersectionObserver
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('active');
+            }
+        });
+    }, { threshold: 0.1 });
+
+    const revealElements = document.querySelectorAll('.reveal');
+    revealElements.forEach(el => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [announcements, galleryImages]); // Re-run when content loads
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -45,6 +42,11 @@ export const HomePage: React.FC = () => {
             const q = query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(3));
             const snapshot = await getDocs(q);
             setAnnouncements(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement)));
+
+            // Gallery
+            const gQ = query(collection(db, 'gallery'), orderBy('date', 'desc'), limit(4));
+            const gSnap = await getDocs(gQ);
+            setGalleryImages(gSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as GalleryItem)));
 
             // HOD Content
             const hodDoc = await getDoc(doc(db, 'content', 'hod_message'));
@@ -67,7 +69,7 @@ export const HomePage: React.FC = () => {
              <img 
                 src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" 
                 alt="AAUA Campus" 
-                className="w-full h-full object-cover scale-105 animate-[blob_20s_infinite_alternate] opacity-40"
+                className="w-full h-full object-cover scale-105 animate-[blob_20s_infinite_alternate] opacity-40 will-change-transform"
              />
              <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
         </div>
@@ -217,22 +219,39 @@ export const HomePage: React.FC = () => {
               <span className="text-indigo-600 font-bold uppercase tracking-widest text-xs">Student Experience</span>
               <h2 className="text-4xl font-serif font-bold text-slate-900 mt-3">Life at FINSA</h2>
           </div>
+          
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 h-[600px]">
-              <div className="col-span-2 row-span-2 relative group overflow-hidden">
-                  <img src="https://images.unsplash.com/photo-1523580494863-6f3031224c94?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Event" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-8">
-                      <span className="text-white font-bold text-xl">Annual Dinner</span>
-                  </div>
-              </div>
-              <div className="relative group overflow-hidden">
-                   <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Class" />
-              </div>
-              <div className="relative group overflow-hidden">
-                   <img src="https://images.unsplash.com/photo-1571260899304-425eee4c7efc?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Library" />
-              </div>
-              <div className="col-span-2 row-span-1 relative group overflow-hidden">
-                   <img src="https://images.unsplash.com/photo-1427504743055-b72976e3d716?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Study" />
-              </div>
+             {galleryImages.length > 0 ? (
+                 <>
+                    {galleryImages.map((img, idx) => (
+                        <div key={img.id} className={`relative group overflow-hidden ${idx === 0 ? 'col-span-2 row-span-2' : idx === 3 ? 'col-span-2 row-span-1' : ''}`}>
+                            <img src={img.imageUrl} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt={img.caption} />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-8">
+                                <span className="text-white font-bold text-xl">{img.caption}</span>
+                            </div>
+                        </div>
+                    ))}
+                    {galleryImages.length < 4 && (
+                         <div className="bg-slate-200 flex items-center justify-center text-slate-400">Add more photos via Admin</div>
+                    )}
+                 </>
+             ) : (
+                 // Default Placeholders if no dynamic content
+                 <>
+                    <div className="col-span-2 row-span-2 relative group overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1523580494863-6f3031224c94?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Event" />
+                    </div>
+                    <div className="relative group overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Class" />
+                    </div>
+                    <div className="relative group overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1571260899304-425eee4c7efc?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Library" />
+                    </div>
+                    <div className="col-span-2 row-span-1 relative group overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1427504743055-b72976e3d716?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Study" />
+                    </div>
+                 </>
+             )}
           </div>
       </section>
 

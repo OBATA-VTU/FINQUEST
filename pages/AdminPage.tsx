@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, doc, updateDoc, deleteDoc, addDoc, setDoc, getDoc } from 'firebase/firestore';
@@ -8,7 +9,7 @@ import { Level, Role } from '../types';
 import { LEVELS } from '../constants';
 import { uploadToImgBB } from '../utils/api';
 
-type AdminTab = 'pending' | 'content' | 'users' | 'generate' | 'news' | 'executives' | 'lecturers' | 'community';
+type AdminTab = 'pending' | 'content' | 'users' | 'generate' | 'news' | 'executives' | 'lecturers' | 'community' | 'gallery';
 
 export const AdminPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>('pending');
@@ -23,6 +24,7 @@ export const AdminPage: React.FC = () => {
   const [execItems, setExecItems] = useState<any[]>([]);
   const [lecturerItems, setLecturerItems] = useState<any[]>([]);
   const [groupItems, setGroupItems] = useState<any[]>([]);
+  const [galleryItems, setGalleryItems] = useState<any[]>([]);
   
   // Website Content State
   const [hodData, setHodData] = useState({ name: '', title: '', message: '', imageUrl: '' });
@@ -83,6 +85,9 @@ export const AdminPage: React.FC = () => {
         } else if (tab === 'community') {
             const snapshot = await getDocs(collection(db, "groups"));
             setGroupItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        } else if (tab === 'gallery') {
+            const snapshot = await getDocs(collection(db, "gallery"));
+            setGalleryItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         }
     } catch (error) {
         console.error(`Error fetching ${tab}:`, error);
@@ -189,7 +194,8 @@ export const AdminPage: React.FC = () => {
               modalType === 'news' ? 'announcements' :
               modalType === 'executives' ? 'executives' :
               modalType === 'lecturers' ? 'lecturers' : 
-              modalType === 'community' ? 'groups' : '';
+              modalType === 'community' ? 'groups' : 
+              modalType === 'gallery' ? 'gallery' : '';
           
           if (!collectionName) return;
 
@@ -200,6 +206,7 @@ export const AdminPage: React.FC = () => {
               showNotification("Updated successfully", "success");
           } else {
               if (modalType === 'news') dataToSave.date = new Date().toISOString();
+              if (modalType === 'gallery') dataToSave.date = new Date().toISOString();
               await addDoc(collection(db, collectionName), dataToSave);
               showNotification("Created successfully", "success");
           }
@@ -297,8 +304,8 @@ export const AdminPage: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 overflow-y-auto">
             <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 m-4 animate-fade-in-down">
                 <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-indigo-900">
-                        {editingItem ? 'Edit' : 'Add New'}
+                    <h3 className="text-xl font-bold text-indigo-900 capitalize">
+                        {editingItem ? 'Edit' : 'Add New'} {modalType}
                     </h3>
                     <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -316,7 +323,7 @@ export const AdminPage: React.FC = () => {
                     {modalType === 'executives' && (
                         <>
                             <div><label className="block text-sm font-bold mb-1">Name</label><input name="name" required value={formData.name || ''} onChange={handleFormChange} className="w-full border p-2 rounded" /></div>
-                            <div><label className="block text-sm font-bold mb-1">Position</label><input name="position" required value={formData.position || ''} onChange={handleFormChange} className="w-full border p-2 rounded" /></div>
+                            <div><label className="block text-sm font-bold mb-1">Position</label><input name="position" required value={formData.position || ''} onChange={handleFormChange} className="w-full border p-2 rounded" placeholder="e.g. President, Treasurer" /></div>
                             <div>
                                 <label className="block text-sm font-bold mb-1">Level</label>
                                 <select name="level" value={formData.level || 100} onChange={handleFormChange} className="w-full border p-2 rounded">
@@ -345,6 +352,11 @@ export const AdminPage: React.FC = () => {
                             </div>
                             <div><label className="block text-sm font-bold mb-1">Link</label><input name="link" required value={formData.link || ''} onChange={handleFormChange} className="w-full border p-2 rounded" /></div>
                             <div><label className="block text-sm font-bold mb-1">Description</label><input name="description" required value={formData.description || ''} onChange={handleFormChange} className="w-full border p-2 rounded" /></div>
+                        </>
+                    )}
+                    {modalType === 'gallery' && (
+                        <>
+                            <div><label className="block text-sm font-bold mb-1">Caption</label><input name="caption" required value={formData.caption || ''} onChange={handleFormChange} className="w-full border p-2 rounded" placeholder="Brief description of event" /></div>
                         </>
                     )}
 
@@ -379,6 +391,7 @@ export const AdminPage: React.FC = () => {
             <TabButton id="executives" label="Executives" />
             <TabButton id="lecturers" label="Lecturers" />
             <TabButton id="community" label="Community" />
+            <TabButton id="gallery" label="Gallery" />
             <TabButton id="generate" label="AI Generator" />
         </div>
 
@@ -479,8 +492,8 @@ export const AdminPage: React.FC = () => {
             </div>
         )}
 
-        {/* 4-7. CMS SECTIONS */}
-        {['news', 'executives', 'lecturers', 'community'].includes(activeTab) && (
+        {/* 4-8. CMS SECTIONS (News, Execs, Lecturers, Community, Gallery) */}
+        {['news', 'executives', 'lecturers', 'community', 'gallery'].includes(activeTab) && (
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                     <h2 className="font-bold text-slate-800 capitalize">{activeTab} Management</h2>
@@ -490,15 +503,20 @@ export const AdminPage: React.FC = () => {
                 </div>
                 {loading ? <div className="p-12 text-center">Loading...</div> : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-                        {(activeTab === 'news' ? newsItems : activeTab === 'executives' ? execItems : activeTab === 'lecturers' ? lecturerItems : groupItems).map((item) => (
-                            <div key={item.id} className="border rounded-lg p-4 flex flex-col hover:shadow-md transition bg-white">
+                        {(activeTab === 'news' ? newsItems : activeTab === 'executives' ? execItems : activeTab === 'lecturers' ? lecturerItems : activeTab === 'gallery' ? galleryItems : groupItems).map((item) => (
+                            <div key={item.id} className="border rounded-lg p-4 flex flex-col hover:shadow-md transition bg-white relative">
+                                {item.imageUrl && (
+                                    <div className="h-32 mb-3 bg-slate-100 rounded overflow-hidden">
+                                        <img src={item.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                                    </div>
+                                )}
                                 <div className="flex-grow">
-                                    <h4 className="font-bold text-slate-800 line-clamp-1">{item.title || item.name}</h4>
+                                    <h4 className="font-bold text-slate-800 line-clamp-1">{item.title || item.name || item.caption}</h4>
                                     <p className="text-xs text-slate-500 line-clamp-2 mt-1">{item.content || item.description || item.specialization || item.position}</p>
                                 </div>
                                 <div className="flex justify-end gap-2 pt-3 border-t border-slate-50 mt-2">
-                                    <button onClick={() => openEditModal(activeTab, item)} className="text-indigo-600 text-xs font-bold hover:underline">Edit</button>
-                                    <button onClick={() => handleDelete(item.id, activeTab === 'news' ? 'announcements' : activeTab === 'community' ? 'groups' : activeTab, item.title || item.name)} className="text-rose-600 text-xs font-bold hover:underline">Delete</button>
+                                    {activeTab !== 'gallery' && <button onClick={() => openEditModal(activeTab, item)} className="text-indigo-600 text-xs font-bold hover:underline">Edit</button>}
+                                    <button onClick={() => handleDelete(item.id, activeTab === 'news' ? 'announcements' : activeTab === 'community' ? 'groups' : activeTab, item.title || item.name || 'Item')} className="text-rose-600 text-xs font-bold hover:underline">Delete</button>
                                 </div>
                             </div>
                         ))}
@@ -507,7 +525,7 @@ export const AdminPage: React.FC = () => {
             </div>
         )}
 
-        {/* 8. AI GENERATOR */}
+        {/* 9. AI GENERATOR */}
         {activeTab === 'generate' && (
              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">

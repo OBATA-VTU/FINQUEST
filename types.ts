@@ -65,3 +65,10 @@ export interface CommunityGroup {
   description: string;
   members: number;
 }
+
+export interface GalleryItem {
+  id: string;
+  imageUrl: string;
+  caption: string;
+  date: string;
+}
