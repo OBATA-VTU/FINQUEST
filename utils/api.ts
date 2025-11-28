@@ -2,12 +2,16 @@
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
 
-const IMGBB_API_KEY = "a4aa97ad337019899bb59b4e94b149e0";
+const IMGBB_API_KEY = process.env.VITE_IMGBB_API_KEY;
 
 /**
  * Uploads an image file to ImgBB.
  */
 export const uploadToImgBB = async (file: File): Promise<string> => {
+  if (!IMGBB_API_KEY) {
+      throw new Error("ImgBB API Key is missing");
+  }
+
   const formData = new FormData();
   formData.append("image", file);
 

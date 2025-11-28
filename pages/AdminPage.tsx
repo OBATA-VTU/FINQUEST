@@ -1,16 +1,20 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { MOCK_PENDING_UPLOADS, LEVELS } from '../constants';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, doc, updateDoc, deleteDoc, addDoc } from 'firebase/firestore';
 import { GoogleGenAI } from "@google/genai";
 import { AuthContext } from '../contexts/AuthContext';
-import { Level } from '../types';
+import { useNotification } from '../contexts/NotificationContext';
+import { Level, Role } from '../types';
 
 export const AdminPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'pending' | 'generate'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'generate' | 'users'>('pending');
   const [pendingItems, setPendingItems] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const auth = useContext(AuthContext);
+  const { showNotification } = useNotification();
 
   // Confirmation State
   const [confirmDialog, setConfirmDialog] = useState<{ id: string, action: 'approve' | 'reject', title: string } | null>(null);
@@ -29,26 +33,53 @@ export const AdminPage: React.FC = () => {
   useEffect(() => {
     if (activeTab === 'pending') {
         fetchPending();
+    } else if (activeTab === 'users') {
+        fetchUsers();
     }
   }, [activeTab]);
 
   const fetchPending = async () => {
         setLoading(true);
         try {
-             // Combine Mock for demo + Real pending from DB
             const q = query(collection(db, "questions"), where("status", "==", "pending"));
             const snapshot = await getDocs(q);
             const realPending = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            // Filter out mocks if real data exists to avoid clutter, or keep both
             setPendingItems([...MOCK_PENDING_UPLOADS, ...realPending]);
         } catch (error) {
             console.error("Error fetching pending:", error);
+            showNotification("Failed to fetch pending items", "error");
             setPendingItems(MOCK_PENDING_UPLOADS);
         } finally {
             setLoading(false);
         }
     };
+
+  const fetchUsers = async () => {
+      setLoading(true);
+      try {
+          // Note: In a real app with thousands of users, use pagination or server-side filtering
+          const snapshot = await getDocs(collection(db, "users"));
+          const fetchedUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setUsers(fetchedUsers);
+      } catch (error) {
+          console.error("Error fetching users:", error);
+          showNotification("Failed to fetch users", "error");
+      } finally {
+          setLoading(false);
+      }
+  };
+
+  const updateUserRole = async (userId: string, newRole: Role) => {
+      try {
+          const userRef = doc(db, 'users', userId);
+          await updateDoc(userRef, { role: newRole });
+          setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+          showNotification(`User role updated to ${newRole}`, "success");
+      } catch (error) {
+          console.error(error);
+          showNotification("Failed to update role", "error");
+      }
+  };
 
   const requestAction = (item: any, action: 'approve' | 'reject') => {
       setConfirmDialog({
@@ -72,12 +103,14 @@ export const AdminPage: React.FC = () => {
           const docRef = doc(db, 'questions', id);
           if (action === 'approve') {
               await updateDoc(docRef, { status: 'approved' });
+              showNotification("Question approved", "success");
           } else {
               await deleteDoc(docRef); 
+              showNotification("Question rejected", "info");
           }
       } catch (error) {
           console.error("Action failed:", error);
-          alert("Failed to update database.");
+          showNotification("Failed to update database", "error");
           fetchPending(); // Revert on failure
       }
   };
@@ -98,7 +131,7 @@ export const AdminPage: React.FC = () => {
     if (!validateForm()) return;
 
     if (!process.env.API_KEY) {
-        alert("API Key missing. Cannot generate.");
+        showNotification("Gemini API Key missing in environment variables.", "error");
         return;
     }
 
@@ -125,13 +158,14 @@ export const AdminPage: React.FC = () => {
 
         if (response.text) {
              setGeneratedContent(response.text);
+             showNotification("Content generated successfully", "success");
         } else {
             throw new Error("Empty response from AI");
         }
 
     } catch (error) {
         console.error("AI Generation Error:", error);
-        alert("Failed to generate content. Please try again later.");
+        showNotification("Failed to generate content. Please try again later.", "error");
     } finally {
         setIsGenerating(false);
     }
@@ -155,7 +189,7 @@ export const AdminPage: React.FC = () => {
         };
 
         await addDoc(collection(db, 'questions'), questionData);
-        alert("Exam saved to database successfully!");
+        showNotification("Exam saved to database successfully!", "success");
         
         // Reset
         setAiTopic('');
@@ -165,7 +199,7 @@ export const AdminPage: React.FC = () => {
         setFormErrors({});
     } catch (error) {
         console.error("Save Error:", error);
-        alert("Failed to save to database.");
+        showNotification("Failed to save to database.", "error");
     } finally {
         setIsSaving(false);
     }
@@ -202,16 +236,23 @@ export const AdminPage: React.FC = () => {
 
       <div className="container mx-auto px-4">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">Admin Dashboard</h1>
-        <p className="text-slate-600 mb-8">Manage content, approve uploads, and oversee the portal.</p>
+        <p className="text-slate-600 mb-8">Manage content, approve uploads, and oversee users.</p>
 
         {/* Tabs */}
-        <div className="flex space-x-4 border-b border-slate-200 mb-8">
+        <div className="flex space-x-6 border-b border-slate-200 mb-8">
             <button 
                 onClick={() => setActiveTab('pending')}
                 className={`pb-4 px-2 font-medium text-sm transition-colors relative ${activeTab === 'pending' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
             >
                 Pending Approvals
                 {activeTab === 'pending' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600"></div>}
+            </button>
+            <button 
+                onClick={() => setActiveTab('users')}
+                className={`pb-4 px-2 font-medium text-sm transition-colors relative ${activeTab === 'users' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+                User Management
+                {activeTab === 'users' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600"></div>}
             </button>
             <button 
                 onClick={() => setActiveTab('generate')}
@@ -222,14 +263,11 @@ export const AdminPage: React.FC = () => {
             </button>
         </div>
 
-        {activeTab === 'pending' ? (
+        {activeTab === 'pending' && (
              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
                  <h2 className="text-lg font-bold text-slate-800">Pending Question Uploads</h2>
                  <button onClick={fetchPending} className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
-                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                     </svg>
                      Refresh
                  </button>
              </div>
@@ -286,19 +324,83 @@ export const AdminPage: React.FC = () => {
                  </div>
              ) : (
                  <div className="p-12 text-center text-slate-500 flex flex-col items-center">
-                     <svg className="w-12 h-12 text-slate-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                     </svg>
                      <p>No pending approvals. Great job!</p>
                  </div>
              )}
          </div>
-        ) : (
+        )}
+
+        {activeTab === 'users' && (
+             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                 <h2 className="text-lg font-bold text-slate-800">User Management</h2>
+                 <button onClick={fetchUsers} className="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+                     Refresh List
+                 </button>
+             </div>
+             
+             {loading ? (
+                 <div className="p-12 text-center flex justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                 </div>
+             ) : (
+                 <div className="overflow-x-auto">
+                     <table className="w-full text-left">
+                         <thead className="bg-slate-50 text-slate-600 text-xs uppercase font-semibold">
+                             <tr>
+                                 <th className="px-6 py-4">User</th>
+                                 <th className="px-6 py-4">Username/Matric</th>
+                                 <th className="px-6 py-4">Current Role</th>
+                                 <th className="px-6 py-4">Actions</th>
+                             </tr>
+                         </thead>
+                         <tbody className="divide-y divide-slate-100">
+                             {users.map((user) => (
+                                 <tr key={user.id} className="hover:bg-slate-50 transition-colors">
+                                     <td className="px-6 py-4">
+                                         <div className="font-bold text-slate-900">{user.name}</div>
+                                         <div className="text-xs text-slate-500">{user.email}</div>
+                                     </td>
+                                     <td className="px-6 py-4">
+                                         <div className="text-sm text-slate-800 font-medium">@{user.username || 'N/A'}</div>
+                                         <div className="text-xs text-slate-500">{user.matricNumber || 'No Matric'}</div>
+                                     </td>
+                                     <td className="px-6 py-4">
+                                         <span className={`px-2 py-1 rounded-full text-xs font-semibold uppercase ${
+                                             user.role === 'admin' ? 'bg-purple-100 text-purple-700' :
+                                             user.role === 'executive' ? 'bg-amber-100 text-amber-700' :
+                                             user.role === 'lecturer' ? 'bg-blue-100 text-blue-700' :
+                                             'bg-slate-100 text-slate-600'
+                                         }`}>
+                                             {user.role}
+                                         </span>
+                                     </td>
+                                     <td className="px-6 py-4">
+                                         <select 
+                                            value={user.role} 
+                                            onChange={(e) => updateUserRole(user.id, e.target.value as Role)}
+                                            className="text-sm border-slate-200 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                         >
+                                             <option value="student">Student</option>
+                                             <option value="executive">Executive</option>
+                                             <option value="lecturer">Lecturer</option>
+                                             <option value="admin">Admin</option>
+                                         </select>
+                                     </td>
+                                 </tr>
+                             ))}
+                         </tbody>
+                     </table>
+                 </div>
+             )}
+             </div>
+        )}
+
+        {activeTab === 'generate' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* AI Form */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
                     <h2 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2">
-                        <svg className="w-6 h-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                         AI Question Generator
                     </h2>
                     <p className="text-sm text-slate-500 mb-6">Enter a topic, and our AI will generate a structured exam paper. The text is saved to the database (Free Storage).</p>
