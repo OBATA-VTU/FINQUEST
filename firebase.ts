@@ -1,7 +1,7 @@
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { initializeApp, FirebaseApp } from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getStorage, FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -13,7 +13,7 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Debug: Check if keys are loaded (Logs presence only, for security)
+// Debug: Check if keys are loaded
 const checkKeys = () => {
   const missingKeys = Object.entries(firebaseConfig)
     .filter(([key, value]) => !value)
@@ -21,17 +21,17 @@ const checkKeys = () => {
 
   if (missingKeys.length > 0) {
     console.error("Missing Firebase Configuration Keys:", missingKeys);
+  } else {
+    console.log("Firebase Configuration Loaded Successfully");
   }
 };
 
 checkKeys();
 
-// Initialize Firebase directly. 
-// This allows TypeScript to infer the correct types (Auth, Firestore, etc.) automatically.
-// If configuration is missing, this will throw a runtime error which is caught by the ErrorBoundary.
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+// Initialize Firebase with explicit types
+const app: FirebaseApp = initializeApp(firebaseConfig);
+const auth: Auth = getAuth(app);
+const db: Firestore = getFirestore(app);
+const storage: FirebaseStorage = getStorage(app);
 
 export { auth, db, storage };

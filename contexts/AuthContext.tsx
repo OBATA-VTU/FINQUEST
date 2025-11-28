@@ -50,7 +50,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     avatarUrl: userData.avatarUrl || firebaseUser.photoURL
                 });
             } else {
-                // Handle case where user exists in Auth but not in Firestore
+                // Handle case where user exists in Auth but not in Firestore (e.g., initial google sign in)
                 const newUser = {
                     id: firebaseUser.uid,
                     email: firebaseUser.email || '',
@@ -158,15 +158,22 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
           };
 
           // Create user document in Firestore
-          await setDoc(doc(db, 'users', firebaseUser.uid), {
-            ...newUser,
-            createdAt: new Date().toISOString()
-          });
+          try {
+              await setDoc(doc(db, 'users', firebaseUser.uid), {
+                ...newUser,
+                createdAt: new Date().toISOString()
+              });
+              console.log("User document created successfully");
+          } catch (dbError) {
+              console.error("Database creation failed:", dbError);
+              throw new Error("Account created but failed to save profile. Please contact admin.");
+          }
 
           // Update local state immediately for better UX
           setUser(newUser);
           showNotification("Account created successfully!", "success");
       } catch (error: any) {
+          console.error("Signup flow failed:", error);
           throw error;
       }
   };
