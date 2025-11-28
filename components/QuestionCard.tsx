@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { PastQuestion } from '../types';
 import { downloadPDF, generatePDF } from '../utils/pdfGenerator';
@@ -16,7 +17,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
       
       let url = '';
       if (question.textContent) {
-          // Generate Blob for text content
           const doc = generatePDF(question.courseTitle, question.textContent, question.courseCode, question.year);
           const pdfBlob = doc.output('blob');
           url = URL.createObjectURL(pdfBlob);
@@ -24,15 +24,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
           url = question.fileUrl;
       }
 
-      // Check if it's likely a PDF or AI generated content
-      const isPdf = url.toLowerCase().endsWith('.pdf') || question.textContent;
-
-      if (isPdf && url) {
+      if (url) {
         setPreviewUrl(url);
         setIsPreviewOpen(true);
-      } else if (url) {
-        // Fallback for images or other types
-        window.open(url, '_blank');
       }
   };
 
@@ -45,56 +39,51 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
 
   return (
     <>
-      <div className="bg-slate-50 border border-slate-200 rounded-lg p-5 flex flex-col justify-between hover:shadow-lg hover:border-indigo-300 transition-all duration-300">
-        <div>
-          <div className="flex justify-between items-start mb-2">
-              <span className="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">{question.courseCode}</span>
-              <span className="text-sm font-medium text-slate-500">{question.year}</span>
+      <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-lg hover:border-indigo-300 transition-all duration-200 group relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-indigo-50 to-white -mr-8 -mt-8 rounded-full z-0 pointer-events-none group-hover:scale-150 transition-transform"></div>
+        
+        <div className="relative z-10">
+          <div className="flex justify-between items-start mb-3">
+              <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded border border-slate-200 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-colors">
+                  {question.year} SESSION
+              </span>
+              {question.textContent && (
+                  <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                      AI
+                  </span>
+              )}
           </div>
-          <h4 className="text-md font-bold text-slate-800 leading-tight mb-4">
+          
+          <h4 className="text-sm font-bold text-slate-800 leading-snug mb-4 line-clamp-2 min-h-[2.5rem]">
               {question.courseTitle}
           </h4>
-          {question.textContent && (
-              <span className="inline-block px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded mb-3">AI Generated</span>
-          )}
-        </div>
-        <div className="flex items-center justify-end gap-2">
-          <button
-            onClick={handlePreview}
-            title="Preview file"
-            className="bg-white border border-slate-300 text-slate-700 font-semibold py-2 px-3 rounded-md text-sm text-center hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            <span className="hidden sm:inline">Preview</span>
-          </button>
-          
-          {question.textContent ? (
-              <button
-                  onClick={handleDownload}
-                  title="Download Generated PDF"
-                  className="bg-indigo-500 text-white font-semibold py-2 px-3 rounded-md text-sm text-center hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all flex items-center justify-center gap-2"
-              >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  <span>Download PDF</span>
-              </button>
-          ) : (
-              <a
-              href={question.fileUrl}
-              download
-              title="Download file"
-              className="bg-indigo-500 text-white font-semibold py-2 px-3 rounded-md text-sm text-center hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all flex items-center justify-center gap-2"
-              >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              <span>Download</span>
-              </a>
-          )}
+
+          <div className="flex items-center gap-2 mt-auto">
+            <button
+                onClick={handlePreview}
+                className="flex-1 bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-200 py-2 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1"
+            >
+                Preview
+            </button>
+            
+            {question.textContent ? (
+                <button
+                    onClick={handleDownload}
+                    className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-2 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1"
+                >
+                    Download
+                </button>
+            ) : (
+                <a
+                    href={question.fileUrl}
+                    download
+                    className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-2 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1"
+                >
+                    Download
+                </a>
+            )}
+          </div>
         </div>
       </div>
       
@@ -102,7 +91,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
         isOpen={isPreviewOpen} 
         onClose={() => setIsPreviewOpen(false)} 
         fileUrl={previewUrl}
-        title={`${question.courseCode} - ${question.courseTitle}`}
+        title={`${question.courseCode} (${question.year})`}
       />
     </>
   );

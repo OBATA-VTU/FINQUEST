@@ -46,8 +46,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate, currentPage, isOpe
         {/* Sidebar Container */}
         <aside 
             className={`
-                fixed xl:sticky top-0 left-0 h-screen w-64 bg-white border-r border-slate-200 z-50 
-                transform transition-transform duration-300 ease-in-out shrink-0 flex flex-col
+                fixed xl:sticky top-0 left-0 h-screen w-72 bg-white border-r border-slate-200 z-50 
+                transform transition-transform duration-300 ease-in-out shrink-0 flex flex-col shadow-xl xl:shadow-none
                 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'}
             `}
         >
@@ -55,8 +55,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate, currentPage, isOpe
             <div className="flex items-center gap-3">
                 <Logo className="h-10 w-10" />
                 <div>
-                    <h1 className="text-lg font-bold text-indigo-900 leading-none">FINQUEST</h1>
-                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">AAUA Chapter</p>
+                    <h1 className="text-xl font-bold text-indigo-900 leading-none">FINQUEST</h1>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">AAUA Chapter</p>
                 </div>
             </div>
             {/* Close Button (Mobile Only) */}
@@ -65,7 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate, currentPage, isOpe
             </button>
           </div>
 
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-100">
             <NavItem 
                 page="home" 
                 label="Home" 
@@ -103,12 +103,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate, currentPage, isOpe
           </nav>
 
           {auth?.user ? (
-              <div className="p-4 border-t border-slate-200">
+              <div className="p-4 border-t border-slate-200 bg-slate-50/50">
                   <div 
                     onClick={() => handleNav('profile')}
-                    className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors mb-2"
+                    className="flex items-center gap-3 p-2 rounded-xl hover:bg-white hover:shadow-sm cursor-pointer transition-all mb-3"
                   >
-                      <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold border border-indigo-200 overflow-hidden">
+                      <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold border border-indigo-200 overflow-hidden shrink-0">
                           {auth.user.avatarUrl ? (
                               <img src={auth.user.avatarUrl} alt={auth.user.name} className="w-full h-full object-cover" />
                           ) : (
@@ -117,24 +117,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate, currentPage, isOpe
                       </div>
                       <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-slate-800 truncate">{auth.user.name}</p>
-                          <p className="text-xs text-slate-500 truncate">@{auth.user.username}</p>
+                          <p className="text-[10px] text-slate-500 truncate uppercase font-semibold">{auth.user.role}</p>
                       </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2">
                     {auth.user.role === 'admin' && (
                         <button 
                             onClick={() => handleNav('admin')}
-                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors text-center"
+                            className="w-full px-3 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
                         >
-                            Admin
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            Admin Dashboard
                         </button>
                     )}
                     <button 
                         onClick={() => { auth.logout(); onClose(); }}
-                        className={`px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-lg transition-colors text-center ${auth.user.role !== 'admin' ? 'col-span-2' : ''}`}
+                        className="w-full px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
-                        Logout
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                        Sign Out
                     </button>
                   </div>
               </div>
