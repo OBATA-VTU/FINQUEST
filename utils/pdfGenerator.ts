@@ -1,3 +1,4 @@
+
 import { jsPDF } from "jspdf";
 
 export const generatePDF = (title: string, content: string, courseCode: string, year: number) => {
@@ -36,7 +37,8 @@ export const generatePDF = (title: string, content: string, courseCode: string, 
   doc.text(splitText, margin, 68);
 
   // Footer
-  const pageCount = doc.internal.getNumberOfPages();
+  // Use 'any' cast to bypass strict type checking on internal properties if types are mismatched
+  const pageCount = (doc as any).internal.getNumberOfPages();
   for(let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(10);
