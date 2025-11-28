@@ -56,7 +56,6 @@ export const AdminPage: React.FC = () => {
   const fetchUsers = async () => {
       setLoading(true);
       try {
-          // Note: In a real app with thousands of users, use pagination or server-side filtering
           const snapshot = await getDocs(collection(db, "users"));
           const fetchedUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setUsers(fetchedUsers);
@@ -133,7 +132,12 @@ export const AdminPage: React.FC = () => {
     setGeneratedContent('');
 
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const apiKey = import.meta.env.VITE_GOOGLE_GENAI_API_KEY;
+        if (!apiKey) {
+            throw new Error("Gemini API Key is missing in environment variables.");
+        }
+
+        const ai = new GoogleGenAI({ apiKey });
         const prompt = `Create a comprehensive university examination past question paper for the course code ${aiCourseCode} titled "${aiCourseTitle}". Level: ${aiLevel}. The year is ${aiYear}.
         
         The specific topic to focus on is: ${aiTopic}.
@@ -157,9 +161,9 @@ export const AdminPage: React.FC = () => {
             throw new Error("Empty response from AI");
         }
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("AI Generation Error:", error);
-        showNotification("Failed to generate content. Please try again later.", "error");
+        showNotification(error.message || "Failed to generate content. Please try again later.", "error");
     } finally {
         setIsGenerating(false);
     }

@@ -1,4 +1,3 @@
-
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
 
@@ -9,6 +8,7 @@ const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY;
  */
 export const uploadToImgBB = async (file: File): Promise<string> => {
   if (!IMGBB_API_KEY) {
+      console.error("ImgBB Key Missing");
       throw new Error("ImgBB API Key is missing");
   }
 
