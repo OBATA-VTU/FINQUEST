@@ -132,12 +132,7 @@ export const AdminPage: React.FC = () => {
     setGeneratedContent('');
 
     try {
-        const apiKey = import.meta.env.VITE_GOOGLE_GENAI_API_KEY;
-        if (!apiKey) {
-            throw new Error("Gemini API Key is missing in environment variables.");
-        }
-
-        const ai = new GoogleGenAI({ apiKey });
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const prompt = `Create a comprehensive university examination past question paper for the course code ${aiCourseCode} titled "${aiCourseTitle}". Level: ${aiLevel}. The year is ${aiYear}.
         
         The specific topic to focus on is: ${aiTopic}.

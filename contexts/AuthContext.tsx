@@ -30,13 +30,6 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const { showNotification } = useNotification();
 
   useEffect(() => {
-    // If Auth isn't initialized correctly due to env vars, stop loading and warn
-    if (!auth) {
-        console.error("Firebase Auth not initialized");
-        setLoading(false);
-        return;
-    }
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
@@ -57,9 +50,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     avatarUrl: userData.avatarUrl || firebaseUser.photoURL
                 });
             } else {
-                // Handle case where user exists in Auth but not in Firestore (e.g. incomplete signup or fresh google login)
-                // We don't automatically create doc here to avoid overwriting pending creation logic
-                // But we set a minimal user state so they aren't stuck in "loading" or "logged out"
+                // Handle case where user exists in Auth but not in Firestore
                 const newUser = {
                     id: firebaseUser.uid,
                     email: firebaseUser.email || '',
@@ -113,7 +104,6 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         
         if (!userDoc.exists()) {
            // New Google User - Create Doc
-           // Note: We don't have Matric Number here, so it's omitted
            await setDoc(doc(db, 'users', firebaseUser.uid), {
             name: firebaseUser.displayName || 'User',
             email: firebaseUser.email,
@@ -139,20 +129,19 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         return querySnapshot.empty;
       } catch (error) {
           console.warn("Username check failed (likely permission issue for unauth users):", error);
-          // If we can't check, we optimistically say it's available and let the actual write fail or handle collision later
+          // If we can't check, we optimistically say it's available
           return true; 
       }
   };
 
   const signup = async (data: { name: string; email: string; pass: string; level: Level; username: string; matricNumber: string }) => {
       try {
-          // Attempt check again, but proceed if it fails silently
+          // Attempt check again
           try {
              const isAvailable = await checkUsernameAvailability(data.username);
              if (!isAvailable) throw new Error("Username is already taken");
           } catch (e: any) {
               if (e.message === "Username is already taken") throw e;
-              // Ignore other errors (permissions) and proceed to creation
           }
 
           const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.pass);
