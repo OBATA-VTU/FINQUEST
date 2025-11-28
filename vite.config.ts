@@ -10,9 +10,5 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-  },
-  define: {
-    // This ensures process.env is defined in the browser
-    'process.env': process.env
   }
 });
