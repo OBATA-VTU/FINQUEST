@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
@@ -15,7 +16,7 @@ export const Layout: React.FC = () => {
                 onClose={() => setIsSidebarOpen(false)}
             />
             
-            <div className="flex-1 flex flex-col min-h-screen min-w-0">
+            <div className="flex-1 min-w-0 flex flex-col">
                 {/* Header for Mobile (Triggers Sidebar) */}
                 <Header onOpenSidebar={() => setIsSidebarOpen(true)} />
                 

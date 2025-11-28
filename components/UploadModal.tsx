@@ -1,3 +1,4 @@
+
 import React, { useState, FormEvent, useRef, useEffect, useContext } from 'react';
 import { PastQuestion, Level } from '../types';
 import { LEVELS } from '../constants';
@@ -23,6 +24,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
     const [file, setFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [statusText, setStatusText] = useState('');
     
     const modalRef = useRef<HTMLDivElement>(null);
 
@@ -44,11 +46,14 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
         try {
             setIsUploading(true);
             setUploadProgress(0);
+            setStatusText('Uploading File...');
             
             // 1. Upload File with Progress Callback
             const downloadUrl = await uploadFile(file, 'past_questions', (progress) => {
                 setUploadProgress(Math.round(progress));
             });
+
+            setStatusText('Saving Data...');
 
             // 2. Create Data Object
             const questionData = {
@@ -86,6 +91,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
         } finally {
             setIsUploading(false);
             setUploadProgress(0);
+            setStatusText('');
         }
     };
     
@@ -183,7 +189,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                         {isUploading && (
                              <div className="mt-4">
                                 <div className="flex justify-between text-xs font-medium text-slate-500 mb-1">
-                                    <span>Uploading...</span>
+                                    <span>{statusText}</span>
                                     <span>{uploadProgress}%</span>
                                 </div>
                                 <div className="w-full bg-slate-200 rounded-full h-2.5">

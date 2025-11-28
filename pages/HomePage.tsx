@@ -61,10 +61,10 @@ export const HomePage: React.FC = () => {
   }, []);
 
   return (
-    <div className="font-sans overflow-x-hidden bg-white text-slate-800">
+    <div className="font-sans bg-white text-slate-800">
       
       {/* 1. HERO SECTION */}
-      <div className="relative h-[90vh] min-h-[600px] flex items-center justify-center overflow-hidden bg-slate-900">
+      <div className="relative h-[90vh] min-h-[600px] flex items-center justify-center bg-slate-900 overflow-hidden">
         <div className="absolute inset-0 z-0">
              <img 
                 src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" 
