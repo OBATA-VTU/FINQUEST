@@ -23,6 +23,7 @@ export const PastQuestionsPage: React.FC = () => {
     const fetchQuestions = async () => {
         setLoading(true);
         try {
+            // Only fetch Approved questions
             const q = query(
                 collection(db, "questions"), 
                 where("status", "==", "approved")
@@ -49,10 +50,11 @@ export const PastQuestionsPage: React.FC = () => {
         }
     };
     fetchQuestions();
-  }, []);
+  }, [isModalOpen]); // Refetch when upload modal closes (optional)
 
   const handleUpload = useCallback((newQuestionData: any) => {
-      // Logic handled by modal via notification/refresh usually
+      // Just close modal, the list wont update until admin approves
+      setIsModalOpen(false);
   }, []);
 
   const groupedQuestions = useMemo(() => {
@@ -106,6 +108,16 @@ export const PastQuestionsPage: React.FC = () => {
       </div>
       
       <div className="container mx-auto px-4 py-8">
+        
+        {/* INFO BANNER */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8 flex items-start gap-3">
+             <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+             <div>
+                 <h4 className="text-sm font-bold text-blue-800">Can't see your upload?</h4>
+                 <p className="text-xs text-blue-600 mt-1">All uploaded questions must be <strong>approved by an administrator</strong> before they appear in this list. This ensures quality and accuracy.</p>
+             </div>
+        </div>
+
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
              <div className="relative w-full md:w-96">
                 <input
@@ -133,7 +145,7 @@ export const PastQuestionsPage: React.FC = () => {
         ) : Object.keys(groupedQuestions).length === 0 ? (
              <div className="text-center py-24 bg-white rounded-2xl border border-slate-200 border-dashed">
                 <h3 className="text-lg font-bold text-slate-900">No Questions Found</h3>
-                <p className="text-slate-500 max-w-xs mx-auto mt-2">There are no uploaded questions for {selectedLevel} Level matching your search.</p>
+                <p className="text-slate-500 max-w-xs mx-auto mt-2">There are no approved questions for {selectedLevel} Level matching your search.</p>
              </div>
         ) : (
              <div className="space-y-10">

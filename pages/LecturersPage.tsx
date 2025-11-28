@@ -33,7 +33,9 @@ export const LecturersPage: React.FC = () => {
        </div>
 
       <div className="container mx-auto px-4 py-16">
-        {loading ? <div className="text-center">Loading...</div> : (
+        {loading ? <div className="text-center py-10">Loading directory...</div> : lecturers.length === 0 ? (
+             <div className="text-center py-10 text-slate-500">No lecturer profiles found. Admins need to add them.</div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {lecturers.map(lecturer => (
             <div key={lecturer.id} className="group bg-white border border-slate-200 rounded-xl p-6 hover:shadow-xl hover:border-indigo-300 transition-all duration-300 flex flex-col sm:flex-row gap-6">
@@ -48,9 +50,9 @@ export const LecturersPage: React.FC = () => {
                  <div className="mt-4">
                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Research Interests</p>
                     <div className="flex flex-wrap gap-2">
-                        {lecturer.specialization.split(', ').map((tag, idx) => (
+                        {lecturer.specialization ? lecturer.specialization.split(', ').map((tag, idx) => (
                             <span key={idx} className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-md border border-slate-200">{tag}</span>
-                        ))}
+                        )) : <span className="text-xs text-slate-400">Not specified</span>}
                     </div>
                  </div>
               </div>

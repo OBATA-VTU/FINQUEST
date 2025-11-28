@@ -50,15 +50,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         {/* Sidebar Container */}
         <aside 
             className={`
-                fixed xl:sticky top-0 left-0 h-screen w-72 bg-indigo-900 z-50 
+                fixed xl:sticky top-0 left-0 h-[100dvh] w-72 bg-indigo-900 z-50 
                 transform transition-transform duration-300 ease-in-out shrink-0 flex flex-col shadow-2xl xl:shadow-none
                 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'}
             `}
         >
-          {/* Header */}
-          <div className="p-6 flex items-center justify-between border-b border-indigo-800/50">
+          {/* Header (Fixed) */}
+          <div className="p-6 flex items-center justify-between border-b border-indigo-800/50 shrink-0">
             <div className="flex items-center gap-3">
-                <div className="bg-white rounded-full p-1">
+                <div className="bg-white rounded-full p-1 shadow-lg">
                     <Logo className="h-8 w-8" />
                 </div>
                 <div>
@@ -72,7 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </button>
           </div>
 
-          {/* Navigation */}
+          {/* Navigation (Scrollable Area) */}
           <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-700">
             <div className="px-4 mb-2 text-xs font-bold text-indigo-400 uppercase tracking-widest">Main Menu</div>
             <NavItem 
@@ -118,8 +118,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             />
           </nav>
 
-          {/* User Section / Login */}
-          <div className="p-4 border-t border-indigo-800 bg-indigo-950/50">
+          {/* User Section / Login (Fixed Bottom) */}
+          <div className="p-4 border-t border-indigo-800 bg-indigo-950 shrink-0">
             {auth?.user ? (
                 <div>
                     <div 
@@ -135,7 +135,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-bold text-white truncate">{auth.user.name}</p>
-                            <p className="text-[10px] text-indigo-300 truncate uppercase font-semibold tracking-wide">
+                            <p className="text-xs text-indigo-300 truncate uppercase font-semibold tracking-wide">
                                 {auth.user.role === 'admin' ? 'Administrator' : `${auth.user.level}L Student`}
                             </p>
                         </div>
