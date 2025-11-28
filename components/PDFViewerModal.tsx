@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 
 interface PDFViewerModalProps {
@@ -21,7 +20,6 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
   }, [onClose]);
 
   useEffect(() => {
-      // Simple check to see if it's likely an image
       if (fileUrl) {
           const lower = fileUrl.toLowerCase();
           setIsImage(lower.includes('.jpg') || lower.includes('.jpeg') || lower.includes('.png') || lower.includes('imgbb'));
@@ -30,8 +28,6 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
 
   if (!isOpen) return null;
 
-  // Google Docs Viewer URL for remote PDFs
-  // Note: Only works if fileUrl is publicly accessible
   const googleDocsUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(fileUrl)}`;
   const isLocalBlob = fileUrl.startsWith('blob:');
 
@@ -65,33 +61,13 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
                 <img src={fileUrl} alt="Preview" className="max-w-full max-h-full object-contain" />
             ) : (
                 isLocalBlob ? (
-                    // Local Blob (AI Generated) - iframe works fine
-                    <iframe 
-                        src={fileUrl} 
-                        className="w-full h-full" 
-                        title="PDF Preview"
-                        frameBorder="0"
-                    />
+                    <iframe src={fileUrl} className="w-full h-full" title="PDF Preview" frameBorder="0" />
                 ) : (
-                    // Remote PDF - Use Google Docs Viewer for better mobile/CORS support
-                    // Fallback to object tag if Google fails
-                    <iframe 
-                        src={googleDocsUrl}
-                        className="w-full h-full" 
-                        title="Document Viewer"
-                        frameBorder="0"
-                    >
+                    <iframe src={googleDocsUrl} className="w-full h-full" title="Document Viewer" frameBorder="0">
                         <object data={fileUrl} type="application/pdf" className="w-full h-full">
                             <div className="flex flex-col items-center justify-center h-full text-slate-500 p-4 text-center">
                                 <p className="mb-4">Unable to display this file directly.</p>
-                                <a 
-                                    href={fileUrl} 
-                                    target="_blank" 
-                                    rel="noreferrer" 
-                                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                                >
-                                    Download to View
-                                </a>
+                                <a href={fileUrl} target="_blank" rel="noreferrer" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Download to View</a>
                             </div>
                         </object>
                     </iframe>
@@ -99,15 +75,8 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
             )}
         </div>
         
-        {/* Footer with download action */}
         <div className="p-4 border-t border-slate-200 bg-white flex justify-end">
-             <a 
-                href={fileUrl} 
-                download={title}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition"
-            >
+             <a href={fileUrl} download={title} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                 Download Original
             </a>

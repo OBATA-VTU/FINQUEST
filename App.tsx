@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
+import { UserDashboardPage } from './pages/UserDashboardPage';
 import { PastQuestionsPage } from './pages/PastQuestionsPage';
 import { ExecutivesPage } from './pages/ExecutivesPage';
 import { LecturersPage } from './pages/LecturersPage';
@@ -52,7 +53,7 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
                 </div>
                 <h2 className="text-3xl font-serif font-bold text-slate-800 mb-4">Restricted Access</h2>
                 <p className="text-slate-600 mb-8 max-w-md">You do not have the necessary administrative privileges to view this page.</p>
-                <a href="/" className="px-8 py-3 bg-indigo-900 text-white rounded-lg hover:bg-indigo-800 transition shadow-lg font-medium">Return Home</a>
+                <a href="/dashboard" className="px-8 py-3 bg-indigo-900 text-white rounded-lg hover:bg-indigo-800 transition shadow-lg font-medium">Return to Dashboard</a>
             </div>
         );
     }
@@ -71,15 +72,17 @@ const AppContent: React.FC = () => {
     <>
         <ScrollToTop />
         <Routes>
+            {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
             
             <Route element={<Layout />}>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/announcements" element={<AnnouncementsPage />} />
                 <Route path="/executives" element={<ExecutivesPage />} />
                 <Route path="/lecturers" element={<LecturersPage />} />
-                <Route path="/announcements" element={<AnnouncementsPage />} />
                 
                 {/* Protected Routes */}
+                <Route path="/dashboard" element={<RequireAuth><UserDashboardPage /></RequireAuth>} />
                 <Route path="/questions" element={<RequireAuth><PastQuestionsPage /></RequireAuth>} />
                 <Route path="/community" element={<RequireAuth><CommunityPage /></RequireAuth>} />
                 <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />

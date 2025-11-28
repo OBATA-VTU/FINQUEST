@@ -20,7 +20,7 @@ export const Layout: React.FC = () => {
                 <Header onOpenSidebar={() => setIsSidebarOpen(true)} />
                 
                 {/* Main Content with Fade Animation */}
-                <main className="flex-grow animate-fade-in">
+                <main className="flex-grow animate-fade-in relative z-0">
                     <Outlet />
                 </main>
                 

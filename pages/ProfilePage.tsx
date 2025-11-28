@@ -1,4 +1,3 @@
-
 import React, { useContext, useState } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { MOCK_QUESTIONS } from '../constants'; // Reusing for "saved" example
@@ -13,8 +12,7 @@ export const ProfilePage: React.FC = () => {
       return <div className="p-8 text-center text-red-500">Please log in to view your profile.</div>;
   }
 
-  // Mocking saved questions by taking the first 2 from the mock list
-  // In a real app, you'd fetch user's saved/bookmarked questions
+  // Mocking saved questions
   const savedQuestions = MOCK_QUESTIONS.slice(0, 2);
 
   return (
