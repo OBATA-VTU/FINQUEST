@@ -13,22 +13,7 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Debug: Check if keys are loaded
-const checkKeys = () => {
-  const missingKeys = Object.entries(firebaseConfig)
-    .filter(([key, value]) => !value)
-    .map(([key]) => key);
-
-  if (missingKeys.length > 0) {
-    console.error("Missing Firebase Configuration Keys:", missingKeys);
-  } else {
-    console.log("Firebase Configuration Loaded Successfully");
-  }
-};
-
-checkKeys();
-
-// Initialize Firebase with explicit types
+// Initialize Firebase with explicit types to satisfy TypeScript compiler
 const app: FirebaseApp = initializeApp(firebaseConfig);
 const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);

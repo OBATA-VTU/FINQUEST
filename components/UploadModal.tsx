@@ -1,4 +1,3 @@
-
 import React, { useState, FormEvent, useRef, useEffect, useContext } from 'react';
 import { PastQuestion, Level } from '../types';
 import { LEVELS } from '../constants';
@@ -10,7 +9,7 @@ import { AuthContext } from '../contexts/AuthContext';
 interface UploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUpload: (newQuestion: any) => void; // Relaxed type as we handle internal upload now
+  onUpload: (newQuestion: any) => void;
 }
 
 export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpload }) => {
@@ -61,7 +60,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
             // 3. Save to Firestore
             const docRef = await addDoc(collection(db, 'questions'), questionData);
 
-            // 4. Notify Parent (Optimistic update or just trigger refresh)
+            // 4. Notify Parent
             onUpload({ ...questionData, id: docRef.id });
 
             alert('Upload successful! It will appear after admin approval.');

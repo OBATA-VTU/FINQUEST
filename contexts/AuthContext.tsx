@@ -64,7 +64,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             }
         } catch (error) {
             console.error("Error fetching user profile:", error);
-            // Even if firestore fails, we have auth. Allow minimal access.
+            // Fallback: Set user with basic auth info if Firestore fails
              setUser({
                     id: firebaseUser.uid,
                     email: firebaseUser.email || '',
@@ -99,22 +99,28 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         const firebaseUser = result.user;
         
         // Check if doc exists
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        
-        if (!userDoc.exists()) {
-           // New Google User - Create Doc
-           await setDoc(doc(db, 'users', firebaseUser.uid), {
-            name: firebaseUser.displayName || 'User',
-            email: firebaseUser.email,
-            role: 'student', // Default role
-            level: 100,
-            username: firebaseUser.email?.split('@')[0].substring(0, 30) || `user${Math.floor(Math.random() * 1000)}`,
-            createdAt: new Date().toISOString()
-          });
-          showNotification("Account created with Google!", "success");
-        } else {
-          showNotification("Welcome back!", "success");
+        try {
+            const userDocRef = doc(db, 'users', firebaseUser.uid);
+            const userDoc = await getDoc(userDocRef);
+            
+            if (!userDoc.exists()) {
+               // New Google User - Create Doc
+               await setDoc(doc(db, 'users', firebaseUser.uid), {
+                name: firebaseUser.displayName || 'User',
+                email: firebaseUser.email,
+                role: 'student', // Default role
+                level: 100,
+                username: firebaseUser.email?.split('@')[0].substring(0, 30) || `user${Math.floor(Math.random() * 1000)}`,
+                createdAt: new Date().toISOString()
+              });
+              showNotification("Account created with Google!", "success");
+            } else {
+              showNotification("Welcome back!", "success");
+            }
+        } catch (dbError) {
+            console.error("Firestore error during Google Sign In:", dbError);
+            // Don't block login if DB fails, allow basic auth access
+            showNotification("Logged in (Profile sync issue)", "info");
         }
     } catch (error: any) {
         throw error;
@@ -129,14 +135,14 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         return querySnapshot.empty;
       } catch (error) {
           console.warn("Username check failed (likely permission issue for unauth users):", error);
-          // If we can't check, we optimistically say it's available
+          // If we can't check due to permissions, allow user to try submitting
           return true; 
       }
   };
 
   const signup = async (data: { name: string; email: string; pass: string; level: Level; username: string; matricNumber: string }) => {
       try {
-          // Attempt check again
+          // Attempt check again, but ignore permission errors
           try {
              const isAvailable = await checkUsernameAvailability(data.username);
              if (!isAvailable) throw new Error("Username is already taken");
@@ -166,7 +172,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
               console.log("User document created successfully");
           } catch (dbError) {
               console.error("Database creation failed:", dbError);
-              throw new Error("Account created but failed to save profile. Please contact admin.");
+              // Do NOT throw here. The user is Auth'd. Let them in, deal with profile later.
+              showNotification("Account created, but profile save failed. Contact admin.", "info");
           }
 
           // Update local state immediately for better UX
