@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
@@ -7,7 +8,12 @@ import { ExecutivesPage } from './pages/ExecutivesPage';
 import { LecturersPage } from './pages/LecturersPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
 import { LoginPage } from './pages/LoginPage';
-import { AdminPage } from './pages/AdminPage';
+import { AdminLayout } from './components/AdminLayout'; // New Layout
+import { AdminPage } from './pages/AdminPage'; // Dashboard
+import { AdminApprovalsPage } from './pages/AdminApprovalsPage';
+import { AdminContentPage } from './pages/AdminContentPage';
+import { AdminUsersPage } from './pages/AdminUsersPage';
+import { AdminSettingsPage } from './pages/AdminSettingsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { CommunityPage } from './pages/CommunityPage';
 import { GalleryPage } from './pages/GalleryPage';
@@ -42,7 +48,6 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
     const auth = useContext(AuthContext);
     
     if (!auth?.user) {
-        // If still strictly loading auth state, show nothing or spinner (handled by AppContent usually)
         if (auth?.loading) return null; 
         return <Navigate to="/login" replace />;
     }
@@ -68,7 +73,6 @@ const AppContent: React.FC = () => {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    // Force splash screen to show for at least 2.5 seconds to prevent "blank out"
     const timer = setTimeout(() => {
       setShowSplash(false);
     }, 2500);
@@ -86,6 +90,7 @@ const AppContent: React.FC = () => {
             {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
             
+            {/* Main App Routes */}
             <Route element={<Layout />}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/announcements" element={<AnnouncementsPage />} />
@@ -100,11 +105,20 @@ const AppContent: React.FC = () => {
                 <Route path="/questions" element={<RequireAuth><PastQuestionsPage /></RequireAuth>} />
                 <Route path="/community" element={<RequireAuth><CommunityPage /></RequireAuth>} />
                 <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
-                <Route path="/admin" element={<RequireAuth adminOnly><AdminPage /></RequireAuth>} />
-                
-                {/* Fallback */}
-                <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
+
+            {/* Admin Routes - Nested Layout */}
+            <Route path="/admin" element={<RequireAuth adminOnly><AdminLayout /></RequireAuth>}>
+                <Route index element={<Navigate to="/admin/dashboard" replace />} />
+                <Route path="dashboard" element={<AdminPage />} />
+                <Route path="approvals" element={<AdminApprovalsPage />} />
+                <Route path="content" element={<AdminContentPage />} />
+                <Route path="users" element={<AdminUsersPage />} />
+                <Route path="settings" element={<AdminSettingsPage />} />
+            </Route>
+            
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     </>
   );

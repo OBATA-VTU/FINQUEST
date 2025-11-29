@@ -155,21 +155,28 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       try {
         const q = query(collection(db, 'users'), where('username', '==', cleanName));
         const querySnapshot = await getDocs(q);
+        // If snapshot is empty, username is available
         return querySnapshot.empty;
-      } catch (error) {
-          console.warn("Username check failed (likely permission issue for unauth users):", error);
-          return true; // Allow optimistic if check fails due to rules
+      } catch (error: any) {
+          console.error("Username check failed:", error);
+          if (error.code === 'permission-denied') {
+              console.warn("Permission denied for username check. Ensure Firestore rules allow public read on 'users' collection.");
+              // If we can't check, we shouldn't optimistically allow it, but for UX flow we might have to.
+              // However, since we provided new rules, this should work.
+              return true;
+          }
+          return false; // Assume unavailable on other errors to be safe
       }
   };
 
   const signup = async (data: { name: string; email: string; pass: string; level: Level; username: string; matricNumber: string; avatarUrl?: string }) => {
       try {
+          const cleanUsername = data.username.trim().toLowerCase();
+          
           // Double check username availability
-          try {
-             const isAvailable = await checkUsernameAvailability(data.username);
-             if (!isAvailable) throw new Error("Username is already taken");
-          } catch (e: any) {
-              if (e.message === "Username is already taken") throw e;
+          const isAvailable = await checkUsernameAvailability(cleanUsername);
+          if (!isAvailable) {
+              throw new Error("Username is already taken");
           }
 
           const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.pass);
@@ -188,7 +195,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             name: data.name,
             role: 'student', 
             level: data.level,
-            username: data.username.toLowerCase(),
+            username: cleanUsername,
             matricNumber: data.matricNumber || '',
             avatarUrl: data.avatarUrl
           };

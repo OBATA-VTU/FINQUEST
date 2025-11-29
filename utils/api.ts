@@ -1,4 +1,3 @@
-
 import { Dropbox } from 'dropbox';
 
 // Environment Variables
@@ -7,45 +6,43 @@ const DROPBOX_ACCESS_TOKEN = import.meta.env.VITE_DROPBOX_ACCESS_TOKEN;
 
 /**
  * Helper to transform a Dropbox URL into a direct download URL.
- * Uses dl.dropboxusercontent.com to bypass the Dropbox app/preview page.
+ * Using the standard dl=1 parameter which is more reliable and avoids 403 errors.
  */
 export const getDropboxDownloadUrl = (url: string | undefined): string => {
     if (!url) return '';
-    if (url.includes('dropbox.com')) {
-        // Replace www.dropbox.com with dl.dropboxusercontent.com
-        // This domain serves the raw file directly
-        let newUrl = url.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
-        
-        // Remove existing query params (like ?dl=0 or ?raw=1) as the domain handles it
-        newUrl = newUrl.split('?')[0];
-        
-        return newUrl;
+    // If it's already a raw link (preview), convert to download link
+    if (url.includes('?raw=1')) {
+        return url.replace('?raw=1', '?dl=1');
+    }
+    // If it has no query params, append dl=1
+    if (url.includes('dropbox.com') && !url.includes('?')) {
+        return `${url}?dl=1`;
+    }
+    // If it's a dl=0 link, swap to dl=1
+    if (url.includes('?dl=0')) {
+        return url.replace('?dl=0', '?dl=1');
     }
     return url;
 };
 
 /**
- * Uploads a file (PDF, DOC, etc.) to Dropbox.
- * Used for Past Questions and Materials.
+ * Uploads a file to Dropbox.
+ * Returns object with URL and Path (for deletion).
  */
-export const uploadFile = async (file: File, folder: string = 'materials', onProgress?: (progress: number) => void): Promise<string> => {
+export const uploadFile = async (file: File, folder: string = 'materials', onProgress?: (progress: number) => void): Promise<{ url: string, path: string }> => {
     return new Promise(async (resolve, reject) => {
         try {
             if (!DROPBOX_ACCESS_TOKEN) {
-                throw new Error("Dropbox Access Token is missing in environment variables.");
+                throw new Error("Dropbox Access Token is missing.");
             }
 
             const dbx = new Dropbox({ accessToken: DROPBOX_ACCESS_TOKEN });
 
-            // 1. Simulate Start Progress
             if (onProgress) onProgress(10);
 
-            // 2. Prepare Path
-            // Clean filename to avoid special char issues
             const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
             const path = `/${folder}/${Date.now()}_${safeName}`;
 
-            // 3. Upload File
             const response = await dbx.filesUpload({
                 path: path,
                 contents: file,
@@ -56,20 +53,20 @@ export const uploadFile = async (file: File, folder: string = 'materials', onPro
 
             if (onProgress) onProgress(60);
 
-            // 4. Create Shared Link
             const linkResponse = await dbx.sharingCreateSharedLinkWithSettings({
                 path: response.result.path_lower!
             });
 
             if (onProgress) onProgress(100);
 
-            // 5. Convert to Raw Link for Previewing
-            // We store ?raw=1 in the DB because it allows embedding in <iframe>.
-            // We will convert this to the download URL dynamically when the user clicks "Download".
-            let directUrl = linkResponse.result.url;
-            directUrl = directUrl.replace('?dl=0', '?raw=1');
+            // Return the ?raw=1 URL for embedding/previewing in the app
+            let previewUrl = linkResponse.result.url;
+            previewUrl = previewUrl.replace('?dl=0', '?raw=1');
 
-            resolve(directUrl);
+            resolve({ 
+                url: previewUrl, 
+                path: response.result.path_lower! 
+            });
 
         } catch (error: any) {
             console.error("Dropbox Upload Error:", error);
@@ -80,8 +77,24 @@ export const uploadFile = async (file: File, folder: string = 'materials', onPro
 };
 
 /**
+ * Deletes a file from Dropbox using its path.
+ */
+export const deleteFile = async (path: string): Promise<void> => {
+    if (!path) return; // Cannot delete without path
+    try {
+        if (!DROPBOX_ACCESS_TOKEN) return;
+        const dbx = new Dropbox({ accessToken: DROPBOX_ACCESS_TOKEN });
+        
+        await dbx.filesDeleteV2({ path });
+        console.log("File deleted from Dropbox:", path);
+    } catch (error) {
+        console.error("Failed to delete from Dropbox:", error);
+        // We don't throw here to avoid blocking the DB delete if storage delete fails
+    }
+};
+
+/**
  * Uploads an image to ImgBB.
- * Used for Profile Pictures and Display Images only.
  */
 export const uploadToImgBB = async (file: File): Promise<string> => {
     try {

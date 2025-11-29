@@ -11,9 +11,13 @@ export interface PastQuestion {
   courseCode: string;
   courseTitle: string;
   year: number;
-  fileUrl?: string; // Optional now, as we might have textContent instead
-  textContent?: string; // For AI generated questions stored in DB
-  file?: File; // Optional file object for new uploads
+  fileUrl?: string; 
+  storagePath?: string; // Path in Dropbox/Storage for deletion
+  textContent?: string;
+  uploadedBy?: string;
+  uploadedByEmail?: string;
+  status?: 'pending' | 'approved';
+  createdAt?: string;
 }
 
 export interface PendingQuestion extends PastQuestion {
@@ -41,9 +45,10 @@ export interface Lecturer {
 export interface Announcement {
   id:string;
   title: string;
-  date: string; // Using string for simplicity, can be Date object
+  date: string;
   content: string;
   author: string;
+  imageUrl?: string;
 }
 
 export interface User {
@@ -55,6 +60,7 @@ export interface User {
   role: Role;
   level?: Level;
   avatarUrl?: string;
+  createdAt?: string;
 }
 
 export interface CommunityGroup {

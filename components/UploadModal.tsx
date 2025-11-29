@@ -45,20 +45,29 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
         }
 
         setIsUploading(true);
-        setUploadStatus('Connecting to Dropbox...');
-        setUploadProgress(10); 
+        setUploadStatus('Starting upload...');
+        setUploadProgress(5);
+
+        const timeoutId = setTimeout(() => {
+            if (isUploading) {
+                 setIsUploading(false);
+                 setUploadStatus('');
+                 showNotification("Upload timed out. Check connection.", "error");
+            }
+        }, 60000);
 
         try {
-            // 1. Upload File (Dropbox)
-            const downloadUrl = await uploadFile(file, 'past_questions', (progress) => {
+            // 1. Upload File & Get Path
+            const { url, path } = await uploadFile(file, 'past_questions', (progress) => {
                 setUploadProgress(progress);
                 if (progress < 100) {
-                    setUploadStatus('Uploading file...');
+                    setUploadStatus('Uploading to Cloud...');
                 } else {
-                    setUploadStatus('Generating link...');
+                    setUploadStatus('Finalizing...');
                 }
             });
 
+            clearTimeout(timeoutId);
             setUploadStatus('Saving record...');
 
             // 2. Create Data Object
@@ -67,7 +76,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                 courseTitle,
                 level,
                 year,
-                fileUrl: downloadUrl,
+                fileUrl: url,
+                storagePath: path, // Save path for deletion
                 uploadedBy: auth.user.id,
                 uploadedByEmail: auth.user.email,
                 status: 'pending',
@@ -77,7 +87,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
             // 3. Save to Firestore
             const docRef = await addDoc(collection(db, 'questions'), questionData);
 
-            // 4. Notify Parent & Reset
             onUpload({ ...questionData, id: docRef.id });
             showNotification('Upload successful! Awaiting admin approval.', 'success');
 
@@ -90,6 +99,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
 
         } catch (error: any) {
             console.error("Upload error:", error);
+            clearTimeout(timeoutId);
             showNotification(`Failed: ${error.message}`, "error");
         } finally {
             setIsUploading(false);
@@ -99,18 +109,26 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
     };
     
     const validateAndSetFile = (selectedFile: File) => {
-        // Allowed Types
-        const allowedTypes = [
+        // MIME types check
+        const allowedMimes = [
             'application/pdf',
             'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'image/jpeg',
             'image/png',
-            'image/jpg'
+            'image/jpg',
+            'image/webp'
         ];
 
-        if (!allowedTypes.includes(selectedFile.type)) {
-            showNotification("Invalid file type. Please use PDF, DOC, or Images.", "error");
+        // Extension check (fallback if MIME is empty/generic)
+        const allowedExtensions = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'webp'];
+        const fileExt = selectedFile.name.split('.').pop()?.toLowerCase() || '';
+
+        const isValidMime = allowedMimes.includes(selectedFile.type);
+        const isValidExt = allowedExtensions.includes(fileExt);
+
+        if (!isValidMime && !isValidExt) {
+            showNotification("Invalid file type. Only PDF, DOC/DOCX, and Images are allowed.", "error");
             return;
         }
 
@@ -157,7 +175,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                 <div className="bg-indigo-900 px-8 py-6 flex justify-between items-center text-white">
                     <div>
                         <h2 className="text-xl font-bold font-serif">Contribute Material</h2>
-                        <p className="text-indigo-200 text-xs">Help your peers by archiving past questions.</p>
+                        <p className="text-indigo-200 text-xs">Upload past questions or notes.</p>
                     </div>
                     <button onClick={onClose} className="text-white/70 hover:text-white transition-colors">
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -166,7 +184,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
 
                 <form onSubmit={handleSubmit} className="p-8 space-y-5">
                     
-                    {/* File Drop Zone */}
                     <div 
                         className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ${dragActive ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 hover:border-indigo-400 hover:bg-slate-50'}`}
                         onDragEnter={handleDrag}
@@ -217,7 +234,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                         <input type="number" value={year} onChange={e => setYear(Number(e.target.value))} required className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
                     </div>
 
-                    {/* Progress Bar */}
                     {isUploading && (
                         <div className="space-y-1">
                              <div className="flex justify-between text-xs font-bold text-indigo-600">

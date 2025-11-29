@@ -8,16 +8,19 @@ import { PastQuestion, Level } from '../types';
 import { LEVELS } from '../constants';
 import { AuthContext } from '../contexts/AuthContext';
 import { db } from '../firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 
 export const PastQuestionsPage: React.FC = () => {
   const [questions, setQuestions] = useState<PastQuestion[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedLevel, setSelectedLevel] = useState<Level | null>(null); // Start null
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
+  // Filters
+  const [selectedLevel, setSelectedLevel] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+
   const auth = useContext(AuthContext);
 
   useEffect(() => {
@@ -36,6 +39,7 @@ export const PastQuestionsPage: React.FC = () => {
                     courseTitle: data.courseTitle,
                     year: data.year,
                     fileUrl: data.fileUrl,
+                    storagePath: data.storagePath,
                     textContent: data.textContent 
                 } as PastQuestion);
             });
@@ -50,123 +54,137 @@ export const PastQuestionsPage: React.FC = () => {
   }, [isModalOpen]); 
 
   const handleUpload = useCallback((newQuestionData: any) => {
-      // Just close modal, the useEffect will re-fetch or we can optimistically ignore 
-      // since it goes to pending anyway.
       setIsModalOpen(false);
   }, []);
 
-  const groupedQuestions = useMemo(() => {
-    if (!selectedLevel) return {};
+  // "Intelligence" - Get Unique Years for Filter
+  const availableYears = useMemo(() => {
+      const years = new Set(questions.map(q => q.year));
+      return Array.from(years).sort((a: number, b: number) => b - a);
+  }, [questions]);
 
-    let filtered = questions.filter(q => q.level === selectedLevel);
+  // "Intelligence" - Recommended for User
+  const recommendedQuestions = useMemo(() => {
+      if (!auth?.user || selectedLevel !== 'all') return [];
+      return questions
+        .filter(q => q.level === auth.user!.level)
+        .sort((a, b) => b.year - a.year)
+        .slice(0, 3);
+  }, [questions, auth?.user, selectedLevel]);
+
+  // Main Filter Logic
+  const filteredQuestions = useMemo(() => {
+    let filtered = questions;
+
+    if (selectedLevel !== 'all') {
+        filtered = filtered.filter(q => q.level === Number(selectedLevel));
+    }
+
+    if (selectedYear !== 'all') {
+        filtered = filtered.filter(q => q.year === Number(selectedYear));
+    }
     
     if (searchTerm) {
+        const lowerTerm = searchTerm.toLowerCase();
         filtered = filtered.filter(q => 
-            q.courseCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            q.courseTitle.toLowerCase().includes(searchTerm.toLowerCase())
+            q.courseCode.toLowerCase().includes(lowerTerm) ||
+            q.courseTitle.toLowerCase().includes(lowerTerm)
         );
     }
 
-    const groups: { [key: string]: PastQuestion[] } = {};
-    filtered.forEach(q => {
-        const code = q.courseCode.toUpperCase();
-        if (!groups[code]) groups[code] = [];
-        groups[code].push(q);
+    return filtered.sort((a, b) => {
+        if (sortOrder === 'newest') return b.year - a.year;
+        return a.year - b.year;
     });
 
-    return Object.keys(groups).sort().reduce((obj, key) => {
-        obj[key] = groups[key].sort((a, b) => b.year - a.year); 
-        return obj;
-    }, {} as { [key: string]: PastQuestion[] });
-
-  }, [questions, selectedLevel, searchTerm]);
+  }, [questions, selectedLevel, searchTerm, selectedYear, sortOrder]);
 
   return (
     <div className="bg-slate-50 min-h-screen pb-20">
       
-      {/* Top Bar */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+      {/* HEADER & FILTERS */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm py-4">
         <div className="container mx-auto px-4">
-             <div className="flex overflow-x-auto py-3 gap-2 scrollbar-hide">
-                 <button onClick={() => setSelectedLevel(null)} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${!selectedLevel ? 'bg-indigo-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Overview</button>
-                 {LEVELS.map(lvl => (
-                     <button key={lvl} onClick={() => setSelectedLevel(lvl)} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${selectedLevel === lvl ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                         {lvl} Level
-                     </button>
-                 ))}
+             <div className="flex flex-col lg:flex-row gap-4 justify-between items-center">
+                 <h1 className="text-2xl font-serif font-bold text-slate-900">Archives</h1>
+                 
+                 {/* SMART FILTER BAR */}
+                 <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+                     {/* Level Dropdown */}
+                     <div className="relative">
+                         <select 
+                            value={selectedLevel} 
+                            onChange={(e) => setSelectedLevel(e.target.value)}
+                            className="w-full sm:w-32 pl-4 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none"
+                         >
+                             <option value="all">All Levels</option>
+                             {LEVELS.map(l => <option key={l} value={l}>{l} Level</option>)}
+                         </select>
+                         <svg className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                     </div>
+
+                     {/* Year Filter */}
+                     <div className="relative">
+                         <select 
+                            value={selectedYear} 
+                            onChange={(e) => setSelectedYear(e.target.value)}
+                            className="w-full sm:w-32 pl-4 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none"
+                         >
+                             <option value="all">All Years</option>
+                             {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                         </select>
+                         <svg className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                     </div>
+
+                     {/* Search */}
+                     <div className="relative flex-1 sm:w-64">
+                        <input
+                            type="text"
+                            placeholder="Search Course Code..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
+                        />
+                        <svg className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                     </div>
+                 </div>
              </div>
         </div>
       </div>
       
       <div className="container mx-auto px-4 py-8">
         
-        {/* INFO BANNER */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8 flex items-start gap-3 animate-fade-in">
-             <div className="text-blue-500 mt-0.5"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
-             <div>
-                 <h4 className="text-sm font-bold text-blue-800">Contributions are Moderated</h4>
-                 <p className="text-xs text-blue-600 mt-1">Uploaded questions will appear after approval by an administrator.</p>
-             </div>
+        {/* RECOMMENDED SECTION (INTELLIGENCE) */}
+        {recommendedQuestions.length > 0 && !searchTerm && selectedLevel === 'all' && (
+            <div className="mb-10 animate-fade-in">
+                <div className="flex items-center gap-2 mb-4">
+                    <span className="bg-amber-100 text-amber-700 p-1 rounded"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></span>
+                    <h2 className="text-lg font-bold text-slate-800">Recommended for You ({auth?.user?.level}L)</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {recommendedQuestions.map(q => <QuestionCard key={q.id} question={q} />)}
+                </div>
+            </div>
+        )}
+
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-8 flex items-center gap-3 text-xs text-blue-800 font-medium">
+             <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+             <span>Showing {filteredQuestions.length} materials. Uploads require approval.</span>
         </div>
 
-        {!selectedLevel ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
-                <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-6">
-                    <svg className="w-10 h-10 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                </div>
-                <h2 className="text-xl font-bold text-slate-800 mb-2">Select a Level to Browse</h2>
-                <p className="text-slate-500 max-w-sm">Choose your academic level from the tabs above to access the archive.</p>
+        {loading ? (
+            <div className="flex justify-center py-32"><div className="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600"></div></div>
+        ) : filteredQuestions.length === 0 ? (
+            <div className="text-center py-24 bg-white rounded-2xl border border-slate-200 border-dashed animate-fade-in">
+                <h3 className="text-lg font-bold text-slate-900">No Materials Found</h3>
+                <p className="text-slate-500 mt-2">Try adjusting your level or search filters.</p>
             </div>
         ) : (
-            <>
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8 animate-fade-in">
-                    <div className="relative w-full md:w-96">
-                        <input
-                            type="text"
-                            placeholder={`Search ${selectedLevel}L courses...`}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
-                        />
-                        <svg className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                    </div>
-
-                    <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
-                        <button onClick={() => setViewMode('grid')} className={`p-2 rounded ${viewMode === 'grid' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-400'}`}>
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                        </button>
-                        <button onClick={() => setViewMode('list')} className={`p-2 rounded ${viewMode === 'list' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-400'}`}>
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-                        </button>
-                    </div>
-                </div>
-
-                {loading ? (
-                    <div className="flex justify-center py-32"><div className="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600"></div></div>
-                ) : Object.keys(groupedQuestions).length === 0 ? (
-                    <div className="text-center py-24 bg-white rounded-2xl border border-slate-200 border-dashed animate-fade-in">
-                        <h3 className="text-lg font-bold text-slate-900">No Questions Found</h3>
-                        <p className="text-slate-500 max-w-xs mx-auto mt-2">There are no approved questions for {selectedLevel} Level matching your search.</p>
-                    </div>
-                ) : (
-                    <div className="space-y-10">
-                        {Object.entries(groupedQuestions).map(([code, courseQuestions]: [string, PastQuestion[]]) => (
-                            <div key={code} className="animate-fade-in">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="h-6 w-1 bg-indigo-500 rounded-full"></div>
-                                    <h2 className="text-xl font-bold text-slate-800">{code}</h2>
-                                    <span className="text-xs font-semibold bg-slate-100 text-slate-500 px-2 py-1 rounded border border-slate-200">
-                                        {courseQuestions[0].courseTitle}
-                                    </span>
-                                </div>
-                                <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" : "flex flex-col gap-3"}>
-                                    {courseQuestions.map(q => <QuestionCard key={q.id} question={q} />)}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fade-in">
+                {filteredQuestions.map(q => (
+                    <QuestionCard key={q.id} question={q} />
+                ))}
+            </div>
         )}
         
         <div className="mt-12"><AdBanner /></div>
