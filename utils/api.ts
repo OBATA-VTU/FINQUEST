@@ -1,56 +1,67 @@
 
-import { createClient } from '@supabase/supabase-js';
+import { Dropbox } from 'dropbox';
 
-// Environment Variables / Hardcoded Fallbacks
+// Environment Variables
 const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || "a4aa97ad337019899bb59b4e94b149e0";
-
-// YOUR SPECIFIC SUPABASE CREDENTIALS
-const SUPABASE_URL = "https://diwkctuzgeiyxbnqvsol.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpd2tjdHV6Z2VpeXhibnF2c29sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTI4MDAsImV4cCI6MjA3OTk4ODgwMH0.IeiP2lnygZbF8IEI_K5dGp2FtHyfHLUtOQqxzkd9OyM";
-
-// Initialize Supabase Client
-export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const DROPBOX_ACCESS_TOKEN = import.meta.env.VITE_DROPBOX_ACCESS_TOKEN;
 
 /**
- * Uploads a file (PDF, DOC, etc.) to Supabase Storage.
- * Uses the 'materials' bucket.
+ * Uploads a file (PDF, DOC, etc.) to Dropbox.
+ * Used for Past Questions and Materials.
  */
-export const uploadFile = async (file: File, folder: string = 'general', onProgress?: (progress: number) => void): Promise<string> => {
+export const uploadFile = async (file: File, folder: string = 'materials', onProgress?: (progress: number) => void): Promise<string> => {
     return new Promise(async (resolve, reject) => {
         try {
-            // 1. Simulate Start Progress (Supabase upload is atomic in JS SDK)
-            if (onProgress) onProgress(10);
-
-            // 2. Sanitize Filename
-            const fileExt = file.name.split('.').pop();
-            const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-            const fileName = `${folder}/${Date.now()}_${safeName}`;
-
-            // 3. Upload to Supabase 'materials' bucket
-            const { data, error } = await supabase.storage
-                .from('materials')
-                .upload(fileName, file, {
-                    cacheControl: '3600',
-                    upsert: false
-                });
-
-            if (error) {
-                console.error("Supabase Upload Error:", error);
-                throw new Error(error.message);
+            if (!DROPBOX_ACCESS_TOKEN) {
+                throw new Error("Dropbox Access Token is missing in environment variables.");
             }
 
-            // 4. Simulate Complete Progress
+            const dbx = new Dropbox({ accessToken: DROPBOX_ACCESS_TOKEN });
+
+            // 1. Simulate Start Progress
+            if (onProgress) onProgress(10);
+
+            // 2. Prepare Path
+            // Clean filename to avoid special char issues
+            const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+            const path = `/${folder}/${Date.now()}_${safeName}`;
+
+            // 3. Upload File
+            // Note: For files > 150MB, uploadSessionStart is needed, but for materials < 20MB, filesUpload is fine.
+            const response = await dbx.filesUpload({
+                path: path,
+                contents: file,
+                mode: { '.tag': 'add' }, // renamed to avoid overwrite
+                autorename: true,
+                mute: false
+            });
+
+            if (onProgress) onProgress(60);
+
+            // 4. Create Shared Link
+            // We need a shared link to allow users to view/download without auth
+            const linkResponse = await dbx.sharingCreateSharedLinkWithSettings({
+                path: response.result.path_lower!
+            });
+
             if (onProgress) onProgress(100);
 
-            // 5. Get Public URL
-            const { data: publicUrlData } = supabase.storage
-                .from('materials')
-                .getPublicUrl(fileName);
+            // 5. Convert to Direct Link
+            // Dropbox links default to 'www.dropbox.com...dl=0' (preview page).
+            // We want 'dl.dropboxusercontent.com' or 'raw=1' for direct embedding/download.
+            let directUrl = linkResponse.result.url;
+            
+            // Replace 'www.dropbox.com' with 'dl.dropboxusercontent.com' is one way,
+            // or simply changing query param ?dl=0 to ?raw=1
+            directUrl = directUrl.replace('?dl=0', '?raw=1');
 
-            resolve(publicUrlData.publicUrl);
+            resolve(directUrl);
 
         } catch (error: any) {
-            reject(new Error(`Upload failed: ${error.message}`));
+            console.error("Dropbox Upload Error:", error);
+            // Handle Dropbox specific error objects
+            const msg = error.error?.error_summary || error.message || "Unknown upload error";
+            reject(new Error(`Upload failed: ${msg}`));
         }
     });
 };

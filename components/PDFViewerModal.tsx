@@ -24,17 +24,16 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
       if (fileUrl) {
           const lower = fileUrl.toLowerCase();
           
-          // Detection Logic for Supabase, Firebase, and Local Blobs
-          // Supabase URLs are typically .../storage/v1/object/public/...
+          // Detection Logic
           
           const isImage = /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(lower) || 
                           lower.includes('imgbb') || 
-                          lower.includes('alt=media') ||
-                          (lower.includes('supabase') && (lower.includes('.jpg') || lower.includes('.png') || lower.includes('.jpeg')));
+                          lower.includes('alt=media');
 
+          // Dropbox PDFs often end in ?raw=1, or might be dl.dropboxusercontent
           const isPdf = /\.(pdf)(\?.*)?$/i.test(lower) || 
                         fileUrl.startsWith('blob:') ||
-                        (lower.includes('supabase') && lower.includes('.pdf'));
+                        (lower.includes('dropbox') && !isImage); // Assume dropbox links are PDFs/Docs if not explicitly image ext
 
           if (isImage) {
               setFileType('image');
@@ -49,6 +48,8 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
   if (!isOpen) return null;
 
   const isLocalBlob = fileUrl.startsWith('blob:');
+  
+  // Google Docs Viewer is great for Dropbox links
   const googleDocsUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(fileUrl)}`;
 
   return (
@@ -85,11 +86,8 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
                      {isLocalBlob ? (
                          <iframe src={fileUrl} className="w-full h-full" title="PDF Preview" />
                      ) : (
-                        // Use native object first (better for mobile in some cases)
-                        <object data={fileUrl} type="application/pdf" className="w-full h-full">
-                            {/* Fallback to Google Docs Viewer */}
-                            <iframe src={googleDocsUrl} className="w-full h-full" title="Google Docs Viewer" />
-                        </object>
+                        // Google Docs Viewer is extremely reliable for Dropbox links
+                        <iframe src={googleDocsUrl} className="w-full h-full" title="Google Docs Viewer" />
                      )}
                 </div>
             ) : (

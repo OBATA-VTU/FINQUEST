@@ -45,17 +45,17 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
         }
 
         setIsUploading(true);
-        setUploadStatus('Starting upload to Supabase...');
-        setUploadProgress(5); 
+        setUploadStatus('Connecting to Dropbox...');
+        setUploadProgress(10); 
 
         try {
-            // 1. Upload File (Supabase)
+            // 1. Upload File (Dropbox)
             const downloadUrl = await uploadFile(file, 'past_questions', (progress) => {
                 setUploadProgress(progress);
                 if (progress < 100) {
                     setUploadStatus('Uploading file...');
                 } else {
-                    setUploadStatus('Processing...');
+                    setUploadStatus('Generating link...');
                 }
             });
 
