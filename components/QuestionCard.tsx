@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { PastQuestion } from '../types';
 import { downloadPDF, generatePDF } from '../utils/pdfGenerator';
 import { PDFViewerModal } from './PDFViewerModal';
+import { getDropboxDownloadUrl } from '../utils/api';
 
 interface QuestionCardProps {
   question: PastQuestion;
@@ -22,7 +23,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
           const pdfBlob = doc.output('blob');
           url = URL.createObjectURL(pdfBlob);
       } else if (question.fileUrl) {
-          // Use stored URL
+          // Use stored URL (which is ?raw=1 for previewing)
           url = question.fileUrl;
       }
       
@@ -37,6 +38,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
         e.preventDefault();
         downloadPDF(question.courseTitle, question.textContent, question.courseCode, question.year);
     }
+    // For regular files, we let the anchor tag handle it via href, but we intercept here just in case logic is needed
   };
 
   const handleClosePreview = () => {
@@ -47,6 +49,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
       }
       setPreviewUrl('');
   }
+
+  // Calculate the forced download URL (swaps ?raw=1 to ?dl=1)
+  const downloadLink = question.textContent ? '#' : getDropboxDownloadUrl(question.fileUrl);
 
   return (
     <>
@@ -68,7 +73,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
 
         <div className="flex gap-2 mt-auto pt-2 border-t border-slate-50">
             <button onClick={handlePreview} className="flex-1 py-2 text-xs font-bold text-slate-600 bg-slate-50 rounded hover:bg-white hover:text-indigo-600 hover:shadow-sm border border-transparent hover:border-slate-200 transition flex items-center justify-center gap-1">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 Preview
             </button>
             {question.textContent ? (
@@ -77,9 +82,15 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
                     PDF
                  </button>
             ) : (
-                 <a href={question.fileUrl} download className="flex-1 py-2 text-xs font-bold text-white bg-indigo-600 rounded hover:bg-indigo-700 transition shadow-sm flex items-center justify-center gap-1 text-center">
+                 <a 
+                    href={downloadLink} 
+                    // target="_blank" is often safer for forced downloads to prevent navigation
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex-1 py-2 text-xs font-bold text-white bg-indigo-600 rounded hover:bg-indigo-700 transition shadow-sm flex items-center justify-center gap-1 text-center"
+                 >
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    PDF
+                    Download
                  </a>
             )}
         </div>

@@ -1,5 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
+import { getDropboxDownloadUrl } from '../utils/api';
 
 interface PDFViewerModalProps {
   isOpen: boolean;
@@ -25,7 +26,6 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
           const lower = fileUrl.toLowerCase();
           
           // Detection Logic
-          
           const isImage = /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(lower) || 
                           lower.includes('imgbb') || 
                           lower.includes('alt=media');
@@ -33,7 +33,7 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
           // Dropbox PDFs often end in ?raw=1, or might be dl.dropboxusercontent
           const isPdf = /\.(pdf)(\?.*)?$/i.test(lower) || 
                         fileUrl.startsWith('blob:') ||
-                        (lower.includes('dropbox') && !isImage); // Assume dropbox links are PDFs/Docs if not explicitly image ext
+                        (lower.includes('dropbox') && !isImage); 
 
           if (isImage) {
               setFileType('image');
@@ -49,8 +49,11 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
 
   const isLocalBlob = fileUrl.startsWith('blob:');
   
-  // Google Docs Viewer is great for Dropbox links
+  // Google Docs Viewer is great for Dropbox links (using the raw=1 url)
   const googleDocsUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(fileUrl)}`;
+
+  // For the download button, we want the forced download link
+  const downloadLink = isLocalBlob ? fileUrl : getDropboxDownloadUrl(fileUrl);
 
   return (
     <div 
@@ -96,7 +99,13 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
         </div>
         
         <div className="p-4 border-t border-slate-200 bg-white flex justify-end">
-             <a href={fileUrl} download={title} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition">
+             <a 
+                href={downloadLink} 
+                download={isLocalBlob ? title : undefined} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition"
+             >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                 Download Original
             </a>

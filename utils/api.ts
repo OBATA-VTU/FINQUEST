@@ -6,6 +6,20 @@ const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || "a4aa97ad337019899bb
 const DROPBOX_ACCESS_TOKEN = import.meta.env.VITE_DROPBOX_ACCESS_TOKEN;
 
 /**
+ * Helper to transform a Dropbox URL into a direct download URL.
+ * Replaces ?dl=0 or ?raw=1 with ?dl=1
+ */
+export const getDropboxDownloadUrl = (url: string | undefined): string => {
+    if (!url) return '';
+    if (url.includes('dropbox.com')) {
+        // Remove existing query params related to display/download
+        const baseUrl = url.split('?')[0];
+        return `${baseUrl}?dl=1`;
+    }
+    return url;
+};
+
+/**
  * Uploads a file (PDF, DOC, etc.) to Dropbox.
  * Used for Past Questions and Materials.
  */
@@ -27,11 +41,10 @@ export const uploadFile = async (file: File, folder: string = 'materials', onPro
             const path = `/${folder}/${Date.now()}_${safeName}`;
 
             // 3. Upload File
-            // Note: For files > 150MB, uploadSessionStart is needed, but for materials < 20MB, filesUpload is fine.
             const response = await dbx.filesUpload({
                 path: path,
                 contents: file,
-                mode: { '.tag': 'add' }, // renamed to avoid overwrite
+                mode: { '.tag': 'add' }, 
                 autorename: true,
                 mute: false
             });
@@ -39,27 +52,22 @@ export const uploadFile = async (file: File, folder: string = 'materials', onPro
             if (onProgress) onProgress(60);
 
             // 4. Create Shared Link
-            // We need a shared link to allow users to view/download without auth
             const linkResponse = await dbx.sharingCreateSharedLinkWithSettings({
                 path: response.result.path_lower!
             });
 
             if (onProgress) onProgress(100);
 
-            // 5. Convert to Direct Link
-            // Dropbox links default to 'www.dropbox.com...dl=0' (preview page).
-            // We want 'dl.dropboxusercontent.com' or 'raw=1' for direct embedding/download.
+            // 5. Convert to Raw Link for Previewing
+            // We store ?raw=1 in the DB because it allows embedding in <iframe>.
+            // We will convert this to ?dl=1 dynamically when the user clicks "Download".
             let directUrl = linkResponse.result.url;
-            
-            // Replace 'www.dropbox.com' with 'dl.dropboxusercontent.com' is one way,
-            // or simply changing query param ?dl=0 to ?raw=1
             directUrl = directUrl.replace('?dl=0', '?raw=1');
 
             resolve(directUrl);
 
         } catch (error: any) {
             console.error("Dropbox Upload Error:", error);
-            // Handle Dropbox specific error objects
             const msg = error.error?.error_summary || error.message || "Unknown upload error";
             reject(new Error(`Upload failed: ${msg}`));
         }
