@@ -1,3 +1,4 @@
+
 import React, { useState, FormEvent, useRef, useEffect, useContext } from 'react';
 import { Level } from '../types';
 import { LEVELS } from '../constants';
@@ -22,7 +23,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
     const [year, setYear] = useState(new Date().getFullYear());
     const [file, setFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
-    const [uploadStatus, setUploadStatus] = useState<string>(''); // For granular feedback
+    const [uploadStatus, setUploadStatus] = useState<string>(''); 
     const [uploadProgress, setUploadProgress] = useState(0);
     const [dragActive, setDragActive] = useState(false);
     
@@ -44,13 +45,18 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
         }
 
         setIsUploading(true);
-        setUploadStatus('Uploading file...');
-        setUploadProgress(1);
+        setUploadStatus('Starting upload...');
+        setUploadProgress(1); // Show something immediately
 
         try {
             // 1. Upload File with Progress
             const downloadUrl = await uploadFile(file, 'past_questions', (progress) => {
                 setUploadProgress(Math.round(progress));
+                if (progress < 100) {
+                    setUploadStatus(`Uploading: ${Math.round(progress)}%`);
+                } else {
+                    setUploadStatus('Finalizing...');
+                }
             });
 
             setUploadStatus('Saving to database...');
@@ -93,6 +99,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
     };
     
     const validateAndSetFile = (selectedFile: File) => {
+        // Allowed Types
         const allowedTypes = [
             'application/pdf',
             'application/msword',
@@ -107,8 +114,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
             return;
         }
 
-        if (selectedFile.size > 10 * 1024 * 1024) {
-             showNotification("File size exceeds 10MB limit.", "error");
+        if (selectedFile.size > 20 * 1024 * 1024) { // Increased to 20MB
+             showNotification("File size exceeds 20MB limit.", "error");
              return;
         }
 
@@ -215,7 +222,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                         <div className="space-y-1">
                              <div className="flex justify-between text-xs font-bold text-indigo-600">
                                 <span>{uploadStatus}</span>
-                                <span>{uploadProgress}%</span>
+                                <span>{Math.round(uploadProgress)}%</span>
                             </div>
                             <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                                 <div className="bg-indigo-600 h-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>

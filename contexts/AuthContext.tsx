@@ -39,7 +39,6 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-            // Fetch user details from Firestore
             const userDocRef = doc(db, 'users', firebaseUser.uid);
             const userDoc = await getDoc(userDocRef);
 
@@ -56,12 +55,12 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     avatarUrl: userData.avatarUrl || firebaseUser.photoURL
                 });
             } else {
-                // Handle case where user exists in Auth but not in Firestore (e.g. fresh google sign in)
+                // If auth exists but no DB doc, treat as partial user
                 const newUser = {
                     id: firebaseUser.uid,
                     email: firebaseUser.email || '',
                     name: firebaseUser.displayName || 'User',
-                    username: firebaseUser.email?.split('@')[0] || 'user',
+                    username: '', // Explicitly empty to force setup
                     role: 'student' as const,
                     level: 100 as Level,
                     avatarUrl: firebaseUser.photoURL || undefined
@@ -70,11 +69,12 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             }
         } catch (error) {
             console.error("Error fetching user profile:", error);
+            // Fallback
              setUser({
                     id: firebaseUser.uid,
                     email: firebaseUser.email || '',
                     name: firebaseUser.displayName || 'User',
-                    username: 'error_loading_profile',
+                    username: 'error',
                     role: 'student',
                     level: 100
                 });
@@ -105,32 +105,34 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         
         let isNewUser = false;
 
-        // Check if doc exists
         try {
             const userDocRef = doc(db, 'users', firebaseUser.uid);
             const userDoc = await getDoc(userDocRef);
             
             if (!userDoc.exists()) {
-               // New Google User - Create Doc
-               // We set minimal data here. The UI should detect missing 'matricNumber' and prompt for it.
+               // New Google User - Create Basic Doc
                const cleanData = sanitizeData({
                 name: firebaseUser.displayName || 'User',
                 email: firebaseUser.email,
                 role: 'student',
-                level: 100, // Default, will update
-                username: firebaseUser.email?.split('@')[0].substring(0, 30) || `user${Math.floor(Math.random() * 1000)}`,
+                level: 100,
                 createdAt: new Date().toISOString(),
-                photoURL: firebaseUser.photoURL
+                photoURL: firebaseUser.photoURL,
+                // NO username yet
               });
 
               await setDoc(doc(db, 'users', firebaseUser.uid), cleanData);
-              showNotification("Account created with Google!", "success");
+              showNotification("Account created! Please set up your profile.", "success");
               isNewUser = true;
             } else {
-              showNotification("Welcome back!", "success");
-              // Check if profile is incomplete (legacy users or interrupted setup)
               const data = userDoc.data();
-              if (!data.matricNumber) isNewUser = true;
+              // CHECK FOR MISSING FIELDS (Legacy users or incomplete setups)
+              if (!data.matricNumber || !data.username) {
+                  isNewUser = true;
+                  showNotification("Please complete your profile setup.", "info");
+              } else {
+                  showNotification("Welcome back!", "success");
+              }
             }
         } catch (dbError) {
             console.error("Firestore error during Google Sign In:", dbError);
@@ -141,7 +143,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     } catch (error: any) {
         console.error("Google Sign-in Error Full:", error);
         if (error.code === 'auth/unauthorized-domain') {
-            throw new Error(`Domain not authorized. Go to Firebase Console > Authentication > Settings > Authorized Domains and add '${window.location.hostname}'`);
+            throw new Error(`Domain not authorized. Add '${window.location.hostname}' to Firebase Console.`);
         }
         throw error;
     }
@@ -149,18 +151,20 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
 
   const checkUsernameAvailability = async (username: string): Promise<boolean> => {
       if (!username || username.length < 3) return false;
+      const cleanName = username.trim().toLowerCase();
       try {
-        const q = query(collection(db, 'users'), where('username', '==', username));
+        const q = query(collection(db, 'users'), where('username', '==', cleanName));
         const querySnapshot = await getDocs(q);
         return querySnapshot.empty;
       } catch (error) {
           console.warn("Username check failed (likely permission issue for unauth users):", error);
-          return true; 
+          return true; // Allow optimistic if check fails due to rules
       }
   };
 
   const signup = async (data: { name: string; email: string; pass: string; level: Level; username: string; matricNumber: string; avatarUrl?: string }) => {
       try {
+          // Double check username availability
           try {
              const isAvailable = await checkUsernameAvailability(data.username);
              if (!isAvailable) throw new Error("Username is already taken");
@@ -176,9 +180,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
               displayName: data.name,
               photoURL: data.avatarUrl || null
             });
-          } catch(e) {
-            console.warn("Profile name update failed", e);
-          }
+          } catch(e) { console.warn("Profile name update failed", e); }
 
           const newUser: User = {
             id: firebaseUser.uid,
@@ -186,7 +188,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             name: data.name,
             role: 'student', 
             level: data.level,
-            username: data.username,
+            username: data.username.toLowerCase(),
             matricNumber: data.matricNumber || '',
             avatarUrl: data.avatarUrl
           };
@@ -198,14 +200,9 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
               });
               
               await setDoc(doc(db, 'users', firebaseUser.uid), cleanData);
-              console.log("User document created successfully");
           } catch (dbError: any) {
               console.error("Database creation failed:", dbError);
-              let msg = dbError.message;
-              if (dbError.code === 'permission-denied') {
-                  msg = "Permission denied. Check Firestore Rules.";
-              }
-              showNotification(`Account created, but database save failed: ${msg}. Contact Admin.`, "error");
+              showNotification(`Account created, but database save failed: ${dbError.message}`, "error");
           }
 
           setUser(newUser);
@@ -233,8 +230,4 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
-};
-
-export const useAuth = () => {
-  return useContext(AuthContext);
 };
