@@ -7,14 +7,19 @@ const DROPBOX_ACCESS_TOKEN = import.meta.env.VITE_DROPBOX_ACCESS_TOKEN;
 
 /**
  * Helper to transform a Dropbox URL into a direct download URL.
- * Replaces ?dl=0 or ?raw=1 with ?dl=1
+ * Uses dl.dropboxusercontent.com to bypass the Dropbox app/preview page.
  */
 export const getDropboxDownloadUrl = (url: string | undefined): string => {
     if (!url) return '';
     if (url.includes('dropbox.com')) {
-        // Remove existing query params related to display/download
-        const baseUrl = url.split('?')[0];
-        return `${baseUrl}?dl=1`;
+        // Replace www.dropbox.com with dl.dropboxusercontent.com
+        // This domain serves the raw file directly
+        let newUrl = url.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
+        
+        // Remove existing query params (like ?dl=0 or ?raw=1) as the domain handles it
+        newUrl = newUrl.split('?')[0];
+        
+        return newUrl;
     }
     return url;
 };
@@ -60,7 +65,7 @@ export const uploadFile = async (file: File, folder: string = 'materials', onPro
 
             // 5. Convert to Raw Link for Previewing
             // We store ?raw=1 in the DB because it allows embedding in <iframe>.
-            // We will convert this to ?dl=1 dynamically when the user clicks "Download".
+            // We will convert this to the download URL dynamically when the user clicks "Download".
             let directUrl = linkResponse.result.url;
             directUrl = directUrl.replace('?dl=0', '?raw=1');
 
