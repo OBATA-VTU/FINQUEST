@@ -45,21 +45,23 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
         }
 
         setIsUploading(true);
-        setUploadStatus('Starting upload...');
-        setUploadProgress(1); // Show something immediately
+        setUploadStatus('Starting upload to cloud...');
+        setUploadProgress(5); 
 
         try {
-            // 1. Upload File with Progress
+            // 1. Upload File (Supabase)
+            // Note: Supabase SDK doesn't stream progress bytes for simple uploads, 
+            // so the progress bar will jump.
             const downloadUrl = await uploadFile(file, 'past_questions', (progress) => {
-                setUploadProgress(Math.round(progress));
+                setUploadProgress(progress);
                 if (progress < 100) {
-                    setUploadStatus(`Uploading: ${Math.round(progress)}%`);
+                    setUploadStatus('Uploading file...');
                 } else {
-                    setUploadStatus('Finalizing...');
+                    setUploadStatus('Processing...');
                 }
             });
 
-            setUploadStatus('Saving to database...');
+            setUploadStatus('Saving record...');
 
             // 2. Create Data Object
             const questionData = {
@@ -90,7 +92,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
 
         } catch (error: any) {
             console.error("Upload error:", error);
-            showNotification(`Failed to upload: ${error.message}`, "error");
+            showNotification(`Failed: ${error.message}`, "error");
         } finally {
             setIsUploading(false);
             setUploadProgress(0);
@@ -114,7 +116,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
             return;
         }
 
-        if (selectedFile.size > 20 * 1024 * 1024) { // Increased to 20MB
+        if (selectedFile.size > 20 * 1024 * 1024) { 
              showNotification("File size exceeds 20MB limit.", "error");
              return;
         }

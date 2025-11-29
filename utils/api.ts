@@ -1,72 +1,67 @@
 
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { storage } from "../firebase";
+import { createClient } from '@supabase/supabase-js';
 
-const IMGBB_API_KEY = "a4aa97ad337019899bb59b4e94b149e0";
+// Environment Variables
+const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || "a4aa97ad337019899bb59b4e94b149e0";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+
+// Initialize Supabase Client
+// Note: Users must provide VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in their .env file
+export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /**
- * Uploads a file to Firebase Storage.
- * Replaced complex fallback logic with direct Firebase usage for reliability.
- * This fixes the "Stuck at 0%" issue caused by ImgBB CORS blocks.
+ * Uploads a file (PDF, DOC, etc.) to Supabase Storage.
+ * Uses the 'materials' bucket.
  */
-export const uploadFile = (file: File, path: string = 'uploads', onProgress?: (progress: number) => void): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        // Create a storage reference
-        // Sanitize filename to prevent issues
-        const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-        const storageRef = ref(storage, `${path}/${fileName}`);
-        
-        // Create upload task
-        const uploadTask = uploadBytesResumable(storageRef, file);
+export const uploadFile = async (file: File, folder: string = 'general', onProgress?: (progress: number) => void): Promise<string> => {
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+        throw new Error("Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file.");
+    }
 
-        // Listen for state changes, errors, and completion of the upload.
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                if (onProgress) {
-                    onProgress(progress);
-                }
-            }, 
-            (error) => {
-                console.error("Firebase Storage Upload Error:", error);
-                // A full list of error codes is available at
-                // https://firebase.google.com/docs/storage/web/handle-errors
-                switch (error.code) {
-                    case 'storage/unauthorized':
-                        reject(new Error("Permission denied. You are not authorized to upload."));
-                        break;
-                    case 'storage/canceled':
-                        reject(new Error("Upload canceled."));
-                        break;
-                    case 'storage/unknown':
-                        reject(new Error("Unknown error occurred, inspect error.serverResponse"));
-                        break;
-                    default:
-                        reject(new Error(`Upload failed: ${error.message}`));
-                }
-            }, 
-            async () => {
-                // Upload completed successfully, now we can get the download URL
-                try {
-                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    resolve(downloadURL);
-                } catch (e: any) {
-                    reject(new Error(`Failed to get download URL: ${e.message}`));
-                }
+    return new Promise(async (resolve, reject) => {
+        try {
+            // 1. Simulate Start Progress
+            if (onProgress) onProgress(10);
+
+            // 2. Sanitize Filename
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+            // 3. Upload to Supabase 'materials' bucket
+            const { data, error } = await supabase.storage
+                .from('materials')
+                .upload(fileName, file, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+
+            if (error) {
+                console.error("Supabase Upload Error:", error);
+                throw new Error(error.message);
             }
-        );
+
+            // 4. Simulate Complete Progress
+            if (onProgress) onProgress(100);
+
+            // 5. Get Public URL
+            const { data: publicUrlData } = supabase.storage
+                .from('materials')
+                .getPublicUrl(fileName);
+
+            resolve(publicUrlData.publicUrl);
+
+        } catch (error: any) {
+            reject(new Error(`Upload failed: ${error.message}`));
+        }
     });
 };
 
 /**
- * Keep ImgBB ONLY for small profile pictures if strictly necessary, 
- * but for consistency, we could also move this to Firebase. 
- * For now, simplified to use fetch with no fancy XHR to avoid hangs.
+ * Uploads an image to ImgBB.
+ * Used for Profile Pictures and Display Images only.
  */
 export const uploadToImgBB = async (file: File): Promise<string> => {
-    // Fallback to Firebase for Profile Pics too if ImgBB fails, 
-    // but try ImgBB first to save Storage bandwidth for PDFs.
     try {
         const formData = new FormData();
         formData.append("image", file);
@@ -80,9 +75,9 @@ export const uploadToImgBB = async (file: File): Promise<string> => {
         if (data && data.data && data.data.url) {
             return data.data.url;
         }
-        throw new Error("ImgBB failed");
-    } catch (e) {
-        console.warn("ImgBB Profile Upload failed, falling back to Firebase");
-        return uploadFile(file, 'profiles');
+        throw new Error("ImgBB response invalid");
+    } catch (e: any) {
+        console.warn("ImgBB Upload failed:", e);
+        throw new Error("Failed to upload image. Please try again.");
     }
 };
