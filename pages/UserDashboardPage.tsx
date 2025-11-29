@@ -1,5 +1,5 @@
 
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -7,137 +7,152 @@ export const UserDashboardPage: React.FC = () => {
   const auth = useContext(AuthContext);
   const navigate = useNavigate();
   const user = auth?.user;
+  const [greeting, setGreeting] = useState('');
+  const [profileComplete, setProfileComplete] = useState(0);
+
+  useEffect(() => {
+    // Smart Greeting based on Time
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting('Good Morning');
+    else if (hour < 18) setGreeting('Good Afternoon');
+    else setGreeting('Good Evening');
+
+    // Smart Profile Completeness Logic
+    if (user) {
+        let score = 0;
+        if (user.name) score += 20;
+        if (user.email) score += 20;
+        if (user.avatarUrl) score += 20;
+        if (user.matricNumber) score += 20;
+        if (user.level) score += 20;
+        setProfileComplete(score);
+    }
+  }, [user]);
 
   if (!user) return null;
 
+  // Icons (Heroicons style)
+  const icons = {
+      book: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>,
+      chat: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>,
+      user: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
+      users: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
+      upload: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+  };
+
   const quickActions = [
-    { label: 'Past Questions', desc: 'Browse Archive', icon: '📚', path: '/questions', color: 'from-blue-500 to-indigo-600' },
-    { label: 'Community', desc: 'Join Groups', icon: '💬', path: '/community', color: 'from-rose-500 to-pink-600' },
-    { label: 'My Profile', desc: 'Edit Details', icon: '👤', path: '/profile', color: 'from-emerald-500 to-teal-600' },
-    { label: 'Lecturers', desc: 'View Directory', icon: '👨‍🏫', path: '/lecturers', color: 'from-amber-500 to-orange-600' },
+    { label: 'Archive', desc: 'Browse Questions', icon: icons.book, path: '/questions', color: 'bg-indigo-50 text-indigo-600 border-indigo-200' },
+    { label: 'Community', desc: 'Join Groups', icon: icons.chat, path: '/community', color: 'bg-rose-50 text-rose-600 border-rose-200' },
+    { label: 'Lecturers', desc: 'Directory', icon: icons.users, path: '/lecturers', color: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+    { label: 'Profile', desc: 'Settings', icon: icons.user, path: '/profile', color: 'bg-amber-50 text-amber-600 border-amber-200' },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans animate-fade-in">
       <div className="max-w-7xl mx-auto space-y-8">
         
-        {/* Premium Welcome Header */}
-        <div className="relative overflow-hidden rounded-3xl bg-indigo-900 text-white shadow-2xl">
-             <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 rounded-full bg-indigo-500 blur-3xl opacity-20"></div>
-             <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-80 h-80 rounded-full bg-purple-500 blur-3xl opacity-20"></div>
-             
-             <div className="relative z-10 p-8 md:p-12 flex flex-col md:flex-row items-center md:items-start gap-8">
-                 <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white/20 shadow-xl overflow-hidden bg-indigo-800 shrink-0">
-                    {user.avatarUrl ? (
-                        <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-indigo-200">
-                            {user.name.charAt(0)}
-                        </div>
-                    )}
-                 </div>
-                 <div className="text-center md:text-left">
-                     <h1 className="text-3xl md:text-5xl font-serif font-bold mb-2 tracking-tight">
-                        Hello, {user.name.split(' ')[0]}
-                     </h1>
-                     <p className="text-indigo-200 text-lg mb-6 max-w-xl">
-                        Welcome to your student portal. You are currently logged in as a <span className="font-bold text-white">{user.level} Level</span> student.
-                     </p>
-                     <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-                        <span className="px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-medium backdrop-blur-sm">
-                            @{user.username}
-                        </span>
-                        <span className="px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-medium backdrop-blur-sm font-mono">
-                            {user.matricNumber || 'No Matric No'}
-                        </span>
-                     </div>
-                 </div>
-             </div>
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 className="text-3xl font-serif font-bold text-slate-900">{greeting}, {user.name.split(' ')[0]}</h1>
+                <p className="text-slate-500">Welcome to your student dashboard.</p>
+            </div>
+            <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 text-sm font-medium text-slate-600">
+                {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
         </div>
 
-        {/* Quick Actions Grid */}
+        {/* Profile Completeness Widget */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 relative overflow-hidden">
+             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+             <div className="flex justify-between items-center mb-2">
+                 <h3 className="font-bold text-slate-800">Profile Completeness</h3>
+                 <span className={`font-bold text-sm ${profileComplete === 100 ? 'text-emerald-500' : 'text-indigo-600'}`}>{profileComplete}%</span>
+             </div>
+             <div className="w-full bg-slate-100 rounded-full h-2.5 mb-2">
+                 <div className={`h-2.5 rounded-full transition-all duration-1000 ${profileComplete === 100 ? 'bg-emerald-500' : 'bg-indigo-600'}`} style={{ width: `${profileComplete}%` }}></div>
+             </div>
+             {profileComplete < 100 ? (
+                 <p className="text-xs text-slate-500 cursor-pointer hover:text-indigo-600 hover:underline" onClick={() => navigate('/profile')}>Complete your profile to unlock full features &rarr;</p>
+             ) : (
+                 <p className="text-xs text-emerald-600 font-medium">Your profile is up to date!</p>
+             )}
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-6 text-white shadow-lg">
+                <div className="flex items-start justify-between">
+                    <div>
+                        <p className="text-indigo-200 text-sm font-medium uppercase tracking-wider mb-1">Academic Level</p>
+                        <h2 className="text-4xl font-bold">{user.level}L</h2>
+                    </div>
+                    <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                        <svg className="w-6 h-6 text-indigo-100" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                 <div className="flex items-start justify-between">
+                    <div>
+                        <p className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-1">User Role</p>
+                        <h2 className="text-2xl font-bold text-slate-800 capitalize">{user.role}</h2>
+                        <p className="text-xs text-slate-400 mt-1">AAUA Chapter Member</p>
+                    </div>
+                    <div className="p-2 bg-slate-50 rounded-lg">
+                         <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                 <div className="flex items-start justify-between">
+                    <div>
+                        <p className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-1">Status</p>
+                        <h2 className="text-2xl font-bold text-emerald-600">Active</h2>
+                        <p className="text-xs text-slate-400 mt-1">Matric: {user.matricNumber || 'N/A'}</p>
+                    </div>
+                    <div className="p-2 bg-emerald-50 rounded-lg">
+                         <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* Action Center */}
         <div>
-            <h2 className="text-xl font-bold text-slate-800 mb-4 px-1">Overview & Actions</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <h2 className="text-lg font-bold text-slate-800 mb-4 px-1">Quick Actions</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {quickActions.map((action, idx) => (
                     <button 
                         key={idx}
                         onClick={() => navigate(action.path)}
-                        className="group relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300 text-left"
+                        className={`p-6 rounded-2xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-md text-left group ${action.color}`}
                     >
-                        <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${action.color} opacity-5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-150`}></div>
-                        
-                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center text-2xl text-white shadow-md mb-4 group-hover:scale-110 transition-transform`}>
-                            {action.icon}
-                        </div>
-                        <h3 className="font-bold text-slate-800 text-lg mb-1">{action.label}</h3>
-                        <p className="text-slate-500 text-sm">{action.desc}</p>
+                        <div className="mb-4">{action.icon}</div>
+                        <h3 className="font-bold text-lg mb-1">{action.label}</h3>
+                        <p className="text-xs opacity-70">{action.desc}</p>
                     </button>
                 ))}
             </div>
         </div>
 
-        {/* Main Content Split */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* Left Column: Academic Stats */}
-            <div className="lg:col-span-2 space-y-8">
-                <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="font-bold text-slate-800 text-lg">Academic Status</h3>
-                        <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold uppercase rounded-full tracking-wider">Active</span>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col items-center text-center">
-                            <span className="text-4xl font-black text-indigo-900 mb-2">{user.level}</span>
-                            <span className="text-xs text-slate-500 font-bold uppercase tracking-widest">Current Level</span>
-                        </div>
-                        <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col items-center text-center">
-                            <span className="text-4xl font-black text-indigo-900 mb-2">{user.role === 'admin' ? 'ADM' : 'STU'}</span>
-                            <span className="text-xs text-slate-500 font-bold uppercase tracking-widest">Account Type</span>
-                        </div>
-                        <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col items-center text-center">
-                            <span className="text-4xl font-black text-indigo-900 mb-2">AAUA</span>
-                            <span className="text-xs text-slate-500 font-bold uppercase tracking-widest">Chapter</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Contribution CTA */}
-                <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-8 text-white shadow-lg">
-                    <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
-                        <div>
-                            <h3 className="font-bold text-xl mb-2">Help the Community</h3>
-                            <p className="text-slate-300 text-sm max-w-md">Do you have past questions or materials that could help others? Upload them to the archive.</p>
-                        </div>
-                        <button onClick={() => navigate('/questions')} className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition shadow-lg shrink-0">
-                            Upload Material
-                        </button>
-                    </div>
-                    {/* Decor */}
-                    <svg className="absolute top-1/2 right-10 -translate-y-1/2 w-48 h-48 text-white/5" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" /></svg>
-                </div>
-            </div>
-
-            {/* Right Column: Recent Activity (Placeholder) */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 flex flex-col h-full">
-                <h3 className="font-bold text-slate-800 text-lg mb-6">Recent Activity</h3>
-                
-                <div className="flex-1 flex flex-col items-center justify-center text-center opacity-60">
-                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 text-slate-300">
-                        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    </div>
-                    <p className="text-slate-500 font-medium">No recent activity</p>
-                    <p className="text-xs text-slate-400 mt-1">Your downloads and uploads will appear here.</p>
-                </div>
-                
-                <button onClick={() => navigate('/profile')} className="w-full mt-8 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition">
-                    View Full Profile
-                </button>
-            </div>
-
+        {/* Contribution Banner */}
+        <div className="bg-gradient-to-r from-slate-900 to-indigo-950 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                 <div>
+                     <h3 className="text-xl font-bold mb-2">Contribute to the Archive</h3>
+                     <p className="text-indigo-200 text-sm max-w-lg">Help your fellow students by uploading past questions you have. Every contribution makes the department stronger.</p>
+                 </div>
+                 <button onClick={() => navigate('/questions')} className="flex items-center gap-2 px-6 py-3 bg-white text-indigo-900 font-bold rounded-lg hover:bg-indigo-50 transition shadow-lg whitespace-nowrap">
+                     {icons.upload}
+                     Upload Material
+                 </button>
+             </div>
         </div>
+
       </div>
     </div>
   );

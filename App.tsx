@@ -1,4 +1,5 @@
-import React, { useContext } from 'react';
+
+import React, { useContext, useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
 import { UserDashboardPage } from './pages/UserDashboardPage';
@@ -10,6 +11,7 @@ import { LoginPage } from './pages/LoginPage';
 import { AdminPage } from './pages/AdminPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { CommunityPage } from './pages/CommunityPage';
+import { GalleryPage } from './pages/GalleryPage';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { Logo } from './components/Logo';
@@ -18,7 +20,7 @@ import ScrollToTop from './components/ScrollToTop';
 
 // Professional Splash Screen
 const LoadingScreen = () => (
-  <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white transition-opacity duration-500">
+  <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white transition-opacity duration-500">
       <div className="relative mb-8">
           <Logo className="h-32 w-32 animate-pulse" />
           <div className="absolute -inset-4 bg-indigo-500/20 rounded-full blur-xl animate-pulse"></div>
@@ -38,10 +40,9 @@ const LoadingScreen = () => (
 const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNode, adminOnly?: boolean }) => {
     const auth = useContext(AuthContext);
     
-    // While checking auth status, keep the splash screen or a smaller loader
-    if (auth?.loading) return <LoadingScreen />;
-    
     if (!auth?.user) {
+        // If still strictly loading auth state, show nothing or spinner (handled by AppContent usually)
+        if (auth?.loading) return null; 
         return <Navigate to="/login" replace />;
     }
 
@@ -63,8 +64,17 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
 
 const AppContent: React.FC = () => {
   const auth = useContext(AuthContext);
+  const [showSplash, setShowSplash] = useState(true);
 
-  if (auth?.loading) {
+  useEffect(() => {
+    // Force splash screen to show for at least 2.5 seconds to prevent "blank out"
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (showSplash || auth?.loading) {
       return <LoadingScreen />;
   }
 
@@ -80,6 +90,7 @@ const AppContent: React.FC = () => {
                 <Route path="/announcements" element={<AnnouncementsPage />} />
                 <Route path="/executives" element={<ExecutivesPage />} />
                 <Route path="/lecturers" element={<LecturersPage />} />
+                <Route path="/gallery" element={<GalleryPage />} />
                 
                 {/* Protected Routes */}
                 <Route path="/dashboard" element={<RequireAuth><UserDashboardPage /></RequireAuth>} />

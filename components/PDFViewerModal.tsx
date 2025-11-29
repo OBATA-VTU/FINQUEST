@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 
 interface PDFViewerModalProps {
@@ -9,7 +10,7 @@ interface PDFViewerModalProps {
 
 export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose, fileUrl, title }) => {
   const modalRef = useRef<HTMLDivElement>(null);
-  const [isImage, setIsImage] = useState(false);
+  const [fileType, setFileType] = useState<'image' | 'pdf' | 'other'>('other');
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -22,14 +23,23 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
   useEffect(() => {
       if (fileUrl) {
           const lower = fileUrl.toLowerCase();
-          setIsImage(lower.includes('.jpg') || lower.includes('.jpeg') || lower.includes('.png') || lower.includes('imgbb'));
+          // Check for image extensions or Firebase 'alt=media' usually implies a file, but we need to check extension in path
+          // If no extension found in url string (signed url), assume other/pdf unless we have metadata. 
+          // For simplicity, we check common image extensions in the URL string.
+          if (lower.includes('.jpg') || lower.includes('.jpeg') || lower.includes('.png') || lower.includes('.gif') || lower.includes('imgbb')) {
+              setFileType('image');
+          } else if (lower.includes('.pdf') || fileUrl.startsWith('blob:')) {
+              setFileType('pdf');
+          } else {
+              setFileType('other');
+          }
       }
   }, [fileUrl]);
 
   if (!isOpen) return null;
 
-  const googleDocsUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(fileUrl)}`;
   const isLocalBlob = fileUrl.startsWith('blob:');
+  const googleDocsUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(fileUrl)}`;
 
   return (
     <div 
@@ -44,7 +54,7 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
         <div className="flex justify-between items-center p-4 border-b border-slate-200 bg-slate-50">
           <div className="flex flex-col min-w-0">
              <h3 className="font-bold text-lg text-slate-800 truncate pr-4">{title}</h3>
-             <p className="text-xs text-slate-500 truncate">{isImage ? 'Image Preview' : 'Document Preview'}</p>
+             <p className="text-xs text-slate-500 truncate">{fileType === 'image' ? 'Image Preview' : 'Document Preview'}</p>
           </div>
           <button 
             onClick={onClose} 
@@ -57,21 +67,29 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
         </div>
         
         <div className="flex-grow bg-slate-100 relative flex items-center justify-center overflow-auto">
-            {isImage ? (
+            {fileType === 'image' ? (
                 <img src={fileUrl} alt="Preview" className="max-w-full max-h-full object-contain" />
-            ) : (
-                isLocalBlob ? (
-                    <iframe src={fileUrl} className="w-full h-full" title="PDF Preview" frameBorder="0" />
-                ) : (
-                    <iframe src={googleDocsUrl} className="w-full h-full" title="Document Viewer" frameBorder="0">
-                        <object data={fileUrl} type="application/pdf" className="w-full h-full">
-                            <div className="flex flex-col items-center justify-center h-full text-slate-500 p-4 text-center">
-                                <p className="mb-4">Unable to display this file directly.</p>
-                                <a href={fileUrl} target="_blank" rel="noreferrer" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Download to View</a>
-                            </div>
+            ) : fileType === 'pdf' ? (
+                // For PDFs, try a direct object embed first (works better on some modern browsers), 
+                // then iframe with blob or google docs for remote.
+                <div className="w-full h-full">
+                     {isLocalBlob ? (
+                         <iframe src={fileUrl} className="w-full h-full" title="PDF Preview" />
+                     ) : (
+                         <object data={fileUrl} type="application/pdf" className="w-full h-full">
+                            {/* Fallback for browsers that don't support object embed of PDF (e.g. some mobile) */}
+                            <iframe src={googleDocsUrl} className="w-full h-full" title="Google Docs Viewer">
+                                <div className="flex flex-col items-center justify-center h-full text-slate-500 p-8 text-center">
+                                    <p className="mb-4">Unable to preview this file inside the browser.</p>
+                                    <a href={fileUrl} target="_blank" rel="noreferrer" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Download to View</a>
+                                </div>
+                            </iframe>
                         </object>
-                    </iframe>
-                )
+                     )}
+                </div>
+            ) : (
+                // Fallback for Word docs or unknown types -> Google Docs Viewer
+                 <iframe src={googleDocsUrl} className="w-full h-full" title="Document Viewer" />
             )}
         </div>
         

@@ -9,543 +9,455 @@ import { Level, Role } from '../types';
 import { LEVELS } from '../constants';
 import { uploadToImgBB } from '../utils/api';
 
-type AdminTab = 'pending' | 'content' | 'users' | 'generate' | 'news' | 'executives' | 'lecturers' | 'community' | 'gallery';
+type AdminSection = 'dashboard' | 'content' | 'users' | 'approvals' | 'settings' | 'ai';
+type ContentType = 'news' | 'executives' | 'lecturers' | 'community' | 'gallery';
 
 export const AdminPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<AdminTab>('pending');
+  const [activeSection, setActiveSection] = useState<AdminSection>('dashboard');
+  const [activeContent, setActiveContent] = useState<ContentType>('news');
   const [loading, setLoading] = useState(false);
   const auth = useContext(AuthContext);
   const { showNotification } = useNotification();
 
+  // Dashboard Stats
+  const [stats, setStats] = useState({ users: 0, pending: 0, questions: 0 });
+
   // Data States
   const [pendingItems, setPendingItems] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  const [newsItems, setNewsItems] = useState<any[]>([]);
-  const [execItems, setExecItems] = useState<any[]>([]);
-  const [lecturerItems, setLecturerItems] = useState<any[]>([]);
-  const [groupItems, setGroupItems] = useState<any[]>([]);
-  const [galleryItems, setGalleryItems] = useState<any[]>([]);
+  const [contentItems, setContentItems] = useState<any[]>([]);
   
-  // Website Content State
+  // Settings State
+  const [socialLinks, setSocialLinks] = useState({ facebook: '', twitter: '', instagram: '', whatsapp: '' });
+  const [adConfig, setAdConfig] = useState({ client: '', slot: '' });
+  
+  // HOD Data
   const [hodData, setHodData] = useState({ name: '', title: '', message: '', imageUrl: '' });
-  const [isSavingContent, setIsSavingContent] = useState(false);
   const [hodImageFile, setHodImageFile] = useState<File | null>(null);
 
   // Modal & Form States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
-  const [modalType, setModalType] = useState<AdminTab | null>(null);
   const [formData, setFormData] = useState<any>({});
   const [formFile, setFormFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Confirmation State
-  const [confirmDialog, setConfirmDialog] = useState<{ id: string, collection: string, action: 'approve' | 'reject' | 'delete', title: string } | null>(null);
-
-  // AI Generator State
-  const [aiCourseCode, setAiCourseCode] = useState('');
-  const [aiCourseTitle, setAiCourseTitle] = useState('');
-  const [aiLevel, setAiLevel] = useState<Level>(100);
-  const [aiTopic, setAiTopic] = useState('');
-  const [aiYear, setAiYear] = useState(new Date().getFullYear());
-  const [isGenerating, setIsGenerating] = useState(false);
+  // AI Generator
+  const [aiForm, setAiForm] = useState({ code: '', title: '', level: '100', topic: '', year: new Date().getFullYear().toString() });
   const [generatedContent, setGeneratedContent] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  // --- FETCHING LOGIC ---
   useEffect(() => {
-    fetchDataForTab(activeTab);
-  }, [activeTab]);
+    fetchStats();
+    if (activeSection === 'users') fetchUsers();
+    if (activeSection === 'approvals') fetchPending();
+    if (activeSection === 'content') fetchContent(activeContent);
+    if (activeSection === 'settings') fetchSettings();
+  }, [activeSection, activeContent]);
 
-  const fetchDataForTab = async (tab: AdminTab) => {
-    setLoading(true);
-    try {
-        if (tab === 'pending') {
-            const q = query(collection(db, "questions"), where("status", "==", "pending"));
-            const snapshot = await getDocs(q);
-            setPendingItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        } else if (tab === 'users') {
-            const snapshot = await getDocs(collection(db, "users"));
-            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        } else if (tab === 'content') {
-            const docRef = doc(db, 'content', 'hod_message');
-            const snapshot = await getDoc(docRef);
-            if (snapshot.exists()) {
-                setHodData(snapshot.data() as any);
-            }
-        } else if (tab === 'news') {
-            const snapshot = await getDocs(collection(db, "announcements"));
-            setNewsItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        } else if (tab === 'executives') {
-            const snapshot = await getDocs(collection(db, "executives"));
-            setExecItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        } else if (tab === 'lecturers') {
-            const snapshot = await getDocs(collection(db, "lecturers"));
-            setLecturerItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        } else if (tab === 'community') {
-            const snapshot = await getDocs(collection(db, "groups"));
-            setGroupItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        } else if (tab === 'gallery') {
-            const snapshot = await getDocs(collection(db, "gallery"));
-            setGalleryItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        }
-    } catch (error) {
-        console.error(`Error fetching ${tab}:`, error);
-    } finally {
-        setLoading(false);
-    }
+  const fetchStats = async () => {
+      try {
+          const uSnap = await getDocs(collection(db, 'users'));
+          const qSnap = await getDocs(collection(db, 'questions'));
+          const pSnap = await getDocs(query(collection(db, 'questions'), where('status', '==', 'pending')));
+          setStats({ users: uSnap.size, questions: qSnap.size, pending: pSnap.size });
+      } catch (e) { console.error(e); }
   };
 
-  // --- CONTENT ACTIONS ---
-  const handleSaveContent = async (e: React.FormEvent) => {
-      e.preventDefault();
-      setIsSavingContent(true);
+  const fetchUsers = async () => {
+      setLoading(true);
+      try {
+          const snap = await getDocs(collection(db, 'users'));
+          setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } finally { setLoading(false); }
+  };
+
+  const fetchPending = async () => {
+      setLoading(true);
+      try {
+          const q = query(collection(db, 'questions'), where('status', '==', 'pending'));
+          const snap = await getDocs(q);
+          setPendingItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } finally { setLoading(false); }
+  };
+
+  const fetchContent = async (type: ContentType) => {
+      setLoading(true);
+      try {
+          let colName = type === 'news' ? 'announcements' : type === 'community' ? 'groups' : type;
+          const snap = await getDocs(collection(db, colName));
+          setContentItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+          // Fetch HOD if news is selected (just as a place to put it)
+          if (type === 'news') {
+               const hDoc = await getDoc(doc(db, 'content', 'hod_message'));
+               if (hDoc.exists()) setHodData(hDoc.data() as any);
+          }
+      } finally { setLoading(false); }
+  };
+
+  const fetchSettings = async () => {
+      setLoading(true);
+      try {
+          const sDoc = await getDoc(doc(db, 'content', 'social_links'));
+          if (sDoc.exists()) setSocialLinks(sDoc.data() as any);
+          const aDoc = await getDoc(doc(db, 'content', 'adsense_config'));
+          if (aDoc.exists()) setAdConfig(aDoc.data() as any);
+      } finally { setLoading(false); }
+  };
+
+  // --- ACTIONS ---
+
+  const handleApproval = async (id: string, approve: boolean) => {
+      try {
+          const ref = doc(db, 'questions', id);
+          if (approve) {
+              await updateDoc(ref, { status: 'approved' });
+              showNotification("Question approved!", "success");
+          } else {
+              await deleteDoc(ref);
+              showNotification("Question rejected and removed.", "info");
+          }
+          fetchPending();
+          fetchStats();
+      } catch (e) { showNotification("Action failed", "error"); }
+  };
+
+  const handleSaveSettings = async () => {
+      try {
+          await setDoc(doc(db, 'content', 'social_links'), socialLinks);
+          await setDoc(doc(db, 'content', 'adsense_config'), adConfig);
+          showNotification("Settings saved successfully", "success");
+      } catch (e) { showNotification("Failed to save settings", "error"); }
+  };
+
+  const handleSaveHOD = async () => {
       try {
           let url = hodData.imageUrl;
-          if (hodImageFile) {
-              url = await uploadToImgBB(hodImageFile);
-          }
+          if (hodImageFile) url = await uploadToImgBB(hodImageFile);
           await setDoc(doc(db, 'content', 'hod_message'), { ...hodData, imageUrl: url });
-          showNotification("Homepage content updated!", "success");
-      } catch (error) {
-          showNotification("Failed to update content", "error");
-      } finally {
-          setIsSavingContent(false);
-      }
+          showNotification("HOD Content updated", "success");
+      } catch (e) { showNotification("Update failed", "error"); }
   };
 
-  // --- GENERIC ACTIONS ---
-  const handleDelete = (id: string, collectionName: string, title: string) => {
-      setConfirmDialog({ id, collection: collectionName, action: 'delete', title });
-  };
-
-  const executeAction = async () => {
-      if (!confirmDialog) return;
-      const { id, collection: colName, action } = confirmDialog;
-
+  const updateUserRole = async (uid: string, role: string) => {
       try {
-          const docRef = doc(db, colName, id);
-          if (action === 'delete' || action === 'reject') {
-              await deleteDoc(docRef);
-              showNotification("Item deleted", "info");
-          } else if (action === 'approve') {
-              await updateDoc(docRef, { status: 'approved' });
-              showNotification("Item approved", "success");
-          }
-          fetchDataForTab(activeTab);
-      } catch (error) {
-          showNotification("Action failed", "error");
-      } finally {
-          setConfirmDialog(null);
-      }
+          await updateDoc(doc(db, 'users', uid), { role });
+          showNotification("User role updated", "success");
+          fetchUsers();
+      } catch (e) { showNotification("Failed to update role", "error"); }
   };
 
-  const updateUserRole = async (userId: string, newRole: Role) => {
+  const handleDeleteContent = async (id: string, type: ContentType) => {
+      if (!window.confirm("Delete this item?")) return;
       try {
-          const userRef = doc(db, 'users', userId);
-          await updateDoc(userRef, { role: newRole });
-          setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
-          showNotification(`Role updated to ${newRole}`, "success");
-      } catch (error) {
-          showNotification("Failed to update role", "error");
-      }
+          let colName = type === 'news' ? 'announcements' : type === 'community' ? 'groups' : type;
+          await deleteDoc(doc(db, colName, id));
+          showNotification("Deleted", "info");
+          fetchContent(type);
+      } catch (e) { showNotification("Delete failed", "error"); }
   };
 
-  // --- MODAL & FORM HANDLERS ---
-  const openAddModal = (type: AdminTab) => {
-      setModalType(type);
-      setEditingItem(null);
-      setFormData({}); 
-      setFormFile(null);
-      setIsModalOpen(true);
-  };
+  // --- MODAL & FORM ---
 
-  const openEditModal = (type: AdminTab, item: any) => {
-      setModalType(type);
+  const openModal = (item: any = null) => {
       setEditingItem(item);
-      setFormData(item);
+      setFormData(item || {});
       setFormFile(null);
       setIsModalOpen(true);
-  };
-
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-      const { name, value } = e.target;
-      setFormData((prev: any) => ({ ...prev, [name]: value }));
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files && e.target.files[0]) {
-          setFormFile(e.target.files[0]);
-      }
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!modalType) return;
       setIsSubmitting(true);
-
       try {
-          let imageUrl = formData.imageUrl || '';
-          if (formFile) {
-              imageUrl = await uploadToImgBB(formFile);
-          }
-
-          const collectionName = 
-              modalType === 'news' ? 'announcements' :
-              modalType === 'executives' ? 'executives' :
-              modalType === 'lecturers' ? 'lecturers' : 
-              modalType === 'community' ? 'groups' : 
-              modalType === 'gallery' ? 'gallery' : '';
+          let url = formData.imageUrl;
+          if (formFile) url = await uploadToImgBB(formFile);
           
-          if (!collectionName) return;
-
-          const dataToSave = { ...formData, imageUrl };
+          let colName = activeContent === 'news' ? 'announcements' : activeContent === 'community' ? 'groups' : activeContent;
+          const payload = { ...formData, imageUrl: url };
+          
+          if (activeContent === 'news' && !editingItem) payload.date = new Date().toISOString();
+          if (activeContent === 'gallery' && !editingItem) payload.date = new Date().toISOString();
 
           if (editingItem) {
-              await updateDoc(doc(db, collectionName, editingItem.id), dataToSave);
-              showNotification("Updated successfully", "success");
+              await updateDoc(doc(db, colName, editingItem.id), payload);
           } else {
-              if (modalType === 'news') dataToSave.date = new Date().toISOString();
-              if (modalType === 'gallery') dataToSave.date = new Date().toISOString();
-              await addDoc(collection(db, collectionName), dataToSave);
-              showNotification("Created successfully", "success");
+              await addDoc(collection(db, colName), payload);
           }
-
           setIsModalOpen(false);
-          fetchDataForTab(modalType);
-      } catch (error) {
-          showNotification("Failed to save", "error");
-      } finally {
-          setIsSubmitting(false);
-      }
+          fetchContent(activeContent);
+          showNotification("Saved successfully", "success");
+      } catch (e) { showNotification("Error saving item", "error"); }
+      finally { setIsSubmitting(false); }
   };
 
-  // --- AI HANDLERS ---
+  // --- AI ---
   const handleGenerateAI = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!aiCourseCode || !aiTopic) { showNotification("Missing fields", "error"); return; }
     setIsGenerating(true);
     setGeneratedContent('');
-
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const prompt = `Create a university exam paper for ${aiCourseCode}: ${aiCourseTitle}. Level: ${aiLevel}. Year: ${aiYear}. Topic: ${aiTopic}. Structure: Header, Section A (10 MCQs), Section B (4 Theory). Plain text format.`;
+        // FIXED: USE VITE ENVIRONMENT VARIABLE SAFELY
+        const apiKey = import.meta.env.VITE_GOOGLE_GENAI_API_KEY;
+        if (!apiKey) throw new Error("API Key missing in Vercel Env Variables");
         
-        const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
-        if (response.text) {
-             setGeneratedContent(response.text);
-             showNotification("Generated successfully", "success");
+        const ai = new GoogleGenAI({ apiKey });
+        const prompt = `Create a university exam paper for ${aiForm.code}: ${aiForm.title}. Level: ${aiForm.level}. Year: ${aiForm.year}. Topic: ${aiForm.topic}. Structure: Header, Section A (10 MCQs), Section B (4 Theory). Plain text format.`;
+        const res = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+        if (res.text) {
+             setGeneratedContent(res.text);
+             showNotification("Generated!", "success");
         }
     } catch (error: any) {
-        showNotification(error.message || "AI Error", "error");
-    } finally {
-        setIsGenerating(false);
-    }
+        showNotification(error.message, "error");
+    } finally { setIsGenerating(false); }
   };
 
-  const handleSaveGenerated = async () => {
-    if (!generatedContent || !auth?.user) return;
-    setIsSaving(true);
-    try {
-        const questionData = {
-            courseCode: aiCourseCode.toUpperCase(),
-            courseTitle: aiCourseTitle,
-            level: aiLevel,
-            year: aiYear,
-            textContent: generatedContent,
-            uploadedBy: auth.user.id,
-            uploadedByEmail: auth.user.email,
-            status: 'approved',
-            createdAt: new Date().toISOString(),
-            isAiGenerated: true
-        };
-        await addDoc(collection(db, 'questions'), questionData);
-        showNotification("Saved to database!", "success");
-        setGeneratedContent('');
-    } catch (error) {
-        showNotification("Failed to save", "error");
-    } finally {
-        setIsSaving(false);
-    }
+  const saveAiQuestion = async () => {
+      try {
+          await addDoc(collection(db, 'questions'), {
+              courseCode: aiForm.code.toUpperCase(),
+              courseTitle: aiForm.title,
+              level: Number(aiForm.level),
+              year: Number(aiForm.year),
+              textContent: generatedContent,
+              status: 'approved',
+              createdAt: new Date().toISOString(),
+              isAiGenerated: true
+          });
+          showNotification("Saved to Database", "success");
+          setGeneratedContent('');
+      } catch (e) { showNotification("Save failed", "error"); }
   };
 
-  const TabButton = ({ id, label }: { id: AdminTab, label: string }) => (
-    <button 
-        onClick={() => setActiveTab(id)}
-        className={`pb-4 px-3 font-medium text-sm transition-colors relative whitespace-nowrap ${activeTab === id ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-    >
-        {label}
-        {activeTab === id && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600"></div>}
-    </button>
+  // --- RENDER HELPERS ---
+  const SidebarItem = ({ id, label, icon }: { id: AdminSection, label: string, icon: React.ReactNode }) => (
+      <button 
+        onClick={() => setActiveSection(id)}
+        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-1 ${activeSection === id ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
+      >
+          {icon} <span className="font-bold text-sm">{label}</span>
+      </button>
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8 md:py-12 relative">
-      
-      {/* Confirmation Modal */}
-      {confirmDialog && (
-          <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-fade-in-down">
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">Confirm Action</h3>
-                  <p className="text-slate-600 mb-6">
-                      Are you sure you want to <span className="font-bold uppercase text-rose-600">{confirmDialog.action}</span>: <br/> 
-                      <span className="italic">"{confirmDialog.title}"</span>?
-                  </p>
-                  <div className="flex justify-end gap-3">
-                      <button onClick={() => setConfirmDialog(null)} className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg">Cancel</button>
-                      <button onClick={executeAction} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg shadow-md">Confirm</button>
-                  </div>
-              </div>
-          </div>
-      )}
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+        
+        {/* SIDEBAR */}
+        <aside className="w-full md:w-64 bg-white border-r border-slate-200 p-6 flex flex-col shrink-0">
+            <h2 className="text-2xl font-serif font-bold text-indigo-900 mb-8 px-2">Admin Panel</h2>
+            <nav className="space-y-1 flex-1">
+                <SidebarItem id="dashboard" label="Overview" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>} />
+                <SidebarItem id="approvals" label="Approvals" icon={<span className="relative"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>{stats.pending > 0 && <span className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full"></span>}</span>} />
+                <SidebarItem id="content" label="CMS" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>} />
+                <SidebarItem id="users" label="Users" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>} />
+                <SidebarItem id="ai" label="AI Generator" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>} />
+                <SidebarItem id="settings" label="Settings" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} />
+            </nav>
+        </aside>
 
-      {/* CRUD Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 m-4 animate-fade-in-down">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-indigo-900 capitalize">
-                        {editingItem ? 'Edit' : 'Add New'} {modalType}
-                    </h3>
-                    <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
+        {/* MAIN CONTENT */}
+        <main className="flex-1 p-6 md:p-12 overflow-y-auto">
+            
+            {/* 1. OVERVIEW */}
+            {activeSection === 'dashboard' && (
+                <div className="space-y-8 animate-fade-in">
+                    <h1 className="text-3xl font-bold text-slate-900">Dashboard Overview</h1>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <h3 className="text-slate-500 font-bold uppercase text-xs tracking-wider">Total Users</h3>
+                            <p className="text-4xl font-bold text-indigo-900 mt-2">{stats.users}</p>
+                        </div>
+                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <h3 className="text-slate-500 font-bold uppercase text-xs tracking-wider">Total Archives</h3>
+                            <p className="text-4xl font-bold text-emerald-600 mt-2">{stats.questions}</p>
+                        </div>
+                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
+                            <h3 className="text-slate-500 font-bold uppercase text-xs tracking-wider">Pending Approvals</h3>
+                            <p className="text-4xl font-bold text-rose-500 mt-2">{stats.pending}</p>
+                            {stats.pending > 0 && <div className="absolute top-0 right-0 w-3 h-3 bg-rose-500 rounded-full animate-ping m-4"></div>}
+                        </div>
+                    </div>
                 </div>
-                <form onSubmit={handleFormSubmit} className="space-y-4">
-                    {/* Fields */}
-                    {modalType === 'news' && (
-                        <>
-                            <div><label className="block text-sm font-bold mb-1">Title</label><input name="title" required value={formData.title || ''} onChange={handleFormChange} className="w-full border p-2 rounded" /></div>
-                            <div><label className="block text-sm font-bold mb-1">Content</label><textarea name="content" required rows={4} value={formData.content || ''} onChange={handleFormChange} className="w-full border p-2 rounded" /></div>
-                            <div><label className="block text-sm font-bold mb-1">Author</label><input name="author" required value={formData.author || ''} onChange={handleFormChange} className="w-full border p-2 rounded" /></div>
-                        </>
-                    )}
-                    {modalType === 'executives' && (
-                        <>
-                            <div><label className="block text-sm font-bold mb-1">Name</label><input name="name" required value={formData.name || ''} onChange={handleFormChange} className="w-full border p-2 rounded" /></div>
-                            <div><label className="block text-sm font-bold mb-1">Position</label><input name="position" required value={formData.position || ''} onChange={handleFormChange} className="w-full border p-2 rounded" placeholder="e.g. President, Treasurer" /></div>
-                            <div>
-                                <label className="block text-sm font-bold mb-1">Level</label>
-                                <select name="level" value={formData.level || 100} onChange={handleFormChange} className="w-full border p-2 rounded">
-                                    {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
-                                </select>
-                            </div>
-                        </>
-                    )}
-                    {modalType === 'lecturers' && (
-                        <>
-                            <div><label className="block text-sm font-bold mb-1">Name</label><input name="name" required value={formData.name || ''} onChange={handleFormChange} className="w-full border p-2 rounded" /></div>
-                            <div><label className="block text-sm font-bold mb-1">Title (e.g. Dr., Prof.)</label><input name="title" required value={formData.title || ''} onChange={handleFormChange} className="w-full border p-2 rounded" /></div>
-                            <div><label className="block text-sm font-bold mb-1">Specialization</label><input name="specialization" required value={formData.specialization || ''} onChange={handleFormChange} className="w-full border p-2 rounded" /></div>
-                        </>
-                    )}
-                    {modalType === 'community' && (
-                        <>
-                            <div><label className="block text-sm font-bold mb-1">Group Name</label><input name="name" required value={formData.name || ''} onChange={handleFormChange} className="w-full border p-2 rounded" /></div>
-                            <div>
-                                <label className="block text-sm font-bold mb-1">Platform</label>
-                                <select name="platform" value={formData.platform || 'WhatsApp'} onChange={handleFormChange} className="w-full border p-2 rounded">
-                                    <option value="WhatsApp">WhatsApp</option>
-                                    <option value="Telegram">Telegram</option>
-                                    <option value="Discord">Discord</option>
-                                </select>
-                            </div>
-                            <div><label className="block text-sm font-bold mb-1">Link</label><input name="link" required value={formData.link || ''} onChange={handleFormChange} className="w-full border p-2 rounded" /></div>
-                            <div><label className="block text-sm font-bold mb-1">Description</label><input name="description" required value={formData.description || ''} onChange={handleFormChange} className="w-full border p-2 rounded" /></div>
-                        </>
-                    )}
-                    {modalType === 'gallery' && (
-                        <>
-                            <div><label className="block text-sm font-bold mb-1">Caption</label><input name="caption" required value={formData.caption || ''} onChange={handleFormChange} className="w-full border p-2 rounded" placeholder="Brief description of event" /></div>
-                        </>
-                    )}
+            )}
 
-                    {modalType !== 'community' && (
-                        <div>
-                            <label className="block text-sm font-bold mb-1">Image</label>
-                            <input type="file" accept="image/*" onChange={handleFileChange} className="w-full text-sm text-slate-500"/>
+            {/* 2. SETTINGS (Socials & Ads) */}
+            {activeSection === 'settings' && (
+                <div className="max-w-2xl space-y-8 animate-fade-in">
+                     <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                         <h3 className="text-xl font-bold text-slate-800 mb-6">Social Media Links</h3>
+                         <div className="space-y-4">
+                             <div><label className="block text-xs font-bold uppercase mb-1">Facebook URL</label><input className="w-full border p-2 rounded" value={socialLinks.facebook} onChange={e => setSocialLinks({...socialLinks, facebook: e.target.value})} /></div>
+                             <div><label className="block text-xs font-bold uppercase mb-1">Twitter / X URL</label><input className="w-full border p-2 rounded" value={socialLinks.twitter} onChange={e => setSocialLinks({...socialLinks, twitter: e.target.value})} /></div>
+                             <div><label className="block text-xs font-bold uppercase mb-1">Instagram URL</label><input className="w-full border p-2 rounded" value={socialLinks.instagram} onChange={e => setSocialLinks({...socialLinks, instagram: e.target.value})} /></div>
+                             <div><label className="block text-xs font-bold uppercase mb-1">WhatsApp Group/Link</label><input className="w-full border p-2 rounded" value={socialLinks.whatsapp} onChange={e => setSocialLinks({...socialLinks, whatsapp: e.target.value})} /></div>
+                         </div>
+                     </div>
+                     <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                         <h3 className="text-xl font-bold text-slate-800 mb-6">Google AdSense</h3>
+                         <div className="space-y-4">
+                             <div><label className="block text-xs font-bold uppercase mb-1">Publisher ID (ca-pub-xxx)</label><input className="w-full border p-2 rounded" value={adConfig.client} onChange={e => setAdConfig({...adConfig, client: e.target.value})} /></div>
+                             <div><label className="block text-xs font-bold uppercase mb-1">Ad Slot ID</label><input className="w-full border p-2 rounded" value={adConfig.slot} onChange={e => setAdConfig({...adConfig, slot: e.target.value})} /></div>
+                         </div>
+                     </div>
+                     <button onClick={handleSaveSettings} className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow hover:bg-indigo-700">Save All Settings</button>
+                </div>
+            )}
+
+            {/* 3. CONTENT MANAGER */}
+            {activeSection === 'content' && (
+                <div className="animate-fade-in">
+                    <div className="flex gap-2 mb-6 border-b border-slate-200 pb-1">
+                        {['news', 'executives', 'lecturers', 'community', 'gallery'].map(c => (
+                            <button key={c} onClick={() => setActiveContent(c as ContentType)} className={`px-4 py-2 font-bold text-sm capitalize rounded-t-lg ${activeContent === c ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>{c}</button>
+                        ))}
+                    </div>
+                    
+                    {activeContent === 'news' && (
+                        <div className="bg-white p-6 rounded-xl border border-slate-200 mb-6">
+                            <h3 className="font-bold mb-4">Homepage HOD Section</h3>
+                            <div className="grid gap-4">
+                                <input className="border p-2 rounded" placeholder="HOD Name" value={hodData.name} onChange={e => setHodData({...hodData, name: e.target.value})} />
+                                <input className="border p-2 rounded" placeholder="Title" value={hodData.title} onChange={e => setHodData({...hodData, title: e.target.value})} />
+                                <textarea className="border p-2 rounded" rows={3} placeholder="Message" value={hodData.message} onChange={e => setHodData({...hodData, message: e.target.value})} />
+                                <input type="file" onChange={e => e.target.files && setHodImageFile(e.target.files[0])} />
+                                <button onClick={handleSaveHOD} className="bg-slate-800 text-white px-4 py-2 rounded font-bold w-fit">Update HOD Info</button>
+                            </div>
                         </div>
                     )}
 
-                    <div className="flex justify-end gap-3 pt-4">
-                        <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded hover:bg-slate-50">Cancel</button>
-                        <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-indigo-600 text-white font-bold rounded hover:bg-indigo-700 disabled:opacity-50">
-                            {isSubmitting ? 'Saving...' : 'Save Changes'}
-                        </button>
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold capitalize">{activeContent} List</h2>
+                        <button onClick={() => openModal()} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700">+ Add New</button>
                     </div>
-                </form>
-            </div>
-        </div>
-      )}
 
-      <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Admin Dashboard</h1>
-        <p className="text-slate-600 mb-8">Full content management system for FINQUEST.</p>
-
-        {/* Scrollable Tabs */}
-        <div className="flex overflow-x-auto space-x-6 border-b border-slate-200 mb-8 pb-1 scrollbar-hide">
-            <TabButton id="pending" label="Pending Qs" />
-            <TabButton id="content" label="Website Content" />
-            <TabButton id="users" label="Users" />
-            <TabButton id="news" label="News" />
-            <TabButton id="executives" label="Executives" />
-            <TabButton id="lecturers" label="Lecturers" />
-            <TabButton id="community" label="Community" />
-            <TabButton id="gallery" label="Gallery" />
-            <TabButton id="generate" label="AI Generator" />
-        </div>
-
-        {/* --- TAB CONTENT --- */}
-        
-        {/* 1. PENDING APPROVALS */}
-        {activeTab === 'pending' && (
-             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                 <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                     <h2 className="font-bold text-slate-800">Pending Uploads</h2>
-                     <button onClick={() => fetchDataForTab('pending')} className="text-indigo-600 text-sm font-bold">Refresh</button>
-                 </div>
-                 {loading ? <div className="p-12 text-center">Loading...</div> : pendingItems.length === 0 ? <div className="p-12 text-center text-slate-500">No pending items.</div> : (
-                     <table className="w-full text-left text-sm">
-                         <thead className="bg-slate-50 border-b border-slate-100"><tr><th className="p-4">Course</th><th className="p-4">Uploader</th><th className="p-4 text-right">Actions</th></tr></thead>
-                         <tbody>
-                             {pendingItems.map(item => (
-                                 <tr key={item.id} className="border-b last:border-0 hover:bg-slate-50">
-                                     <td className="p-4">
-                                         <div className="font-bold">{item.courseCode}</div>
-                                         <div className="text-xs text-slate-500">{item.courseTitle}</div>
-                                     </td>
-                                     <td className="p-4">{item.submittedByEmail || 'Unknown'}</td>
-                                     <td className="p-4 text-right space-x-2">
-                                         <button onClick={() => setConfirmDialog({id: item.id, collection: 'questions', action: 'approve', title: item.courseCode})} className="text-emerald-600 font-bold hover:underline">Approve</button>
-                                         <button onClick={() => setConfirmDialog({id: item.id, collection: 'questions', action: 'reject', title: item.courseCode})} className="text-rose-600 font-bold hover:underline">Reject</button>
-                                     </td>
-                                 </tr>
-                             ))}
-                         </tbody>
-                     </table>
-                 )}
-             </div>
-        )}
-
-        {/* 2. WEBSITE CONTENT */}
-        {activeTab === 'content' && (
-             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                 <h2 className="font-bold text-slate-800 mb-6 text-xl">Homepage HOD Section</h2>
-                 <form onSubmit={handleSaveContent} className="space-y-6 max-w-2xl">
-                     <div>
-                         <label className="block text-sm font-bold mb-2">Head of Department Name</label>
-                         <input type="text" value={hodData.name} onChange={e => setHodData({...hodData, name: e.target.value})} className="w-full border p-2 rounded" placeholder="e.g. Dr. A. A. Adebayo" />
-                     </div>
-                     <div>
-                         <label className="block text-sm font-bold mb-2">Welcome Title</label>
-                         <input type="text" value={hodData.title} onChange={e => setHodData({...hodData, title: e.target.value})} className="w-full border p-2 rounded" placeholder="e.g. Breeding Financial Experts" />
-                     </div>
-                     <div>
-                         <label className="block text-sm font-bold mb-2">Welcome Message</label>
-                         <textarea rows={5} value={hodData.message} onChange={e => setHodData({...hodData, message: e.target.value})} className="w-full border p-2 rounded" placeholder="Full message..." />
-                     </div>
-                     <div>
-                         <label className="block text-sm font-bold mb-2">HOD Photo</label>
-                         <input type="file" accept="image/*" onChange={e => e.target.files && setHodImageFile(e.target.files[0])} className="w-full text-sm"/>
-                         {hodData.imageUrl && <div className="mt-2 text-xs text-green-600">Current image set</div>}
-                     </div>
-                     <button disabled={isSavingContent} className="px-6 py-2 bg-indigo-600 text-white font-bold rounded hover:bg-indigo-700 disabled:opacity-50">
-                         {isSavingContent ? 'Updating...' : 'Update Content'}
-                     </button>
-                 </form>
-             </div>
-        )}
-
-        {/* 3. USER MANAGEMENT */}
-        {activeTab === 'users' && (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                     <h2 className="font-bold text-slate-800">All Users</h2>
-                     <button onClick={() => fetchDataForTab('users')} className="text-indigo-600 text-sm font-bold">Refresh</button>
-                </div>
-                {loading ? <div className="p-12 text-center">Loading...</div> : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 border-b border-slate-100"><tr><th className="p-4">User</th><th className="p-4">Role</th><th className="p-4">Action</th></tr></thead>
-                            <tbody>
-                                {users.map(u => (
-                                    <tr key={u.id} className="border-b last:border-0 hover:bg-slate-50">
-                                        <td className="p-4">
-                                            <div className="font-bold">{u.name}</div>
-                                            <div className="text-xs text-slate-500">{u.email}</div>
-                                        </td>
-                                        <td className="p-4"><span className="uppercase text-xs font-bold bg-slate-100 px-2 py-1 rounded">{u.role}</span></td>
-                                        <td className="p-4">
-                                            <select value={u.role} onChange={(e) => updateUserRole(u.id, e.target.value as Role)} className="border rounded p-1 text-xs">
-                                                <option value="student">Student</option>
-                                                <option value="executive">Executive</option>
-                                                <option value="lecturer">Lecturer</option>
-                                                <option value="admin">Admin</option>
-                                            </select>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
-        )}
-
-        {/* 4-8. CMS SECTIONS (News, Execs, Lecturers, Community, Gallery) */}
-        {['news', 'executives', 'lecturers', 'community', 'gallery'].includes(activeTab) && (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <h2 className="font-bold text-slate-800 capitalize">{activeTab} Management</h2>
-                    <button onClick={() => openAddModal(activeTab)} className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-indigo-700 shadow-sm flex items-center gap-1">
-                        Add New
-                    </button>
-                </div>
-                {loading ? <div className="p-12 text-center">Loading...</div> : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-                        {(activeTab === 'news' ? newsItems : activeTab === 'executives' ? execItems : activeTab === 'lecturers' ? lecturerItems : activeTab === 'gallery' ? galleryItems : groupItems).map((item) => (
-                            <div key={item.id} className="border rounded-lg p-4 flex flex-col hover:shadow-md transition bg-white relative">
-                                {item.imageUrl && (
-                                    <div className="h-32 mb-3 bg-slate-100 rounded overflow-hidden">
-                                        <img src={item.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                                    </div>
-                                )}
-                                <div className="flex-grow">
-                                    <h4 className="font-bold text-slate-800 line-clamp-1">{item.title || item.name || item.caption}</h4>
-                                    <p className="text-xs text-slate-500 line-clamp-2 mt-1">{item.content || item.description || item.specialization || item.position}</p>
-                                </div>
-                                <div className="flex justify-end gap-2 pt-3 border-t border-slate-50 mt-2">
-                                    {activeTab !== 'gallery' && <button onClick={() => openEditModal(activeTab, item)} className="text-indigo-600 text-xs font-bold hover:underline">Edit</button>}
-                                    <button onClick={() => handleDelete(item.id, activeTab === 'news' ? 'announcements' : activeTab === 'community' ? 'groups' : activeTab, item.title || item.name || 'Item')} className="text-rose-600 text-xs font-bold hover:underline">Delete</button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {contentItems.map(item => (
+                            <div key={item.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                                {item.imageUrl && <img src={item.imageUrl} className="w-full h-32 object-cover rounded-lg mb-3" alt="preview" />}
+                                <h4 className="font-bold">{item.title || item.name || item.caption}</h4>
+                                <div className="mt-auto pt-4 flex gap-2">
+                                    <button onClick={() => openModal(item)} className="text-xs font-bold text-indigo-600 border border-indigo-200 px-3 py-1 rounded">Edit</button>
+                                    <button onClick={() => handleDeleteContent(item.id, activeContent)} className="text-xs font-bold text-rose-600 border border-rose-200 px-3 py-1 rounded">Delete</button>
                                 </div>
                             </div>
                         ))}
                     </div>
-                )}
-            </div>
-        )}
+                </div>
+            )}
 
-        {/* 9. AI GENERATOR */}
-        {activeTab === 'generate' && (
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h2 className="text-xl font-bold text-indigo-900 mb-4">AI Question Generator</h2>
-                    <form onSubmit={handleGenerateAI} className="space-y-4">
-                        <input type="text" placeholder="Course Code" value={aiCourseCode} onChange={e => setAiCourseCode(e.target.value)} className="w-full border p-2 rounded" />
-                        <input type="text" placeholder="Course Title" value={aiCourseTitle} onChange={e => setAiCourseTitle(e.target.value)} className="w-full border p-2 rounded" />
-                        <textarea placeholder="Topic" value={aiTopic} onChange={e => setAiTopic(e.target.value)} className="w-full border p-2 rounded" />
-                        <button disabled={isGenerating} className="w-full bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700 disabled:opacity-50">{isGenerating ? 'Generating...' : 'Generate'}</button>
+            {/* 4. APPROVALS */}
+            {activeSection === 'approvals' && (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in">
+                     <table className="w-full text-left text-sm">
+                         <thead className="bg-slate-50 border-b"><tr><th className="p-4">Details</th><th className="p-4">User</th><th className="p-4 text-right">Action</th></tr></thead>
+                         <tbody>
+                             {pendingItems.map(item => (
+                                 <tr key={item.id} className="border-b last:border-0">
+                                     <td className="p-4">
+                                         <p className="font-bold">{item.courseCode}</p>
+                                         <p className="text-xs text-slate-500">{item.courseTitle} ({item.year})</p>
+                                     </td>
+                                     <td className="p-4 text-slate-500">{item.submittedByEmail}</td>
+                                     <td className="p-4 text-right space-x-2">
+                                         <button onClick={() => handleApproval(item.id, true)} className="text-emerald-600 font-bold hover:bg-emerald-50 px-3 py-1 rounded">Approve</button>
+                                         <button onClick={() => handleApproval(item.id, false)} className="text-rose-600 font-bold hover:bg-rose-50 px-3 py-1 rounded">Reject</button>
+                                     </td>
+                                 </tr>
+                             ))}
+                             {pendingItems.length === 0 && <tr><td colSpan={3} className="p-8 text-center text-slate-400">No pending items.</td></tr>}
+                         </tbody>
+                     </table>
+                </div>
+            )}
+
+            {/* 5. USERS */}
+            {activeSection === 'users' && (
+                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50 border-b"><tr><th className="p-4">User</th><th className="p-4">Current Role</th><th className="p-4">Change Role</th></tr></thead>
+                        <tbody>
+                            {users.map(u => (
+                                <tr key={u.id} className="border-b last:border-0">
+                                    <td className="p-4">
+                                        <p className="font-bold">{u.name}</p>
+                                        <p className="text-xs text-slate-500">{u.email}</p>
+                                    </td>
+                                    <td className="p-4"><span className="uppercase text-xs font-bold bg-slate-100 px-2 py-1 rounded">{u.role}</span></td>
+                                    <td className="p-4">
+                                        <select value={u.role} onChange={(e) => updateUserRole(u.id, e.target.value)} className="border rounded p-1 text-xs">
+                                            <option value="student">Student</option>
+                                            <option value="admin">Admin</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                 </div>
+            )}
+
+            {/* 6. AI GENERATOR */}
+            {activeSection === 'ai' && (
+                <div className="max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in">
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-lg mb-4">Generate Question</h3>
+                        <div className="space-y-4">
+                            <input className="w-full border p-2 rounded" placeholder="Course Code" value={aiForm.code} onChange={e => setAiForm({...aiForm, code: e.target.value})} />
+                            <input className="w-full border p-2 rounded" placeholder="Course Title" value={aiForm.title} onChange={e => setAiForm({...aiForm, title: e.target.value})} />
+                            <input className="w-full border p-2 rounded" placeholder="Topic" value={aiForm.topic} onChange={e => setAiForm({...aiForm, topic: e.target.value})} />
+                            <div className="flex gap-2">
+                                <select className="w-1/2 border p-2 rounded" value={aiForm.level} onChange={e => setAiForm({...aiForm, level: e.target.value})}>{LEVELS.map(l => <option key={l} value={l}>{l}</option>)}</select>
+                                <input className="w-1/2 border p-2 rounded" type="number" value={aiForm.year} onChange={e => setAiForm({...aiForm, year: e.target.value})} />
+                            </div>
+                            <button onClick={handleGenerateAI} disabled={isGenerating} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 disabled:opacity-50">
+                                {isGenerating ? 'Thinking...' : 'Generate with AI'}
+                            </button>
+                        </div>
+                    </div>
+                    <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 flex flex-col">
+                        <h3 className="font-bold mb-2">Preview</h3>
+                        <div className="flex-1 bg-white border p-4 rounded mb-4 overflow-y-auto h-64 whitespace-pre-wrap text-sm">
+                            {generatedContent || <span className="text-slate-400 italic">Output will appear here...</span>}
+                        </div>
+                        <button onClick={saveAiQuestion} disabled={!generatedContent} className="w-full bg-emerald-600 text-white py-3 rounded-lg font-bold hover:bg-emerald-700 disabled:opacity-50">Save to Database</button>
+                    </div>
+                </div>
+            )}
+
+        </main>
+
+        {/* GENERIC CONTENT MODAL */}
+        {isModalOpen && (
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl">
+                    <h3 className="font-bold text-xl mb-4 capitalize">{editingItem ? 'Edit' : 'Add'} {activeContent}</h3>
+                    <form onSubmit={handleFormSubmit} className="space-y-4">
+                        {(activeContent === 'news' || activeContent === 'community' || activeContent === 'gallery') && (
+                            <input className="w-full border p-2 rounded" placeholder="Title / Name / Caption" value={formData.title || formData.name || formData.caption || ''} onChange={e => setFormData({...formData, title: e.target.value, name: e.target.value, caption: e.target.value})} required />
+                        )}
+                        {(activeContent === 'news' || activeContent === 'community') && (
+                            <textarea className="w-full border p-2 rounded" rows={3} placeholder="Content / Description" value={formData.content || formData.description || ''} onChange={e => setFormData({...formData, content: e.target.value, description: e.target.value})} required />
+                        )}
+                        {(activeContent === 'executives' || activeContent === 'lecturers') && (
+                            <>
+                                <input className="w-full border p-2 rounded" placeholder="Name" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} required />
+                                <input className="w-full border p-2 rounded" placeholder="Position / Title" value={formData.position || formData.title || ''} onChange={e => setFormData({...formData, position: e.target.value, title: e.target.value})} required />
+                            </>
+                        )}
+                        <div className="border-t pt-4">
+                            <label className="block text-xs font-bold mb-2">Upload Image (Optional)</label>
+                            <input type="file" onChange={e => e.target.files && setFormFile(e.target.files[0])} />
+                        </div>
+                        <div className="flex justify-end gap-2 pt-4">
+                            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-600 font-bold">Cancel</button>
+                            <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-indigo-600 text-white font-bold rounded">Save</button>
+                        </div>
                     </form>
                 </div>
-                <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 flex flex-col h-full max-h-[600px]">
-                     <h3 className="font-bold text-slate-800 mb-2">Preview</h3>
-                     <div className="flex-grow bg-white border p-4 overflow-y-auto whitespace-pre-wrap text-sm mb-4">{generatedContent || <span className="text-slate-400 italic">Result...</span>}</div>
-                     <button onClick={handleSaveGenerated} disabled={!generatedContent || isSaving} className="w-full bg-emerald-600 text-white py-2 rounded font-bold hover:bg-emerald-700 disabled:opacity-50">Save</button>
-                </div>
-             </div>
+            </div>
         )}
-
-      </div>
     </div>
   );
 };

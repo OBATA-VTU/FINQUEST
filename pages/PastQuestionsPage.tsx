@@ -13,8 +13,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 export const PastQuestionsPage: React.FC = () => {
   const [questions, setQuestions] = useState<PastQuestion[]>([]);
   const [loading, setLoading] = useState(false);
-  // Default to null so we don't show any questions initially
-  const [selectedLevel, setSelectedLevel] = useState<Level | null>(null);
+  const [selectedLevel, setSelectedLevel] = useState<Level | null>(null); // Start null
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -25,11 +24,7 @@ export const PastQuestionsPage: React.FC = () => {
     const fetchQuestions = async () => {
         setLoading(true);
         try {
-            // Only fetch Approved questions
-            const q = query(
-                collection(db, "questions"), 
-                where("status", "==", "approved")
-            );
+            const q = query(collection(db, "questions"), where("status", "==", "approved"));
             const querySnapshot = await getDocs(q);
             const firebaseQuestions: PastQuestion[] = [];
             querySnapshot.forEach((doc) => {
@@ -55,6 +50,8 @@ export const PastQuestionsPage: React.FC = () => {
   }, [isModalOpen]); 
 
   const handleUpload = useCallback((newQuestionData: any) => {
+      // Just close modal, the useEffect will re-fetch or we can optimistically ignore 
+      // since it goes to pending anyway.
       setIsModalOpen(false);
   }, []);
 
@@ -86,53 +83,39 @@ export const PastQuestionsPage: React.FC = () => {
 
   return (
     <div className="bg-slate-50 min-h-screen pb-20">
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-        <div className="container mx-auto px-4 py-4 md:py-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-serif font-bold text-slate-900">Archive</h1>
-                    <p className="text-sm text-slate-500">Access verified departmental examination papers.</p>
-                </div>
-                
-                {/* Level Dropdown */}
-                <div className="relative">
-                    <select
-                        value={selectedLevel || ''}
-                        onChange={(e) => setSelectedLevel(Number(e.target.value) as Level)}
-                        className="appearance-none w-full md:w-48 px-4 py-2.5 bg-indigo-50 border border-indigo-200 text-indigo-900 font-bold rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                        <option value="" disabled>Select Level</option>
-                        {LEVELS.map(lvl => (
-                            <option key={lvl} value={lvl}>{lvl} Level</option>
-                        ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-indigo-600">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                    </div>
-                </div>
-            </div>
+      
+      {/* Top Bar */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+        <div className="container mx-auto px-4">
+             <div className="flex overflow-x-auto py-3 gap-2 scrollbar-hide">
+                 <button onClick={() => setSelectedLevel(null)} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${!selectedLevel ? 'bg-indigo-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Overview</button>
+                 {LEVELS.map(lvl => (
+                     <button key={lvl} onClick={() => setSelectedLevel(lvl)} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${selectedLevel === lvl ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                         {lvl} Level
+                     </button>
+                 ))}
+             </div>
         </div>
       </div>
       
       <div className="container mx-auto px-4 py-8">
         
         {/* INFO BANNER */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8 flex items-start gap-3">
-             <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8 flex items-start gap-3 animate-fade-in">
+             <div className="text-blue-500 mt-0.5"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
              <div>
-                 <h4 className="text-sm font-bold text-blue-800">Can't see your upload?</h4>
-                 <p className="text-xs text-blue-600 mt-1">All uploaded questions must be <strong>approved by an administrator</strong> before they appear in this list. This ensures quality and accuracy.</p>
+                 <h4 className="text-sm font-bold text-blue-800">Contributions are Moderated</h4>
+                 <p className="text-xs text-blue-600 mt-1">Uploaded questions will appear after approval by an administrator.</p>
              </div>
         </div>
 
         {!selectedLevel ? (
-            // EMPTY STATE: Initial Load
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-                <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mb-6">
-                    <svg className="w-10 h-10 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+            <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
+                <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-6">
+                    <svg className="w-10 h-10 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                 </div>
-                <h2 className="text-xl font-bold text-slate-800 mb-2">Select a Level to Begin</h2>
-                <p className="text-slate-500 max-w-sm">Please select your academic level from the dropdown above to view relevant past questions.</p>
+                <h2 className="text-xl font-bold text-slate-800 mb-2">Select a Level to Browse</h2>
+                <p className="text-slate-500 max-w-sm">Choose your academic level from the tabs above to access the archive.</p>
             </div>
         ) : (
             <>
@@ -143,7 +126,7 @@ export const PastQuestionsPage: React.FC = () => {
                             placeholder={`Search ${selectedLevel}L courses...`}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
                         />
                         <svg className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                     </div>
