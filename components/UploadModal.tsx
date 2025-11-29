@@ -1,4 +1,3 @@
-
 import React, { useState, FormEvent, useRef, useEffect, useContext } from 'react';
 import { Level } from '../types';
 import { LEVELS } from '../constants';
@@ -23,6 +22,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
     const [year, setYear] = useState(new Date().getFullYear());
     const [file, setFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadStatus, setUploadStatus] = useState<string>(''); // For granular feedback
     const [uploadProgress, setUploadProgress] = useState(0);
     const [dragActive, setDragActive] = useState(false);
     
@@ -43,14 +43,17 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
             return;
         }
 
-        try {
-            setIsUploading(true);
-            setUploadProgress(1); // Start indicator
+        setIsUploading(true);
+        setUploadStatus('Uploading file...');
+        setUploadProgress(1);
 
-            // 1. Upload File with Progress Callback
+        try {
+            // 1. Upload File with Progress
             const downloadUrl = await uploadFile(file, 'past_questions', (progress) => {
                 setUploadProgress(Math.round(progress));
             });
+
+            setUploadStatus('Saving to database...');
 
             // 2. Create Data Object
             const questionData = {
@@ -61,33 +64,31 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                 fileUrl: downloadUrl,
                 uploadedBy: auth.user.id,
                 uploadedByEmail: auth.user.email,
-                status: 'pending', // Requires admin approval
+                status: 'pending',
                 createdAt: new Date().toISOString()
             };
 
             // 3. Save to Firestore
             const docRef = await addDoc(collection(db, 'questions'), questionData);
 
-            // 4. Notify Parent
+            // 4. Notify Parent & Reset
             onUpload({ ...questionData, id: docRef.id });
-
             showNotification('Upload successful! Awaiting admin approval.', 'success');
 
-            // Reset
             setCourseCode('');
             setCourseTitle('');
             setLevel(100);
             setYear(new Date().getFullYear());
             setFile(null);
-            setUploadProgress(0);
             onClose();
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Upload error:", error);
-            showNotification("Failed to upload. Please try again.", "error");
+            showNotification(`Failed to upload: ${error.message}`, "error");
         } finally {
             setIsUploading(false);
             setUploadProgress(0);
+            setUploadStatus('');
         }
     };
     
@@ -213,7 +214,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                     {isUploading && (
                         <div className="space-y-1">
                              <div className="flex justify-between text-xs font-bold text-indigo-600">
-                                <span>Uploading...</span>
+                                <span>{uploadStatus}</span>
                                 <span>{uploadProgress}%</span>
                             </div>
                             <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">

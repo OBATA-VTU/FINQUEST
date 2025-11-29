@@ -45,6 +45,7 @@ export const AdminPage: React.FC = () => {
   const [aiForm, setAiForm] = useState({ code: '', title: '', level: '100', topic: '', year: new Date().getFullYear().toString() });
   const [generatedContent, setGeneratedContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSavingAi, setIsSavingAi] = useState(false);
 
   useEffect(() => {
     fetchStats();
@@ -197,8 +198,13 @@ export const AdminPage: React.FC = () => {
     setIsGenerating(true);
     setGeneratedContent('');
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const prompt = `Create a university exam paper for ${aiForm.code}: ${aiForm.title}. Level: ${aiForm.level}. Year: ${aiForm.year}. Topic: ${aiForm.topic}. Structure: Header, Section A (10 MCQs), Section B (4 Theory). Plain text format.`;
+        // Updated to use process.env as per guidelines, but checking if Vite env is available just in case
+        const apiKey = process.env.API_KEY || import.meta.env.VITE_GOOGLE_GENAI_API_KEY;
+        if (!apiKey) throw new Error("API Key missing");
+        
+        const ai = new GoogleGenAI({ apiKey });
+        const prompt = `Create a university exam paper for "Adekunle Ajasin University Akungba Akoko AAUA, Department of Finance". Course Code: ${aiForm.code}. Title: ${aiForm.title}. Level: ${aiForm.level}. Year: ${aiForm.year}. Topic: ${aiForm.topic}. Structure: Official Header, Instructions, Section A (10 MCQs with answers at end), Section B (4 Theory Questions). Plain text format.`;
+        
         const res = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
         if (res.text) {
              setGeneratedContent(res.text);
@@ -210,6 +216,8 @@ export const AdminPage: React.FC = () => {
   };
 
   const saveAiQuestion = async () => {
+      if (!generatedContent) return;
+      setIsSavingAi(true);
       try {
           await addDoc(collection(db, 'questions'), {
               courseCode: aiForm.code.toUpperCase(),
@@ -217,13 +225,20 @@ export const AdminPage: React.FC = () => {
               level: Number(aiForm.level),
               year: Number(aiForm.year),
               textContent: generatedContent,
-              status: 'approved',
+              status: 'approved', // Admin generated, so auto-approve
               createdAt: new Date().toISOString(),
-              isAiGenerated: true
+              isAiGenerated: true,
+              uploadedBy: auth?.user?.id,
+              uploadedByEmail: auth?.user?.email
           });
           showNotification("Saved to Database", "success");
           setGeneratedContent('');
-      } catch (e) { showNotification("Save failed", "error"); }
+      } catch (e) { 
+          console.error(e);
+          showNotification("Save failed. Check console.", "error"); 
+      } finally {
+          setIsSavingAi(false);
+      }
   };
 
   // --- RENDER HELPERS ---
@@ -416,7 +431,9 @@ export const AdminPage: React.FC = () => {
                         <div className="flex-1 bg-white border p-4 rounded mb-4 overflow-y-auto h-64 whitespace-pre-wrap text-sm">
                             {generatedContent || <span className="text-slate-400 italic">Output will appear here...</span>}
                         </div>
-                        <button onClick={saveAiQuestion} disabled={!generatedContent} className="w-full bg-emerald-600 text-white py-3 rounded-lg font-bold hover:bg-emerald-700 disabled:opacity-50">Save to Database</button>
+                        <button onClick={saveAiQuestion} disabled={!generatedContent || isSavingAi} className="w-full bg-emerald-600 text-white py-3 rounded-lg font-bold hover:bg-emerald-700 disabled:opacity-50">
+                            {isSavingAi ? 'Saving...' : 'Save to Database'}
+                        </button>
                     </div>
                 </div>
             )}

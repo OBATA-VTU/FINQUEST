@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Logo } from './Logo';
 import { Link } from 'react-router-dom';
@@ -102,8 +101,8 @@ export const Footer: React.FC = () => {
         <div className="border-t border-indigo-900 mt-12 pt-8 text-center text-xs text-indigo-500 flex flex-col md:flex-row justify-between items-center">
           <p>&copy; {new Date().getFullYear()} FINQUEST. Built for students, by students.</p>
           <div className="flex gap-4 mt-2 md:mt-0">
-              <Link to="#" className="hover:text-indigo-300">Privacy Policy</Link>
-              <Link to="#" className="hover:text-indigo-300">Terms of Use</Link>
+              <Link to="/privacy" className="hover:text-indigo-300">Privacy Policy</Link>
+              <Link to="/terms" className="hover:text-indigo-300">Terms of Use</Link>
           </div>
         </div>
       </div>

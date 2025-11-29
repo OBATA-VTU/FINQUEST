@@ -1,4 +1,3 @@
-
 import React, { useContext, useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
@@ -12,6 +11,8 @@ import { AdminPage } from './pages/AdminPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { CommunityPage } from './pages/CommunityPage';
 import { GalleryPage } from './pages/GalleryPage';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { TermsPage } from './pages/TermsPage';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { Logo } from './components/Logo';
@@ -91,6 +92,8 @@ const AppContent: React.FC = () => {
                 <Route path="/executives" element={<ExecutivesPage />} />
                 <Route path="/lecturers" element={<LecturersPage />} />
                 <Route path="/gallery" element={<GalleryPage />} />
+                <Route path="/privacy" element={<PrivacyPage />} />
+                <Route path="/terms" element={<TermsPage />} />
                 
                 {/* Protected Routes */}
                 <Route path="/dashboard" element={<RequireAuth><UserDashboardPage /></RequireAuth>} />

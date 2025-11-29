@@ -1,7 +1,7 @@
-
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
 
+// Hardcoded for reliability as requested
 const IMGBB_API_KEY = "a4aa97ad337019899bb59b4e94b149e0";
 
 /**
@@ -19,6 +19,7 @@ export const uploadToImgBB = (file: File, onProgress?: (progress: number) => voi
 
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`);
+    xhr.timeout = 30000; // 30s timeout
 
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable && onProgress) {
@@ -31,19 +32,20 @@ export const uploadToImgBB = (file: File, onProgress?: (progress: number) => voi
       if (xhr.status === 200) {
         try {
             const data = JSON.parse(xhr.responseText);
-            if (data.success) {
+            if (data && data.data && data.data.url) {
                 resolve(data.data.url);
             } else {
-                reject(new Error(data.error?.message || "ImgBB Upload Failed"));
+                reject(new Error("ImgBB response missing URL"));
             }
         } catch (e) {
-            reject(new Error("Invalid response from ImgBB"));
+            reject(new Error("Invalid JSON response from ImgBB"));
         }
       } else {
         reject(new Error("ImgBB Upload Failed with status " + xhr.status));
       }
     };
 
+    xhr.ontimeout = () => reject(new Error("ImgBB upload timed out"));
     xhr.onerror = () => reject(new Error("Network Error during ImgBB upload"));
     xhr.send(formData);
   });
