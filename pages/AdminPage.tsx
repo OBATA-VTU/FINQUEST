@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, doc, updateDoc, deleteDoc, addDoc, setDoc, getDoc } from 'firebase/firestore';
@@ -198,11 +197,7 @@ export const AdminPage: React.FC = () => {
     setIsGenerating(true);
     setGeneratedContent('');
     try {
-        // FIXED: USE VITE ENVIRONMENT VARIABLE SAFELY
-        const apiKey = import.meta.env.VITE_GOOGLE_GENAI_API_KEY;
-        if (!apiKey) throw new Error("API Key missing in Vercel Env Variables");
-        
-        const ai = new GoogleGenAI({ apiKey });
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const prompt = `Create a university exam paper for ${aiForm.code}: ${aiForm.title}. Level: ${aiForm.level}. Year: ${aiForm.year}. Topic: ${aiForm.topic}. Structure: Header, Section A (10 MCQs), Section B (4 Theory). Plain text format.`;
         const res = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
         if (res.text) {

@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Announcement, GalleryItem } from '../types';
 import { db } from '../firebase';
@@ -7,6 +7,7 @@ import { collection, query, orderBy, limit, getDocs, doc, getDoc } from 'firebas
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const observerRef = useRef<IntersectionObserver | null>(null);
   
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [galleryImages, setGalleryImages] = useState<GalleryItem[]>([]);
@@ -14,21 +15,20 @@ export const HomePage: React.FC = () => {
 
   // Optimized Scroll Reveal using IntersectionObserver
   useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
+    observerRef.current = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 entry.target.classList.add('active');
-                // Optional: Stop observing once revealed to save resources
-                observer.unobserve(entry.target);
+                observerRef.current?.unobserve(entry.target);
             }
         });
-    }, { threshold: 0.1 });
+    }, { threshold: 0.1, rootMargin: '50px' });
 
     const revealElements = document.querySelectorAll('.reveal');
-    revealElements.forEach(el => observer.observe(el));
+    revealElements.forEach(el => observerRef.current?.observe(el));
 
-    return () => observer.disconnect();
-  }, [announcements, galleryImages]); // Re-run when content loads
+    return () => observerRef.current?.disconnect();
+  }, [announcements, galleryImages]); 
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -61,13 +61,20 @@ export const HomePage: React.FC = () => {
       {/* 1. HERO SECTION */}
       <div className="relative h-[90vh] min-h-[500px] flex items-center justify-center bg-slate-900 overflow-hidden">
         <div className="absolute inset-0 z-0">
-             {/* Disable heavy animation on mobile (md:animate-[blob...]) to prevent freezing */}
+             {/* Optimized Image: No animation on mobile to prevent freezing */}
              <img 
                 src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" 
                 alt="AAUA Campus" 
-                className="w-full h-full object-cover opacity-40 md:scale-105 md:animate-[blob_20s_infinite_alternate] will-change-transform"
+                loading="eager"
+                className="w-full h-full object-cover opacity-40 md:scale-105 hidden md:block md:animate-[blob_20s_infinite_alternate]"
              />
-             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
+             {/* Static image for mobile for better performance */}
+             <img 
+                src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60" 
+                alt="AAUA Campus Mobile" 
+                className="w-full h-full object-cover opacity-40 md:hidden"
+             />
+             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-transparent"></div>
         </div>
 
         <div className="container mx-auto px-4 relative z-10 text-center text-white mt-8 md:mt-16">
@@ -100,7 +107,7 @@ export const HomePage: React.FC = () => {
       </div>
 
       {/* 2. HOD WELCOME */}
-      <section className="py-16 md:py-32 bg-white reveal">
+      <section className="py-12 md:py-32 bg-white reveal">
           <div className="container mx-auto px-4">
               <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
                   <div className="lg:w-1/2 relative w-full">
@@ -130,7 +137,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* 3. FINQUEST HUB */}
-      <section className="py-16 md:py-24 bg-slate-900 text-white relative overflow-hidden reveal">
+      <section className="py-12 md:py-24 bg-slate-900 text-white relative overflow-hidden reveal">
           <div className="absolute top-0 right-0 w-2/3 h-full bg-slate-800/50 -skew-x-12 transform origin-top-right pointer-events-none"></div>
           
           <div className="container mx-auto px-4 relative z-10">
@@ -177,7 +184,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* 4. NEWS & EVENTS */}
-      <section className="py-16 md:py-24 bg-white border-y border-slate-100 reveal">
+      <section className="py-12 md:py-24 bg-white border-y border-slate-100 reveal">
           <div className="container mx-auto px-4">
               <div className="flex flex-col lg:flex-row gap-12">
                   <div className="lg:w-1/3">
@@ -210,7 +217,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* 5. CAMPUS LIFE GALLERY */}
-      <section className="py-16 md:py-24 bg-slate-50 reveal">
+      <section className="py-12 md:py-24 bg-slate-50 reveal">
           <div className="container mx-auto px-4 text-center mb-12">
               <span className="text-indigo-600 font-bold uppercase tracking-widest text-xs">Student Experience</span>
               <h2 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 mt-3">Life at FINSA</h2>
@@ -221,32 +228,15 @@ export const HomePage: React.FC = () => {
                  <>
                     {galleryImages.map((img, idx) => (
                         <div key={img.id} className={`relative group overflow-hidden rounded-lg md:rounded-none h-48 md:h-auto ${idx === 0 ? 'col-span-2 row-span-2 h-96 md:h-auto' : idx === 3 ? 'col-span-2 row-span-1' : ''}`}>
-                            <img src={img.imageUrl} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt={img.caption} />
+                            <img src={img.imageUrl} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt={img.caption} loading="lazy" />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4 md:p-8">
                                 <span className="text-white font-bold text-sm md:text-xl">{img.caption}</span>
                             </div>
                         </div>
                     ))}
-                    {galleryImages.length < 4 && (
-                         <div className="bg-slate-200 flex items-center justify-center text-slate-400 p-8 rounded-lg">Add more photos via Admin</div>
-                    )}
                  </>
              ) : (
-                 // Default Placeholders if no dynamic content
-                 <>
-                    <div className="col-span-2 row-span-2 relative group overflow-hidden rounded-lg md:rounded-none h-64 md:h-auto">
-                        <img src="https://images.unsplash.com/photo-1523580494863-6f3031224c94?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Event" />
-                    </div>
-                    <div className="relative group overflow-hidden rounded-lg md:rounded-none h-32 md:h-auto">
-                        <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Class" />
-                    </div>
-                    <div className="relative group overflow-hidden rounded-lg md:rounded-none h-32 md:h-auto">
-                        <img src="https://images.unsplash.com/photo-1571260899304-425eee4c7efc?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Library" />
-                    </div>
-                    <div className="col-span-2 row-span-1 relative group overflow-hidden rounded-lg md:rounded-none h-32 md:h-auto">
-                        <img src="https://images.unsplash.com/photo-1427504743055-b72976e3d716?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Study" />
-                    </div>
-                 </>
+                 <div className="col-span-4 text-center text-slate-400 py-12">Gallery is empty</div>
              )}
           </div>
       </section>

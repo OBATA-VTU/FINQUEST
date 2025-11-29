@@ -23,12 +23,13 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
   useEffect(() => {
       if (fileUrl) {
           const lower = fileUrl.toLowerCase();
-          // Check for image extensions or Firebase 'alt=media' usually implies a file, but we need to check extension in path
-          // If no extension found in url string (signed url), assume other/pdf unless we have metadata. 
-          // For simplicity, we check common image extensions in the URL string.
-          if (lower.includes('.jpg') || lower.includes('.jpeg') || lower.includes('.png') || lower.includes('.gif') || lower.includes('imgbb')) {
+          // Improved Detection for Firebase URLs
+          const isImage = /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(lower) || lower.includes('imgbb') || lower.includes('alt=media');
+          const isPdf = /\.(pdf)(\?.*)?$/i.test(lower) || fileUrl.startsWith('blob:');
+
+          if (isImage) {
               setFileType('image');
-          } else if (lower.includes('.pdf') || fileUrl.startsWith('blob:')) {
+          } else if (isPdf) {
               setFileType('pdf');
           } else {
               setFileType('other');
@@ -70,25 +71,19 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
             {fileType === 'image' ? (
                 <img src={fileUrl} alt="Preview" className="max-w-full max-h-full object-contain" />
             ) : fileType === 'pdf' ? (
-                // For PDFs, try a direct object embed first (works better on some modern browsers), 
-                // then iframe with blob or google docs for remote.
+                // Robust PDF Embedding
                 <div className="w-full h-full">
                      {isLocalBlob ? (
                          <iframe src={fileUrl} className="w-full h-full" title="PDF Preview" />
                      ) : (
-                         <object data={fileUrl} type="application/pdf" className="w-full h-full">
-                            {/* Fallback for browsers that don't support object embed of PDF (e.g. some mobile) */}
-                            <iframe src={googleDocsUrl} className="w-full h-full" title="Google Docs Viewer">
-                                <div className="flex flex-col items-center justify-center h-full text-slate-500 p-8 text-center">
-                                    <p className="mb-4">Unable to preview this file inside the browser.</p>
-                                    <a href={fileUrl} target="_blank" rel="noreferrer" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Download to View</a>
-                                </div>
-                            </iframe>
+                        // Use native object first (better for mobile in some cases)
+                        <object data={fileUrl} type="application/pdf" className="w-full h-full">
+                            {/* Fallback to Google Docs Viewer */}
+                            <iframe src={googleDocsUrl} className="w-full h-full" title="Google Docs Viewer" />
                         </object>
                      )}
                 </div>
             ) : (
-                // Fallback for Word docs or unknown types -> Google Docs Viewer
                  <iframe src={googleDocsUrl} className="w-full h-full" title="Document Viewer" />
             )}
         </div>

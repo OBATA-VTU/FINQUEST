@@ -42,7 +42,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
   const handleClosePreview = () => {
       setIsPreviewOpen(false);
       // Clean up blob URL if it was generated locally to avoid memory leaks
-      if (previewUrl.startsWith('blob:')) {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
           URL.revokeObjectURL(previewUrl);
       }
       setPreviewUrl('');
