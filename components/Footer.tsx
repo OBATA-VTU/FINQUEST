@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Logo } from './Logo';
 import { Link } from 'react-router-dom';
@@ -32,7 +33,6 @@ export const Footer: React.FC = () => {
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 text-center md:text-left">
           
-          {/* Brand Column */}
           <div className="md:col-span-2 flex flex-col items-center md:items-start">
             <div className="flex items-center space-x-3 mb-6">
               <div className="bg-white p-1 rounded-full">
@@ -47,7 +47,6 @@ export const Footer: React.FC = () => {
               The official digital resource hub for the Finance Department of Adekunle Ajasin University. Breeding financial experts since inception.
             </p>
             
-            {/* Dynamic Social Icons */}
             <div className="flex gap-4">
                 {socials.facebook && (
                     <a href={socials.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-indigo-900 hover:bg-indigo-800 flex items-center justify-center transition-all hover:-translate-y-1">
@@ -99,7 +98,11 @@ export const Footer: React.FC = () => {
         
         {/* Copyright */}
         <div className="border-t border-indigo-900 mt-12 pt-8 text-center text-xs text-indigo-500 flex flex-col md:flex-row justify-between items-center">
-          <p>&copy; {new Date().getFullYear()} FINQUEST. Built for students, by students.</p>
+          <div className="flex flex-col md:flex-row gap-2 items-center">
+              <p>&copy; {new Date().getFullYear()} FINQUEST.</p>
+              <span className="hidden md:inline text-indigo-700">•</span>
+              <p className="text-indigo-400 font-bold">Crafted with ❤️ by OBA - PRO '25/26</p>
+          </div>
           <div className="flex gap-4 mt-2 md:mt-0">
               <Link to="/privacy" className="hover:text-indigo-300">Privacy Policy</Link>
               <Link to="/terms" className="hover:text-indigo-300">Terms of Use</Link>

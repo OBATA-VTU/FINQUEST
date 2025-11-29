@@ -32,6 +32,9 @@ export interface Executive {
   position: string;
   imageUrl: string;
   level: Level;
+  whatsapp?: string;
+  email?: string;
+  quote?: string;
 }
 
 export interface Lecturer {

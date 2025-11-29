@@ -76,7 +76,8 @@ export const AdminContentPage: React.FC = () => {
           if (formFile) url = await uploadToImgBB(formFile);
           
           let colName = activeContent === 'news' ? 'announcements' : activeContent === 'community' ? 'groups' : activeContent;
-          const payload = { ...formData, imageUrl: url };
+          const payload = { ...formData };
+          if (url) payload.imageUrl = url; // Only update if new image exists or existing one is there
           
           if (activeContent === 'news' && !editingItem) payload.date = new Date().toISOString();
           if (activeContent === 'gallery' && !editingItem) payload.date = new Date().toISOString();
@@ -162,7 +163,7 @@ export const AdminContentPage: React.FC = () => {
             </div>
         )}
 
-        {/* FULL SCREEN MODAL FOR MOBILE */}
+        {/* FORM MODAL */}
         {isModalOpen && (
             <div className="fixed inset-0 bg-slate-900/90 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
                 <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
@@ -190,6 +191,13 @@ export const AdminContentPage: React.FC = () => {
                                 <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Role / Title</label><input className="w-full border border-slate-300 p-3 rounded-xl" placeholder="Position" value={formData.position || formData.title || ''} onChange={e => setFormData({...formData, position: e.target.value, title: e.target.value})} required /></div>
                             </>
                         )}
+                        {activeContent === 'executives' && (
+                            <>
+                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">WhatsApp</label><input className="w-full border border-slate-300 p-3 rounded-xl" placeholder="https://wa.me/..." value={formData.whatsapp || ''} onChange={e => setFormData({...formData, whatsapp: e.target.value})} /></div>
+                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Email</label><input className="w-full border border-slate-300 p-3 rounded-xl" placeholder="email@aaua.edu.ng" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} /></div>
+                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Favorite Quote</label><textarea className="w-full border border-slate-300 p-3 rounded-xl" rows={2} placeholder="Quote..." value={formData.quote || ''} onChange={e => setFormData({...formData, quote: e.target.value})} /></div>
+                            </>
+                        )}
                         {(activeContent === 'executives' || activeContent === 'lecturers') && (
                              <div>
                                 <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Level</label>
@@ -203,7 +211,7 @@ export const AdminContentPage: React.FC = () => {
                         )}
                         <div className="pt-4">
                             <label className="block w-full border-2 border-dashed border-slate-300 p-4 rounded-xl text-center cursor-pointer hover:bg-slate-50 transition-colors">
-                                <span className="text-sm font-bold text-slate-500">{formFile ? 'Image Selected' : 'Tap to Upload Image'}</span>
+                                <span className="text-sm font-bold text-slate-500">{formFile ? 'Image Selected' : 'Tap to Upload Image (Optional)'}</span>
                                 <input type="file" className="hidden" onChange={e => e.target.files && setFormFile(e.target.files[0])} />
                             </label>
                         </div>
