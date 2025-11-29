@@ -1,13 +1,14 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Environment Variables
+// Environment Variables / Hardcoded Fallbacks
 const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || "a4aa97ad337019899bb59b4e94b149e0";
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+
+// YOUR SPECIFIC SUPABASE CREDENTIALS
+const SUPABASE_URL = "https://diwkctuzgeiyxbnqvsol.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpd2tjdHV6Z2VpeXhibnF2c29sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTI4MDAsImV4cCI6MjA3OTk4ODgwMH0.IeiP2lnygZbF8IEI_K5dGp2FtHyfHLUtOQqxzkd9OyM";
 
 // Initialize Supabase Client
-// Note: Users must provide VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in their .env file
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /**
@@ -15,18 +16,15 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
  * Uses the 'materials' bucket.
  */
 export const uploadFile = async (file: File, folder: string = 'general', onProgress?: (progress: number) => void): Promise<string> => {
-    if (!SUPABASE_URL || !SUPABASE_KEY) {
-        throw new Error("Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file.");
-    }
-
     return new Promise(async (resolve, reject) => {
         try {
-            // 1. Simulate Start Progress
+            // 1. Simulate Start Progress (Supabase upload is atomic in JS SDK)
             if (onProgress) onProgress(10);
 
             // 2. Sanitize Filename
             const fileExt = file.name.split('.').pop();
-            const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+            const fileName = `${folder}/${Date.now()}_${safeName}`;
 
             // 3. Upload to Supabase 'materials' bucket
             const { data, error } = await supabase.storage

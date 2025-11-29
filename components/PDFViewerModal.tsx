@@ -25,12 +25,12 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
           const lower = fileUrl.toLowerCase();
           
           // Detection Logic for Supabase, Firebase, and Local Blobs
-          // Supabase URLs for images often don't have nice extensions if raw, but usually do if uploaded with one.
+          // Supabase URLs are typically .../storage/v1/object/public/...
           
           const isImage = /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(lower) || 
                           lower.includes('imgbb') || 
                           lower.includes('alt=media') ||
-                          (lower.includes('supabase') && (lower.includes('.jpg') || lower.includes('.png')));
+                          (lower.includes('supabase') && (lower.includes('.jpg') || lower.includes('.png') || lower.includes('.jpeg')));
 
           const isPdf = /\.(pdf)(\?.*)?$/i.test(lower) || 
                         fileUrl.startsWith('blob:') ||

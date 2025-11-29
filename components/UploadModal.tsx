@@ -45,13 +45,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
         }
 
         setIsUploading(true);
-        setUploadStatus('Starting upload to cloud...');
+        setUploadStatus('Starting upload to Supabase...');
         setUploadProgress(5); 
 
         try {
             // 1. Upload File (Supabase)
-            // Note: Supabase SDK doesn't stream progress bytes for simple uploads, 
-            // so the progress bar will jump.
             const downloadUrl = await uploadFile(file, 'past_questions', (progress) => {
                 setUploadProgress(progress);
                 if (progress < 100) {

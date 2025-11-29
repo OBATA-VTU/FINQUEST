@@ -198,11 +198,10 @@ export const AdminPage: React.FC = () => {
     setIsGenerating(true);
     setGeneratedContent('');
     try {
-        // Updated to use process.env as per guidelines, but checking if Vite env is available just in case
-        const apiKey = process.env.API_KEY || import.meta.env.VITE_GOOGLE_GENAI_API_KEY;
+        const apiKey = process.env.API_KEY;
         if (!apiKey) throw new Error("API Key missing");
         
-        const ai = new GoogleGenAI({ apiKey });
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const prompt = `Create a university exam paper for "Adekunle Ajasin University Akungba Akoko AAUA, Department of Finance". Course Code: ${aiForm.code}. Title: ${aiForm.title}. Level: ${aiForm.level}. Year: ${aiForm.year}. Topic: ${aiForm.topic}. Structure: Official Header, Instructions, Section A (10 MCQs with answers at end), Section B (4 Theory Questions). Plain text format.`;
         
         const res = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
