@@ -28,6 +28,7 @@ export const TestPage: React.FC = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
   const [showCalculator, setShowCalculator] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   
   // Setup State
   const [topic, setTopic] = useState('');
@@ -99,6 +100,15 @@ export const TestPage: React.FC = () => {
     }
     
     setStage('loading');
+    setLoadingProgress(0);
+
+    // Simulated Progress Bar Logic
+    const progressInterval = setInterval(() => {
+        setLoadingProgress(prev => {
+            if (prev >= 95) return prev; // Stall at 95% until complete
+            return prev + Math.floor(Math.random() * 5) + 1;
+        });
+    }, 400);
     
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -110,7 +120,12 @@ export const TestPage: React.FC = () => {
             prompt = `Generate 20 difficult, complex, and rigid multiple-choice questions for ${selectedLevel} Level Finance students. Questions should cover a random mix of core courses typically taught at this level (e.g., Corporate Finance, Accounting, Economics, Quantitative Analysis). Do not group them by subject.`;
         }
 
-        const response = await ai.models.generateContent({
+        // Timeout Promise (25 seconds)
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("AI generation timed out. Please try again.")), 25000)
+        );
+
+        const aiPromise = ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
@@ -130,6 +145,12 @@ export const TestPage: React.FC = () => {
             }
         });
 
+        // Race between AI and Timeout
+        const response: any = await Promise.race([aiPromise, timeoutPromise]);
+        
+        clearInterval(progressInterval);
+        setLoadingProgress(100);
+
         const data = JSON.parse(response.text);
         if (Array.isArray(data)) {
             setQuestions(data.map((q: any, idx: number) => ({
@@ -143,14 +164,15 @@ export const TestPage: React.FC = () => {
                 setStage('exam');
                 setCurrentQuestionIndex(0);
                 setUserAnswers({});
-            }, 1500);
+            }, 800);
         } else {
             throw new Error("Invalid format received");
         }
 
-    } catch (e) {
+    } catch (e: any) {
+        clearInterval(progressInterval);
         console.error(e);
-        showNotification("Connection timeout. Please try again.", "error");
+        showNotification(e.message || "Connection timeout. Please try again.", "error");
         setStage('setup');
     }
   };
@@ -301,9 +323,23 @@ export const TestPage: React.FC = () => {
   if (stage === 'loading') {
       return (
           <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-white">
-              <div className="w-16 h-16 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mb-6"></div>
-              <h2 className="text-xl font-mono font-bold tracking-wide animate-pulse">ESTABLISHING SECURE CONNECTION...</h2>
-              <p className="text-indigo-300 text-sm mt-2">Retrieving {selectedLevel} Level Examination Packet from Database</p>
+              <div className="w-full max-w-md mb-8">
+                  <div className="flex justify-between text-xs font-bold text-indigo-400 mb-2 font-mono">
+                      <span>GENERATING ASSESSMENT...</span>
+                      <span>{loadingProgress}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                      <div 
+                        className="h-full bg-indigo-500 transition-all duration-300 ease-out relative"
+                        style={{ width: `${loadingProgress}%` }}
+                      >
+                         <div className="absolute inset-0 bg-white/30 w-full animate-[shimmer_2s_infinite]"></div>
+                      </div>
+                  </div>
+              </div>
+              
+              <h2 className="text-xl font-mono font-bold tracking-wide animate-pulse text-center">ESTABLISHING SECURE CONNECTION...</h2>
+              <p className="text-indigo-300 text-sm mt-3 text-center opacity-80">Retrieving {selectedLevel} Level Examination Packet from AI Core</p>
           </div>
       );
   }
