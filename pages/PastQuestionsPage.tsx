@@ -4,11 +4,11 @@ import { QuestionCard } from '../components/QuestionCard';
 import { UploadButton } from '../components/UploadButton';
 import { UploadModal } from '../components/UploadModal';
 import { AdBanner } from '../components/AdBanner';
-import { PastQuestion, Level } from '../types';
+import { PastQuestion } from '../types';
 import { LEVELS } from '../constants';
 import { AuthContext } from '../contexts/AuthContext';
 import { db } from '../firebase';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 export const PastQuestionsPage: React.FC = () => {
   const [questions, setQuestions] = useState<PastQuestion[]>([]);
@@ -85,10 +85,10 @@ export const PastQuestionsPage: React.FC = () => {
     }
     
     if (searchTerm) {
-        const lowerTerm = searchTerm.toLowerCase();
+        const lowerTerm = searchTerm.toLowerCase().trim();
         filtered = filtered.filter(q => 
-            q.courseCode.toLowerCase().includes(lowerTerm) ||
-            q.courseTitle.toLowerCase().includes(lowerTerm)
+            (q.courseCode && q.courseCode.toLowerCase().includes(lowerTerm)) ||
+            (q.courseTitle && q.courseTitle.toLowerCase().includes(lowerTerm))
         );
     }
 
@@ -137,13 +137,13 @@ export const PastQuestionsPage: React.FC = () => {
                      </div>
 
                      {/* Search */}
-                     <div className="relative flex-1 sm:w-64">
+                     <div className="relative flex-1 sm:w-80">
                         <input
                             type="text"
-                            placeholder="Search Course Code..."
+                            placeholder="Search by Course Code or Title..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm placeholder:text-slate-400"
                         />
                         <svg className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                      </div>
