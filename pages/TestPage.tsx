@@ -1,9 +1,14 @@
+
 import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { Calculator } from '../components/Calculator';
 import { GoogleGenAI, Type } from "@google/genai";
 import { useNotification } from '../contexts/NotificationContext';
 import { Link } from 'react-router-dom';
+import { db } from '../firebase';
+import { collection, addDoc, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { LEVELS } from '../constants';
+import { Level, TestResult } from '../types';
 
 interface Question {
   id: number;
@@ -16,28 +21,60 @@ export const TestPage: React.FC = () => {
   const auth = useContext(AuthContext);
   const { showNotification } = useNotification();
   
-  const [stage, setStage] = useState<'setup' | 'loading' | 'exam' | 'result'>('setup');
+  // Stages: Menu -> Setup -> Loading -> Exam -> Result
+  const [stage, setStage] = useState<'menu' | 'setup' | 'loading' | 'exam' | 'result'>('menu');
+  const [mode, setMode] = useState<'topic' | 'mock'>('topic');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
   const [showCalculator, setShowCalculator] = useState(false);
+  
+  // Setup State
   const [topic, setTopic] = useState('');
+  const [selectedLevel, setSelectedLevel] = useState<Level>(auth?.user?.level || 100);
+  
+  // Result State
   const [score, setScore] = useState(0);
+  const [leaderboard, setLeaderboard] = useState<TestResult[]>([]);
+
+  useEffect(() => {
+      fetchLeaderboard();
+  }, []);
+
+  const fetchLeaderboard = async () => {
+      try {
+          const q = query(collection(db, 'test_results'), orderBy('score', 'desc'), limit(5));
+          const snap = await getDocs(q);
+          setLeaderboard(snap.docs.map(d => ({ id: d.id, ...d.data() } as TestResult)));
+      } catch (e) { console.error("Leaderboard error", e); }
+  };
+
+  const handleModeSelect = (selectedMode: 'topic' | 'mock') => {
+      setMode(selectedMode);
+      setStage('setup');
+  };
 
   const startExam = async () => {
-    if (!topic.trim()) {
-        showNotification("Please enter a topic to generate questions.", "error");
+    if (mode === 'topic' && !topic.trim()) {
+        showNotification("Please enter a topic.", "error");
         return;
     }
+    
     setStage('loading');
     
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const level = auth?.user?.level || 100;
         
+        let prompt = "";
+        if (mode === 'topic') {
+            prompt = `Generate 20 very difficult, rigid, and exam-standard multiple-choice questions for ${selectedLevel} Level Finance university students specifically on the topic: "${topic}". The questions must rigorously test understanding of this topic at this academic level. Ensure options are plausible, tricky, and complex to simulate a hard university exam. Return ONLY a JSON array.`;
+        } else {
+            prompt = `Generate 20 very difficult, rigid, and complex multiple-choice questions for ${selectedLevel} Level Finance university students. The questions must be selected randomly from the standard curriculum for this specific level (covering courses like Financial Accounting, Corporate Finance, Business Law, Quantitative Analysis, Macroeconomics, etc.). The difficulty must be high, simulating a tough university semester examination. Do not include easy questions. Ensure the options are tricky. Return ONLY a JSON array.`;
+        }
+
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: `Generate 10 multiple-choice questions for ${level} Level Finance students about "${topic}". The options must be an array of 4 strings.`,
+            contents: prompt,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: {
@@ -63,16 +100,20 @@ export const TestPage: React.FC = () => {
                 options: q.options,
                 correctAnswer: q.answerIndex
             })));
-            setStage('exam');
-            setCurrentQuestionIndex(0);
-            setUserAnswers({});
+            
+            // Simulate "fetching" delay for system realism
+            setTimeout(() => {
+                setStage('exam');
+                setCurrentQuestionIndex(0);
+                setUserAnswers({});
+            }, 2000);
         } else {
-            throw new Error("Invalid format received from AI");
+            throw new Error("Invalid format received");
         }
 
     } catch (e) {
         console.error(e);
-        showNotification("Failed to generate test. Please try again.", "error");
+        showNotification("Connection timeout. Please try again.", "error");
         setStage('setup');
     }
   };
@@ -81,63 +122,138 @@ export const TestPage: React.FC = () => {
       setUserAnswers(prev => ({ ...prev, [currentQuestionIndex]: optionIdx }));
   };
 
-  const handleNext = () => {
-      if (currentQuestionIndex < questions.length - 1) {
-          setCurrentQuestionIndex(prev => prev + 1);
-      }
-  };
-
-  const handlePrev = () => {
-      if (currentQuestionIndex > 0) {
-          setCurrentQuestionIndex(prev => prev - 1);
-      }
-  };
-
-  const handleJumpTo = (idx: number) => {
-      setCurrentQuestionIndex(idx);
-  };
-
-  const finishTest = () => {
+  const finishTest = async () => {
       let s = 0;
       questions.forEach((q, idx) => {
           if (userAnswers[idx] === q.correctAnswer) s++;
       });
-      setScore(s);
+      
+      // Calculate exact percentage (integer)
+      const finalPercentage = Math.round((s / questions.length) * 100);
+      setScore(finalPercentage);
       setStage('result');
+
+      // Save to Leaderboard
+      if (auth?.user) {
+          try {
+              await addDoc(collection(db, 'test_results'), {
+                  userId: auth.user.id,
+                  username: auth.user.username,
+                  avatarUrl: auth.user.avatarUrl || '',
+                  score: finalPercentage, // Save as percentage for ranking
+                  totalQuestions: questions.length,
+                  level: selectedLevel,
+                  date: new Date().toISOString()
+              });
+              fetchLeaderboard();
+          } catch (e) { console.error("Error saving result", e); }
+      }
   };
 
-  const resetTest = () => {
-      setStage('setup');
-      setTopic('');
-      setQuestions([]);
-      setUserAnswers({});
-      setScore(0);
-  };
+  // --- RENDERERS ---
+
+  if (stage === 'menu') {
+      return (
+          <div className="min-h-screen bg-slate-50 py-12 px-4 flex flex-col items-center">
+              <div className="max-w-4xl w-full">
+                  <h1 className="text-3xl font-serif font-bold text-slate-900 text-center mb-2">Finance Assessment Portal</h1>
+                  <p className="text-slate-500 text-center mb-12">Select an examination mode to begin your practice session.</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {/* Topic Mode */}
+                      <button 
+                        onClick={() => handleModeSelect('topic')}
+                        className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-indigo-500 hover:shadow-xl transition-all group text-left"
+                      >
+                          <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center mb-6 text-indigo-600 group-hover:scale-110 transition-transform">
+                              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                          </div>
+                          <h3 className="text-xl font-bold text-slate-900 mb-2">Topic Practice</h3>
+                          <p className="text-slate-500 text-sm">Focus on specific areas like "Bonds", "Derivatives", or "Accounting". Great for revision.</p>
+                      </button>
+
+                      {/* Mock Exam Mode */}
+                      <button 
+                        onClick={() => handleModeSelect('mock')}
+                        className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-emerald-500 hover:shadow-xl transition-all group text-left"
+                      >
+                          <div className="w-14 h-14 bg-emerald-100 rounded-xl flex items-center justify-center mb-6 text-emerald-600 group-hover:scale-110 transition-transform">
+                              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                          </div>
+                          <h3 className="text-xl font-bold text-slate-900 mb-2">Full Mock Exam</h3>
+                          <p className="text-slate-500 text-sm">Randomized, rigid questions covering various courses for your level. Simulates real exam conditions.</p>
+                      </button>
+                  </div>
+
+                  {/* Mini Leaderboard */}
+                  <div className="mt-16 max-w-2xl mx-auto">
+                      <h3 className="text-center font-bold text-slate-400 uppercase tracking-widest text-xs mb-6">Recent Top Performers</h3>
+                      <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+                          {leaderboard.length > 0 ? leaderboard.map((entry, idx) => (
+                              <div key={idx} className="flex items-center justify-between p-4">
+                                  <div className="flex items-center gap-3">
+                                      <span className={`w-6 text-center font-bold ${idx===0?'text-amber-500':idx===1?'text-slate-400':'text-orange-700'}`}>#{idx+1}</span>
+                                      <span className="font-bold text-slate-700">@{entry.username}</span>
+                                  </div>
+                                  <div className="flex gap-4">
+                                      <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500">{entry.level}L</span>
+                                      <span className="font-mono font-bold text-emerald-600">{entry.score}%</span>
+                                  </div>
+                              </div>
+                          )) : <div className="p-4 text-center text-slate-400 text-sm">No records yet. Be the first!</div>}
+                      </div>
+                  </div>
+              </div>
+          </div>
+      );
+  }
 
   if (stage === 'setup') {
       return (
-          <div className="min-h-screen bg-slate-50 py-12 px-4 flex items-center justify-center">
-              <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-8 text-center animate-fade-in-up">
-                  <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6 text-indigo-600">
-                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
-                  </div>
-                  <h1 className="text-2xl font-bold text-slate-900 mb-2">Practice CBT</h1>
-                  <p className="text-slate-500 mb-8">Test your knowledge with AI-generated questions tailored to your level.</p>
-                  
-                  <div className="text-left mb-6">
-                      <label className="block text-sm font-bold text-slate-700 mb-2">Topic or Course Code</label>
-                      <input 
-                        type="text" 
-                        value={topic} 
-                        onChange={(e) => setTopic(e.target.value)} 
-                        className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none"
-                        placeholder="e.g. FIN 201, Corporate Finance, Bonds"
-                      />
-                  </div>
-                  
-                  <button onClick={startExam} className="w-full py-3.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg transition-transform hover:-translate-y-1">
-                      Start Assessment
+          <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 animate-fade-in-up">
+                  <button onClick={() => setStage('menu')} className="text-slate-400 hover:text-slate-600 mb-6 flex items-center gap-1 text-sm font-bold">
+                      &larr; Back
                   </button>
+                  
+                  <h2 className="text-2xl font-bold text-slate-900 mb-6">Configure {mode === 'topic' ? 'Practice' : 'Exam'}</h2>
+                  
+                  <div className="space-y-6">
+                      <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">Select Level</label>
+                          <div className="grid grid-cols-4 gap-2">
+                              {LEVELS.map(lvl => (
+                                  <button
+                                      key={lvl}
+                                      onClick={() => setSelectedLevel(lvl)}
+                                      className={`py-2 rounded-lg font-bold text-sm border-2 transition-all ${selectedLevel === lvl ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 text-slate-500 hover:border-indigo-300'}`}
+                                  >
+                                      {lvl}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
+
+                      {mode === 'topic' && (
+                          <div>
+                              <label className="block text-sm font-bold text-slate-700 mb-2">Focus Topic</label>
+                              <input 
+                                type="text" 
+                                value={topic} 
+                                onChange={e => setTopic(e.target.value)}
+                                className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-0 outline-none font-medium"
+                                placeholder="e.g. Capital Budgeting"
+                              />
+                          </div>
+                      )}
+
+                      <button 
+                        onClick={startExam} 
+                        className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg transition-transform hover:-translate-y-1 mt-4"
+                      >
+                          Start Session
+                      </button>
+                  </div>
               </div>
           </div>
       );
@@ -145,57 +261,32 @@ export const TestPage: React.FC = () => {
 
   if (stage === 'loading') {
       return (
-          <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-              <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-              <h2 className="text-xl font-bold text-slate-800">Generating Questions...</h2>
-              <p className="text-slate-500">Our AI is crafting a unique test for you.</p>
+          <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-white">
+              <div className="w-16 h-16 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mb-6"></div>
+              <h2 className="text-xl font-mono font-bold tracking-wide animate-pulse">ESTABLISHING SECURE CONNECTION...</h2>
+              <p className="text-indigo-300 text-sm mt-2">Retrieving {selectedLevel} Level Examination Packet from Database</p>
           </div>
       );
   }
 
   if (stage === 'result') {
-      const percentage = Math.round((score / questions.length) * 100);
       return (
-          <div className="min-h-screen bg-slate-50 py-12 px-4">
-              <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden animate-fade-in-up">
-                  <div className={`p-8 text-center text-white ${percentage >= 50 ? 'bg-emerald-600' : 'bg-rose-600'}`}>
-                      <h1 className="text-3xl font-bold mb-2">{percentage >= 50 ? 'Great Job!' : 'Keep Practicing'}</h1>
-                      <div className="text-6xl font-black mb-2">{percentage}%</div>
-                      <p className="opacity-90">You scored {score} out of {questions.length}</p>
+          <div className="min-h-screen bg-slate-50 py-12 px-4 flex items-center justify-center">
+              <div className="max-w-2xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden animate-fade-in-up">
+                  <div className={`p-10 text-center text-white ${score >= 50 ? 'bg-emerald-600' : 'bg-rose-600'}`}>
+                      <h1 className="text-4xl font-bold mb-2 font-serif">{score >= 50 ? 'Excellent Work!' : 'Study Harder!'}</h1>
+                      <div className="text-8xl font-black mb-2 tracking-tighter">{score}<span className="text-4xl">%</span></div>
+                      <p className="opacity-90 font-medium">You answered {Math.round((score / 100) * questions.length)} of {questions.length} questions correctly.</p>
                   </div>
-                  <div className="p-8">
-                      <h3 className="font-bold text-slate-800 mb-4 text-lg">Review Answers</h3>
-                      <div className="space-y-6">
-                          {questions.map((q, idx) => (
-                              <div key={q.id} className="border-b border-slate-100 pb-4 last:border-0">
-                                  <div className="flex gap-3">
-                                      <span className="font-bold text-slate-400">0{idx + 1}.</span>
-                                      <div className="flex-1">
-                                          <p className="font-medium text-slate-800 mb-2">{q.text}</p>
-                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                                              {q.options.map((opt, oIdx) => {
-                                                  const isCorrect = oIdx === q.correctAnswer;
-                                                  const isSelected = userAnswers[idx] === oIdx;
-                                                  let className = "p-2 rounded border ";
-                                                  if (isCorrect) className += "bg-emerald-50 border-emerald-500 text-emerald-700 font-bold";
-                                                  else if (isSelected && !isCorrect) className += "bg-rose-50 border-rose-500 text-rose-700";
-                                                  else className += "border-slate-200 text-slate-500";
-                                                  
-                                                  return (
-                                                      <div key={oIdx} className={className}>
-                                                          {opt} {isCorrect && '✓'} {isSelected && !isCorrect && '✗'}
-                                                      </div>
-                                                  );
-                                              })}
-                                          </div>
-                                      </div>
-                                  </div>
-                              </div>
-                          ))}
-                      </div>
-                      <div className="mt-8 flex gap-4">
-                          <button onClick={resetTest} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700">Take Another Test</button>
-                          <Link to="/dashboard" className="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 text-center">Back to Dashboard</Link>
+                  
+                  <div className="p-8 bg-slate-50">
+                      <div className="flex gap-4">
+                          <button onClick={() => { setStage('menu'); setQuestions([]); setScore(0); }} className="flex-1 py-4 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition shadow-sm">
+                              Back to Menu
+                          </button>
+                          <Link to="/dashboard" className="flex-1 py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg text-center flex items-center justify-center">
+                              Dashboard
+                          </Link>
                       </div>
                   </div>
               </div>
@@ -203,136 +294,94 @@ export const TestPage: React.FC = () => {
       );
   }
 
-  // EXAM STAGE
+  // EXAM UI
   const currentQ = questions[currentQuestionIndex];
 
   return (
-    <div className="min-h-screen bg-slate-50 py-6 px-4 md:px-8">
-      {/* Top Bar */}
-      <div className="max-w-6xl mx-auto flex justify-between items-center mb-6">
-          <div>
-              <h1 className="text-xl font-bold text-slate-900">{topic || 'Finance Test'}</h1>
-              <p className="text-sm text-slate-500">Question {currentQuestionIndex + 1} of {questions.length}</p>
-          </div>
-          <div className="flex gap-3">
-              <button 
-                onClick={() => setShowCalculator(!showCalculator)}
-                className={`p-2 rounded-lg transition-colors ${showCalculator ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
-                title="Toggle Calculator"
-              >
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-              </button>
-          </div>
-      </div>
+    <div className="min-h-screen bg-slate-100 flex flex-col">
+        {/* Header */}
+        <header className="bg-white px-4 py-3 border-b border-slate-200 flex justify-between items-center sticky top-0 z-20">
+            <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center font-bold text-indigo-700">{auth?.user?.name.charAt(0)}</div>
+                <div className="hidden md:block">
+                    <h3 className="font-bold text-slate-800 text-sm">{mode === 'topic' ? 'Practice Mode' : 'Mock Exam'}</h3>
+                    <p className="text-xs text-slate-500">{selectedLevel} Level • {questions.length} Questions</p>
+                </div>
+            </div>
+            <div className="flex gap-3">
+                <button 
+                    onClick={() => setShowCalculator(!showCalculator)} 
+                    className={`p-2 rounded-lg transition-colors ${showCalculator ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+                    title="Toggle Calculator"
+                >
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                </button>
+                <button onClick={() => window.confirm("Submit Exam?") && finishTest()} className="px-4 py-2 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 text-sm">Submit Exam</button>
+            </div>
+        </header>
 
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6 items-start">
-          
-          {/* Main Question Card */}
-          <div className="flex-1 w-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[500px]">
-              <div className="p-6 md:p-10 flex-grow">
-                  <h2 className="text-lg md:text-xl font-medium text-slate-800 leading-relaxed mb-8">
-                      {currentQ.text}
-                  </h2>
-                  
-                  <div className="space-y-3">
-                      {currentQ.options.map((option, idx) => (
-                          <button
-                              key={idx}
-                              onClick={() => handleAnswer(idx)}
-                              className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
-                                  userAnswers[currentQuestionIndex] === idx 
-                                  ? 'border-indigo-600 bg-indigo-50 text-indigo-900' 
-                                  : 'border-slate-100 hover:border-indigo-200 hover:bg-slate-50 text-slate-600'
-                              }`}
-                          >
-                              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                                  userAnswers[currentQuestionIndex] === idx 
-                                  ? 'border-indigo-600' 
-                                  : 'border-slate-300'
-                              }`}>
-                                  {userAnswers[currentQuestionIndex] === idx && <div className="w-3 h-3 bg-indigo-600 rounded-full"></div>}
-                              </div>
-                              <span className="font-medium">{option}</span>
-                          </button>
-                      ))}
-                  </div>
-              </div>
-
-              {/* Navigation Footer */}
-              <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-between">
-                  <button 
-                    onClick={handlePrev} 
-                    disabled={currentQuestionIndex === 0}
-                    className="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                      Previous
-                  </button>
-                  
-                  {currentQuestionIndex < questions.length - 1 ? (
-                      <button 
-                        onClick={handleNext} 
-                        className="px-6 py-2.5 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-md transition-colors"
-                      >
-                          Next
-                      </button>
-                  ) : (
-                      <button 
-                        onClick={() => window.confirm("Are you sure you want to finish the exam?") && finishTest()}
-                        className="px-6 py-2.5 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-md transition-colors"
-                      >
-                          Finish Exam
-                      </button>
-                  )}
-              </div>
-          </div>
-
-          {/* Sidebar / Question Map */}
-          <div className="w-full md:w-72 shrink-0 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-auto">
-              <div className="bg-slate-50 border-b border-slate-200 p-4 text-center">
-                  <h3 className="font-bold text-slate-800 text-sm uppercase">Question Map</h3>
-              </div>
-              <div className="p-4 grid grid-cols-5 gap-2 max-h-64 md:max-h-none overflow-y-auto">
-                  {questions.map((_, idx) => {
-                      const isAnswered = userAnswers[idx] !== undefined;
-                      const isCurrent = currentQuestionIndex === idx;
-                      return (
-                          <button
-                              key={idx}
-                              onClick={() => handleJumpTo(idx)}
-                              className={`aspect-square rounded-lg font-bold text-xs flex items-center justify-center transition-all ${
-                                  isCurrent 
-                                  ? 'ring-2 ring-indigo-600 ring-offset-2 bg-indigo-100 text-indigo-700' 
-                                  : isAnswered 
-                                      ? 'bg-emerald-500 text-white shadow-sm' 
-                                      : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                              }`}
-                          >
-                              {idx + 1}
-                          </button>
-                      );
-                  })}
-              </div>
-              <div className="p-4 border-t border-slate-100 bg-slate-50 text-xs text-slate-500 space-y-2">
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-500 rounded"></div> Answered</div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 bg-slate-200 rounded"></div> Unanswered</div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 bg-indigo-100 border border-indigo-600 rounded"></div> Current</div>
-              </div>
-              <div className="p-4 border-t border-slate-100">
+        <div className="flex-1 container mx-auto max-w-6xl p-4 flex flex-col md:flex-row gap-6">
+            
+            {/* Question Card */}
+            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                <div className="p-6 border-b border-slate-100 flex justify-between">
+                    <span className="font-bold text-slate-700">Question {currentQuestionIndex + 1}</span>
+                    <span className="text-xs font-bold text-slate-400 uppercase">Select Option</span>
+                </div>
+                <div className="p-8 md:p-12 flex-grow overflow-y-auto">
+                    <h2 className="text-xl md:text-2xl font-serif font-medium text-slate-900 leading-relaxed mb-8">{currentQ.text}</h2>
+                    <div className="space-y-3">
+                        {currentQ.options.map((opt, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => handleAnswer(idx)}
+                                className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600 bg-indigo-50 text-indigo-900' : 'border-slate-100 hover:border-indigo-200 text-slate-600'}`}
+                            >
+                                <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border ${userAnswers[currentQuestionIndex] === idx ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white border-slate-300 text-slate-400'}`}>{String.fromCharCode(65+idx)}</span>
+                                <span className="font-medium">{opt}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-between">
                     <button 
-                        onClick={() => window.confirm("Are you sure you want to submit?") && finishTest()}
-                        className="w-full py-3 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 shadow-sm transition-colors text-sm"
+                        disabled={currentQuestionIndex === 0}
+                        onClick={() => setCurrentQuestionIndex(p => p - 1)}
+                        className="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-white disabled:opacity-50"
                     >
-                        Submit Exam
+                        Previous
                     </button>
-              </div>
-          </div>
-      </div>
+                    {currentQuestionIndex < questions.length - 1 ? (
+                        <button onClick={() => setCurrentQuestionIndex(p => p + 1)} className="px-6 py-2.5 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700">Next</button>
+                    ) : (
+                        <button onClick={() => window.confirm("Finish Exam?") && finishTest()} className="px-6 py-2.5 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700">Finish Exam</button>
+                    )}
+                </div>
+            </div>
 
-      {showCalculator && (
-          <div className="fixed bottom-20 right-4 z-50 animate-fade-in-up">
-              <Calculator />
-          </div>
-      )}
+            {/* Sidebar Map */}
+            <div className="w-full md:w-72 shrink-0 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col h-fit">
+                <div className="p-4 border-b border-slate-100 font-bold text-center text-sm text-slate-800 uppercase">Question Map</div>
+                <div className="p-4 grid grid-cols-5 gap-2">
+                    {questions.map((_, idx) => (
+                        <button
+                            key={idx}
+                            onClick={() => setCurrentQuestionIndex(idx)}
+                            className={`aspect-square rounded-lg font-bold text-xs flex items-center justify-center transition-all ${currentQuestionIndex === idx ? 'ring-2 ring-indigo-600 bg-indigo-50 text-indigo-700' : userAnswers[idx] !== undefined ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}`}
+                        >
+                            {idx + 1}
+                        </button>
+                    ))}
+                </div>
+                <div className="p-4 border-t border-slate-100 space-y-2">
+                    <button onClick={() => window.confirm("Submit Exam?") && finishTest()} className="w-full py-3 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 text-sm">Submit All</button>
+                </div>
+            </div>
+        </div>
+
+        {showCalculator && (
+            <div className="fixed bottom-20 right-4 z-50 animate-fade-in-up"><Calculator /></div>
+        )}
     </div>
   );
 };

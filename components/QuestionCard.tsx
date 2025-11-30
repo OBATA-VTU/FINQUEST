@@ -4,6 +4,7 @@ import { PastQuestion } from '../types';
 import { downloadPDF, generatePDF } from '../utils/pdfGenerator';
 import { PDFViewerModal } from './PDFViewerModal';
 import { getDropboxDownloadUrl } from '../utils/api';
+import { useNotification } from '../contexts/NotificationContext';
 
 interface QuestionCardProps {
   question: PastQuestion;
@@ -12,6 +13,7 @@ interface QuestionCardProps {
 export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
+  const { showNotification } = useNotification();
 
   const handlePreview = (e: React.MouseEvent) => {
       e.preventDefault();
@@ -27,11 +29,21 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
             url = URL.createObjectURL(pdfBlob);
           } catch (err) {
               console.error("Error generating PDF preview", err);
+              showNotification("Could not generate preview.", "error");
               return;
           }
       } else if (question.fileUrl) {
-          // Use stored URL (usually has ?raw=1 from upload logic)
+          // Use stored URL. Ensure it is raw=1 for previewing content directly
           url = question.fileUrl;
+          if (url.includes('dropbox.com')) {
+              // Ensure we have the raw stream for preview, not the download or page
+              if (url.includes('?dl=0')) url = url.replace('?dl=0', '?raw=1');
+              else if (url.includes('?dl=1')) url = url.replace('?dl=1', '?raw=1');
+              else if (!url.includes('?')) url = `${url}?raw=1`;
+          }
+      } else {
+          showNotification("No preview available for this item.", "info");
+          return;
       }
       
       if (url) {

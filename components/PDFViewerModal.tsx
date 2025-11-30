@@ -13,6 +13,7 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
   const modalRef = useRef<HTMLDivElement>(null);
   const [fileType, setFileType] = useState<'image' | 'pdf' | 'other'>('other');
   const [loading, setLoading] = useState(true);
+  const [displayUrl, setDisplayUrl] = useState('');
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -27,14 +28,24 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
       if (fileUrl) {
           const lower = fileUrl.toLowerCase();
           
+          // Ensure we are using raw=1 for previewing if it's dropbox
+          let cleanUrl = fileUrl;
+          if (lower.includes('dropbox.com')) {
+              if (lower.includes('?dl=0')) cleanUrl = fileUrl.replace('?dl=0', '?raw=1');
+              else if (lower.includes('?dl=1')) cleanUrl = fileUrl.replace('?dl=1', '?raw=1');
+              else if (!lower.includes('?')) cleanUrl = `${fileUrl}?raw=1`;
+          }
+          setDisplayUrl(cleanUrl);
+
           // Detection Logic
           const isImage = /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(lower) || 
                           lower.includes('imgbb') || 
                           lower.includes('alt=media');
 
+          // Check for PDF: either extension, blob, or if it's dropbox (assuming PDF for now if not image/doc)
           const isPdf = /\.(pdf)(\?.*)?$/i.test(lower) || 
-                        fileUrl.startsWith('blob:') ||
-                        (lower.includes('dropbox') && !isImage); 
+                        cleanUrl.startsWith('blob:') ||
+                        (lower.includes('dropbox') && !isImage && !/\.(doc|docx|ppt|pptx|xls|xlsx)(\?.*)?$/i.test(lower));
 
           if (isImage) {
               setFileType('image');
@@ -52,8 +63,8 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
 
   const isLocalBlob = fileUrl.startsWith('blob:');
   
-  // Google Docs Viewer is extremely reliable for Dropbox links (raw=1 or dl=1)
-  const googleDocsUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(fileUrl)}`;
+  // Google Docs Viewer for Office Documents (Word, PPT, Excel)
+  const googleDocsUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(displayUrl)}`;
 
   // For the download button, we want the forced download link (dl=1)
   const downloadLink = isLocalBlob ? fileUrl : getDropboxDownloadUrl(fileUrl);
@@ -71,7 +82,9 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
         <div className="flex justify-between items-center p-4 border-b border-slate-200 bg-slate-50">
           <div className="flex flex-col min-w-0">
              <h3 className="font-bold text-lg text-slate-800 truncate pr-4">{title}</h3>
-             <p className="text-xs text-slate-500 truncate">{fileType === 'image' ? 'Image Preview' : 'Document Preview'}</p>
+             <p className="text-xs text-slate-500 truncate">
+                 {fileType === 'image' ? 'Image Preview' : fileType === 'pdf' ? 'PDF Viewer' : 'Document Preview'}
+             </p>
           </div>
           <button 
             onClick={onClose} 
@@ -85,28 +98,34 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
         
         <div className="flex-grow bg-slate-100 relative flex items-center justify-center overflow-auto">
             {loading && (
-                <div className="absolute inset-0 flex items-center justify-center z-10">
+                <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
                 </div>
             )}
             
             {fileType === 'image' ? (
                 <img 
-                    src={fileUrl} 
+                    src={displayUrl} 
                     alt="Preview" 
                     className="max-w-full max-h-full object-contain" 
                     onLoad={() => setLoading(false)}
                 />
             ) : fileType === 'pdf' ? (
-                <div className="w-full h-full relative">
-                     {isLocalBlob ? (
-                         <iframe src={fileUrl} className="w-full h-full" title="PDF Preview" onLoad={handleIframeLoad} />
-                     ) : (
-                        <iframe src={googleDocsUrl} className="w-full h-full" title="Google Docs Viewer" onLoad={handleIframeLoad} />
-                     )}
-                </div>
+                // Use Native Iframe for PDFs to support Dropbox raw streams directly
+                <iframe 
+                    src={displayUrl} 
+                    className="w-full h-full border-none" 
+                    title="PDF Viewer" 
+                    onLoad={handleIframeLoad} 
+                />
             ) : (
-                 <iframe src={googleDocsUrl} className="w-full h-full" title="Document Viewer" onLoad={handleIframeLoad} />
+                 // Use Google Docs Viewer for non-PDF documents (Word, PPT)
+                 <iframe 
+                    src={googleDocsUrl} 
+                    className="w-full h-full border-none" 
+                    title="Document Viewer" 
+                    onLoad={handleIframeLoad} 
+                 />
             )}
         </div>
         
