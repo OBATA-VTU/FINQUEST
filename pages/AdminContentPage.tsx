@@ -241,7 +241,7 @@ export const AdminContentPage: React.FC = () => {
                         )}
                         {activeContent === 'executives' && (
                             <>
-                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">WhatsApp</label><input className="w-full border border-slate-300 p-3 rounded-xl" placeholder="https://wa.me/..." value={formData.whatsapp || ''} onChange={e => setFormData({...formData, whatsapp: e.target.value})} /></div>
+                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">WhatsApp Link or Number</label><input className="w-full border border-slate-300 p-3 rounded-xl" placeholder="https://wa.me/..." value={formData.whatsapp || ''} onChange={e => setFormData({...formData, whatsapp: e.target.value})} /></div>
                                 <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Email</label><input className="w-full border border-slate-300 p-3 rounded-xl" placeholder="email@aaua.edu.ng" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} /></div>
                                 <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Favorite Quote</label><textarea className="w-full border border-slate-300 p-3 rounded-xl" rows={2} placeholder="Quote..." value={formData.quote || ''} onChange={e => setFormData({...formData, quote: e.target.value})} /></div>
                             </>

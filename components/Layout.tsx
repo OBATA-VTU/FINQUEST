@@ -1,12 +1,16 @@
 
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { Footer } from './Footer';
 
 export const Layout: React.FC = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const { pathname } = useLocation();
+
+    // Pages where the footer should NOT appear
+    const hideFooter = ['/community', '/test'].includes(pathname) || pathname.startsWith('/admin');
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-800 flex font-sans">
@@ -25,7 +29,7 @@ export const Layout: React.FC = () => {
                     <Outlet />
                 </main>
                 
-                <Footer />
+                {!hideFooter && <Footer />}
             </div>
         </div>
     );
