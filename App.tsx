@@ -71,16 +71,9 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
 
 const AppContent: React.FC = () => {
   const auth = useContext(AuthContext);
-  const [showSplash, setShowSplash] = useState(true);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (showSplash || auth?.loading) {
+  // Removed artificial splash delay to improve LCP for AdSense bots
+  if (auth?.loading) {
       return <LoadingScreen />;
   }
 

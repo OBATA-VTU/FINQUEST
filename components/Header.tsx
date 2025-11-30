@@ -30,8 +30,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
           </div>
 
           {/* Right Side: Date & Notifications (Visible on Desktop & Mobile) */}
-          <div className="flex items-center gap-4 ml-auto">
-                <div className="hidden md:block px-3 py-1 bg-slate-50 border border-slate-200 rounded-full text-xs font-bold text-slate-600">
+          <div className="flex items-center gap-3 ml-auto">
+                <div className="px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[10px] sm:text-xs font-bold text-slate-600 whitespace-nowrap">
                     {new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                 </div>
                 

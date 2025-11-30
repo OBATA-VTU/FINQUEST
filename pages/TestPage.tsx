@@ -29,6 +29,7 @@ export const TestPage: React.FC = () => {
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
   const [showCalculator, setShowCalculator] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState('Initializing AI...');
   
   // Setup State
   const [topic, setTopic] = useState('');
@@ -100,15 +101,20 @@ export const TestPage: React.FC = () => {
     }
     
     setStage('loading');
-    setLoadingProgress(0);
+    setLoadingProgress(5);
+    setLoadingMessage('Contacting Gemini AI...');
 
-    // Simulated Progress Bar Logic
+    // Progress Bar Simulation
     const progressInterval = setInterval(() => {
         setLoadingProgress(prev => {
-            if (prev >= 95) return prev; // Stall at 95% until complete
-            return prev + Math.floor(Math.random() * 5) + 1;
+            const next = prev + Math.floor(Math.random() * 8) + 1;
+            if (next > 30 && next < 50) setLoadingMessage('Generating Questions...');
+            if (next > 50 && next < 80) setLoadingMessage('Formatting Response...');
+            if (next > 80 && next < 95) setLoadingMessage('Finalizing...');
+            if (next >= 95) return 95; 
+            return next;
         });
-    }, 400);
+    }, 800);
     
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -120,9 +126,9 @@ export const TestPage: React.FC = () => {
             prompt = `Generate 20 difficult, complex, and rigid multiple-choice questions for ${selectedLevel} Level Finance students. Questions should cover a random mix of core courses typically taught at this level (e.g., Corporate Finance, Accounting, Economics, Quantitative Analysis). Do not group them by subject.`;
         }
 
-        // Timeout Promise (25 seconds)
+        // Timeout Promise (30 seconds)
         const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("AI generation timed out. Please try again.")), 25000)
+            setTimeout(() => reject(new Error("AI generation timed out. Please try again.")), 30000)
         );
 
         const aiPromise = ai.models.generateContent({
@@ -151,8 +157,10 @@ export const TestPage: React.FC = () => {
         clearInterval(progressInterval);
         setLoadingProgress(100);
 
+        if (!response.text) throw new Error("Empty response from AI");
+
         const data = JSON.parse(response.text);
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && data.length > 0) {
             setQuestions(data.map((q: any, idx: number) => ({
                 id: idx,
                 text: q.question,
@@ -164,7 +172,7 @@ export const TestPage: React.FC = () => {
                 setStage('exam');
                 setCurrentQuestionIndex(0);
                 setUserAnswers({});
-            }, 800);
+            }, 500);
         } else {
             throw new Error("Invalid format received");
         }
@@ -172,9 +180,14 @@ export const TestPage: React.FC = () => {
     } catch (e: any) {
         clearInterval(progressInterval);
         console.error(e);
-        showNotification(e.message || "Connection timeout. Please try again.", "error");
+        showNotification(e.message || "Connection failed. Please try again.", "error");
         setStage('setup');
     }
+  };
+
+  const handleCancelLoading = () => {
+      setStage('setup');
+      showNotification("Generation cancelled.", "info");
   };
 
   const handleAnswer = (optionIdx: number) => {
@@ -325,10 +338,10 @@ export const TestPage: React.FC = () => {
           <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-white">
               <div className="w-full max-w-md mb-8">
                   <div className="flex justify-between text-xs font-bold text-indigo-400 mb-2 font-mono">
-                      <span>GENERATING ASSESSMENT...</span>
+                      <span>{loadingMessage.toUpperCase()}</span>
                       <span>{loadingProgress}%</span>
                   </div>
-                  <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                  <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden shadow-inner border border-slate-700">
                       <div 
                         className="h-full bg-indigo-500 transition-all duration-300 ease-out relative"
                         style={{ width: `${loadingProgress}%` }}
@@ -338,8 +351,15 @@ export const TestPage: React.FC = () => {
                   </div>
               </div>
               
-              <h2 className="text-xl font-mono font-bold tracking-wide animate-pulse text-center">ESTABLISHING SECURE CONNECTION...</h2>
-              <p className="text-indigo-300 text-sm mt-3 text-center opacity-80">Retrieving {selectedLevel} Level Examination Packet from AI Core</p>
+              <h2 className="text-xl font-mono font-bold tracking-wide animate-pulse text-center mb-4">ESTABLISHING SECURE CONNECTION...</h2>
+              <p className="text-indigo-300 text-sm mt-3 text-center opacity-80 mb-8">Retrieving {selectedLevel} Level Examination Packet from AI Core</p>
+
+              <button 
+                onClick={handleCancelLoading}
+                className="px-6 py-2 border border-slate-600 text-slate-400 rounded hover:bg-slate-800 hover:text-white transition text-xs font-bold uppercase tracking-wider"
+              >
+                  Cancel Request
+              </button>
           </div>
       );
   }
