@@ -20,7 +20,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<void>;
   loginWithGoogle: () => Promise<boolean>; // Returns true if NEW user (needs profile setup)
   signup: (data: { name: string; email: string; pass: string; level: Level; username: string; matricNumber: string; avatarUrl?: string }) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   checkUsernameAvailability: (username: string) => Promise<boolean>;
 }
 
@@ -217,10 +217,14 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       }
   };
 
-  const logout = () => {
-    signOut(auth);
-    setUser(null);
-    showNotification("Logged out successfully", "info");
+  const logout = async () => {
+    try {
+        await signOut(auth);
+        setUser(null);
+        showNotification("Logged out successfully", "info");
+    } catch (e) {
+        console.error("Logout failed", e);
+    }
   };
 
   const value = {

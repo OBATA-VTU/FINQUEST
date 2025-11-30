@@ -240,62 +240,123 @@ export const TestPage: React.FC = () => {
 
   if (stage === 'menu') {
       return (
-          <div className="min-h-screen bg-slate-50 py-12 px-4 flex flex-col items-center animate-fade-in">
+          <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 flex flex-col items-center animate-fade-in transition-colors">
               <div className="max-w-4xl w-full">
-                  <h1 className="text-3xl font-serif font-bold text-slate-900 text-center mb-2">Finance Assessment Portal</h1>
-                  <p className="text-slate-500 text-center mb-12">Select an examination mode to begin your practice session.</p>
+                  <h1 className="text-3xl font-serif font-bold text-slate-900 dark:text-white text-center mb-2">Finance Assessment Portal</h1>
+                  <p className="text-slate-500 dark:text-slate-400 text-center mb-12">Select an examination mode to begin your practice session.</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       {/* Topic Mode */}
                       <button 
                         onClick={() => handleModeSelect('topic')}
-                        className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-indigo-500 hover:shadow-xl transition-all group text-left"
+                        className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:border-indigo-500 hover:shadow-xl transition-all group text-left"
                       >
-                          <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center mb-6 text-indigo-600 group-hover:scale-110 transition-transform">
+                          <div className="w-14 h-14 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center mb-6 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
                               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
                           </div>
-                          <h3 className="text-xl font-bold text-slate-900 mb-2">Topic Practice</h3>
-                          <p className="text-slate-500 text-sm">Focus on specific areas like "Bonds", "Derivatives", or "Accounting". Great for revision.</p>
+                          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Topic Practice</h3>
+                          <p className="text-slate-500 dark:text-slate-400 text-sm">Focus on specific areas like "Bonds", "Derivatives", or "Accounting". Great for revision.</p>
                       </button>
 
                       {/* Mock Exam Mode */}
                       <button 
                         onClick={() => handleModeSelect('mock')}
-                        className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-emerald-500 hover:shadow-xl transition-all group text-left"
+                        className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:border-emerald-500 hover:shadow-xl transition-all group text-left"
                       >
-                          <div className="w-14 h-14 bg-emerald-100 rounded-xl flex items-center justify-center mb-6 text-emerald-600 group-hover:scale-110 transition-transform">
+                          <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/50 rounded-xl flex items-center justify-center mb-6 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
                               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                           </div>
-                          <h3 className="text-xl font-bold text-slate-900 mb-2">Full Mock Exam</h3>
-                          <p className="text-slate-500 text-sm">Randomized, rigid questions covering various courses for your level. Simulates real exam conditions.</p>
+                          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Full Mock Exam</h3>
+                          <p className="text-slate-500 dark:text-slate-400 text-sm">Randomized, rigid questions covering various courses for your level. Simulates real exam conditions.</p>
                       </button>
                   </div>
 
                   {/* Leaderboard */}
                   <div className="mt-16 max-w-2xl mx-auto w-full">
                       <div className="flex justify-between items-end mb-6">
-                        <h3 className="text-center font-bold text-slate-400 uppercase tracking-widest text-xs">Hall of Fame</h3>
-                        <button onClick={fetchLeaderboard} className="text-xs text-indigo-500 font-bold hover:underline">Refresh</button>
+                        <h3 className="text-center font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest text-xs flex items-center gap-2">
+                            <span className="text-xl">🏆</span> Hall of Fame
+                        </h3>
+                        <button onClick={fetchLeaderboard} className="text-xs text-indigo-500 dark:text-indigo-400 font-bold hover:underline">Refresh Board</button>
                       </div>
-                      <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-sm">
-                          {leaderboard.length > 0 ? leaderboard.map((entry, idx) => (
-                              <div key={idx} className={`flex items-center justify-between p-4 ${idx === 0 ? 'bg-amber-50' : idx === 1 ? 'bg-slate-50' : idx === 2 ? 'bg-orange-50' : ''}`}>
-                                  <div className="flex items-center gap-4">
-                                      <div className={`w-8 h-8 flex items-center justify-center rounded-full font-bold text-sm 
-                                          ${idx===0?'bg-amber-100 text-amber-600':idx===1?'bg-slate-200 text-slate-600':idx===2?'bg-orange-100 text-orange-600':'bg-slate-100 text-slate-400'}`}>
-                                          {idx + 1}
+                      
+                      <div className="space-y-3">
+                          {leaderboard.length > 0 ? leaderboard.map((entry, idx) => {
+                              const rank = idx + 1;
+                              
+                              // Default Styles (4th+)
+                              let containerStyle = "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700";
+                              let rankDisplay = <span className="font-bold text-slate-400 dark:text-slate-500 w-8 text-center">#{rank}</span>;
+                              let scoreColor = "text-indigo-600 dark:text-indigo-400";
+                              let ringColor = "border-slate-200 dark:border-slate-600";
+                              
+                              // 1st Place - Gold
+                              if (rank === 1) {
+                                  containerStyle = "bg-gradient-to-r from-yellow-50 to-amber-100 dark:from-yellow-900/30 dark:to-amber-900/30 border-amber-300 dark:border-amber-700 shadow-lg shadow-amber-100/50 transform scale-105 z-10";
+                                  scoreColor = "text-amber-700 dark:text-amber-400";
+                                  ringColor = "border-amber-400";
+                                  rankDisplay = (
+                                      <div className="relative w-10 h-10 flex items-center justify-center">
+                                          <span className="text-3xl filter drop-shadow-sm">🥇</span>
+                                          <svg className="absolute -top-2 -right-2 w-4 h-4 text-yellow-500 animate-[spin_3s_linear_infinite]" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                          <svg className="absolute top-0 -left-2 w-3 h-3 text-yellow-400 animate-pulse" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
                                       </div>
-                                      <div>
-                                        <span className={`block font-bold ${idx < 3 ? 'text-slate-900' : 'text-slate-600'}`}>@{entry.username}</span>
-                                        <span className="text-[10px] text-slate-400">{new Date(entry.date).toLocaleDateString()}</span>
+                                  );
+                              }
+                              
+                              // 2nd Place - Silver
+                              if (rank === 2) {
+                                  containerStyle = "bg-gradient-to-r from-slate-50 to-gray-200 dark:from-slate-800 dark:to-gray-800 border-slate-300 dark:border-slate-600 shadow-md";
+                                  scoreColor = "text-slate-700 dark:text-slate-300";
+                                  ringColor = "border-slate-300";
+                                  rankDisplay = (
+                                      <div className="relative w-10 h-10 flex items-center justify-center">
+                                          <span className="text-3xl filter drop-shadow-sm">🥈</span>
+                                          <svg className="absolute -top-1 -right-1 w-4 h-4 text-slate-400 animate-bounce" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" /></svg>
+                                      </div>
+                                  );
+                              }
+
+                              // 3rd Place - Bronze
+                              if (rank === 3) {
+                                  containerStyle = "bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/20 border-orange-300 dark:border-orange-700 shadow-sm";
+                                  scoreColor = "text-orange-800 dark:text-orange-400";
+                                  ringColor = "border-orange-300";
+                                  rankDisplay = (
+                                      <div className="relative w-10 h-10 flex items-center justify-center">
+                                          <span className="text-3xl filter drop-shadow-sm">🥉</span>
+                                          <div className="absolute top-0 right-0 w-2 h-2 bg-orange-400 rounded-full animate-ping"></div>
+                                      </div>
+                                  );
+                              }
+
+                              return (
+                                  <div key={idx} className={`flex items-center justify-between p-4 rounded-xl border ${containerStyle} transition-all duration-300`}>
+                                      <div className="flex items-center gap-4">
+                                          <div className="shrink-0">{rankDisplay}</div>
+                                          <div className="flex items-center gap-3">
+                                              <div className={`w-10 h-10 rounded-full border-2 ${ringColor} overflow-hidden bg-slate-200 dark:bg-slate-700`}>
+                                                  {entry.avatarUrl ? (
+                                                      <img src={entry.avatarUrl} className="w-full h-full object-cover" alt="avatar" />
+                                                  ) : (
+                                                      <div className="w-full h-full flex items-center justify-center font-bold text-slate-500 dark:text-slate-400">{entry.username?.charAt(0)}</div>
+                                                  )}
+                                              </div>
+                                              <div>
+                                                  <span className={`block font-bold text-sm md:text-base ${rank === 1 ? 'text-amber-900 dark:text-amber-100' : 'text-slate-800 dark:text-slate-100'}`}>
+                                                      {entry.username || 'Unknown User'}
+                                                  </span>
+                                                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{new Date(entry.date).toLocaleDateString()}</span>
+                                              </div>
+                                          </div>
+                                      </div>
+                                      <div className="flex flex-col items-end">
+                                          <span className={`font-black text-xl ${scoreColor}`}>{entry.score}%</span>
+                                          <span className="text-[10px] bg-white/50 dark:bg-black/30 px-2 py-0.5 rounded text-slate-500 dark:text-slate-400 font-bold border border-slate-100 dark:border-slate-700 uppercase tracking-wider">{entry.level}L</span>
                                       </div>
                                   </div>
-                                  <div className="flex gap-4 items-center">
-                                      <span className="text-[10px] bg-white border border-slate-200 px-2 py-1 rounded text-slate-500 uppercase tracking-wide">{entry.level}L</span>
-                                      <span className={`font-mono font-bold text-lg ${idx === 0 ? 'text-amber-500' : 'text-emerald-600'}`}>{entry.score}%</span>
-                                  </div>
-                              </div>
-                          )) : <div className="p-8 text-center text-slate-400 text-sm">No records yet. Be the first!</div>}
+                              );
+                          }) : <div className="p-12 text-center text-slate-400 dark:text-slate-500 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">Leaderboard is empty. Be the first!</div>}
                       </div>
                   </div>
               </div>
@@ -305,23 +366,23 @@ export const TestPage: React.FC = () => {
 
   if (stage === 'setup') {
       return (
-          <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 animate-fade-in-up">
-                  <button onClick={() => setStage('menu')} className="text-slate-400 hover:text-slate-600 mb-6 flex items-center gap-1 text-sm font-bold">
+          <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4 transition-colors">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full p-8 animate-fade-in-up border border-slate-100 dark:border-slate-700">
+                  <button onClick={() => setStage('menu')} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 mb-6 flex items-center gap-1 text-sm font-bold">
                       &larr; Back
                   </button>
                   
-                  <h2 className="text-2xl font-bold text-slate-900 mb-6">Configure {mode === 'topic' ? 'Practice' : 'Exam'}</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Configure {mode === 'topic' ? 'Practice' : 'Exam'}</h2>
                   
                   <div className="space-y-6">
                       <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-2">Select Level</label>
+                          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Select Level</label>
                           <div className="grid grid-cols-4 gap-2">
                               {LEVELS.map(lvl => (
                                   <button
                                       key={lvl}
                                       onClick={() => setSelectedLevel(lvl)}
-                                      className={`py-2 rounded-lg font-bold text-sm border-2 transition-all ${selectedLevel === lvl ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 text-slate-500 hover:border-indigo-300'}`}
+                                      className={`py-2 rounded-lg font-bold text-sm border-2 transition-all ${selectedLevel === lvl ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-indigo-300 dark:hover:border-indigo-500'}`}
                                   >
                                       {lvl}
                                   </button>
@@ -331,12 +392,12 @@ export const TestPage: React.FC = () => {
 
                       {mode === 'topic' && (
                           <div>
-                              <label className="block text-sm font-bold text-slate-700 mb-2">Focus Topic</label>
+                              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Focus Topic</label>
                               <input 
                                 type="text" 
                                 value={topic} 
                                 onChange={e => setTopic(e.target.value)}
-                                className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-0 outline-none font-medium"
+                                className="w-full border-2 border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-0 outline-none font-medium"
                                 placeholder="e.g. Capital Budgeting"
                               />
                           </div>
@@ -387,17 +448,17 @@ export const TestPage: React.FC = () => {
 
   if (stage === 'result') {
       return (
-          <div className="min-h-screen bg-slate-50 py-12 px-4 flex items-center justify-center">
-              <div className="max-w-2xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden animate-fade-in-up">
+          <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 flex items-center justify-center transition-colors">
+              <div className="max-w-2xl w-full bg-white dark:bg-slate-800 rounded-3xl shadow-2xl overflow-hidden animate-fade-in-up border border-slate-100 dark:border-slate-700">
                   <div className={`p-10 text-center text-white ${score >= 50 ? 'bg-emerald-600' : 'bg-rose-600'}`}>
                       <h1 className="text-4xl font-bold mb-2 font-serif">{score >= 50 ? 'Excellent Work!' : 'Study Harder!'}</h1>
                       <div className="text-8xl font-black mb-2 tracking-tighter">{score}<span className="text-4xl">%</span></div>
                       <p className="opacity-90 font-medium">You answered {Math.round((score / 100) * questions.length)} of {questions.length} questions correctly.</p>
                   </div>
                   
-                  <div className="p-8 bg-slate-50">
+                  <div className="p-8 bg-slate-50 dark:bg-slate-900">
                       <div className="flex gap-4">
-                          <button onClick={() => setStage('review')} className="flex-1 py-4 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition shadow-sm">
+                          <button onClick={() => setStage('review')} className="flex-1 py-4 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition shadow-sm">
                               Review Answers
                           </button>
                           <Link to="/dashboard" className="flex-1 py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg text-center flex items-center justify-center">
@@ -412,10 +473,10 @@ export const TestPage: React.FC = () => {
 
   if (stage === 'review') {
       return (
-          <div className="min-h-screen bg-slate-50 py-8 px-4 flex flex-col items-center animate-fade-in">
+          <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 px-4 flex flex-col items-center animate-fade-in transition-colors">
               <div className="max-w-4xl w-full">
                   <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-2xl font-bold text-slate-900">Test Review</h2>
+                      <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Test Review</h2>
                       <div className="flex gap-3">
                           <button onClick={downloadReview} className="px-4 py-2 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 flex items-center gap-2">
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
@@ -432,21 +493,21 @@ export const TestPage: React.FC = () => {
                           const userAns = userAnswers[idx];
                           const isCorrect = userAns === q.correctAnswer;
                           return (
-                              <div key={idx} className={`bg-white p-6 rounded-xl border-l-4 shadow-sm ${isCorrect ? 'border-emerald-500' : 'border-rose-500'}`}>
+                              <div key={idx} className={`bg-white dark:bg-slate-800 p-6 rounded-xl border-l-4 shadow-sm ${isCorrect ? 'border-emerald-500' : 'border-rose-500'} dark:border-l-4`}>
                                   <div className="flex justify-between mb-4">
-                                      <span className="font-bold text-slate-500">Question {idx + 1}</span>
+                                      <span className="font-bold text-slate-500 dark:text-slate-400">Question {idx + 1}</span>
                                       {isCorrect ? (
-                                          <span className="text-xs font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded">Correct</span>
+                                          <span className="text-xs font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded">Correct</span>
                                       ) : (
-                                          <span className="text-xs font-bold bg-rose-100 text-rose-700 px-2 py-1 rounded">Incorrect</span>
+                                          <span className="text-xs font-bold bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 px-2 py-1 rounded">Incorrect</span>
                                       )}
                                   </div>
-                                  <p className="text-lg font-medium text-slate-900 mb-4">{q.text}</p>
+                                  <p className="text-lg font-medium text-slate-900 dark:text-white mb-4">{q.text}</p>
                                   <div className="space-y-2">
                                       {q.options.map((opt, optIdx) => {
-                                          let bgClass = "bg-slate-50 border-slate-200 text-slate-600";
-                                          if (optIdx === q.correctAnswer) bgClass = "bg-emerald-100 border-emerald-300 text-emerald-800 font-bold";
-                                          else if (optIdx === userAns && !isCorrect) bgClass = "bg-rose-100 border-rose-300 text-rose-800";
+                                          let bgClass = "bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300";
+                                          if (optIdx === q.correctAnswer) bgClass = "bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 font-bold";
+                                          else if (optIdx === userAns && !isCorrect) bgClass = "bg-rose-100 dark:bg-rose-900/30 border-rose-300 dark:border-rose-700 text-rose-800 dark:text-rose-300";
                                           
                                           return (
                                               <div key={optIdx} className={`p-3 rounded-lg border text-sm ${bgClass}`}>
@@ -471,20 +532,20 @@ export const TestPage: React.FC = () => {
   const currentQ = questions[currentQuestionIndex];
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 flex flex-col transition-colors">
         {/* Header */}
-        <header className="bg-white px-4 py-3 border-b border-slate-200 flex justify-between items-center sticky top-0 z-20">
+        <header className="bg-white dark:bg-slate-800 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center sticky top-0 z-20">
             <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center font-bold text-indigo-700">{auth?.user?.name.charAt(0)}</div>
+                <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center font-bold text-indigo-700 dark:text-indigo-300">{auth?.user?.name.charAt(0)}</div>
                 <div className="hidden md:block">
-                    <h3 className="font-bold text-slate-800 text-sm">{mode === 'topic' ? 'Practice Mode' : 'Mock Exam'}</h3>
-                    <p className="text-xs text-slate-500">{selectedLevel} Level • {questions.length} Questions</p>
+                    <h3 className="font-bold text-slate-800 dark:text-white text-sm">{mode === 'topic' ? 'Practice Mode' : 'Mock Exam'}</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{selectedLevel} Level • {questions.length} Questions</p>
                 </div>
             </div>
             <div className="flex gap-3">
                 <button 
                     onClick={() => setShowCalculator(!showCalculator)} 
-                    className={`p-2 rounded-lg transition-colors ${showCalculator ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+                    className={`p-2 rounded-lg transition-colors ${showCalculator ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'}`}
                     title="Toggle Calculator"
                 >
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
@@ -496,31 +557,31 @@ export const TestPage: React.FC = () => {
         <div className="flex-1 container mx-auto max-w-6xl p-4 flex flex-col md:flex-row gap-6">
             
             {/* Question Card */}
-            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-                <div className="p-6 border-b border-slate-100 flex justify-between">
-                    <span className="font-bold text-slate-700">Question {currentQuestionIndex + 1}</span>
+            <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between">
+                    <span className="font-bold text-slate-700 dark:text-slate-300">Question {currentQuestionIndex + 1}</span>
                     <span className="text-xs font-bold text-slate-400 uppercase">Select Option</span>
                 </div>
                 <div className="p-8 md:p-12 flex-grow overflow-y-auto">
-                    <h2 className="text-xl md:text-2xl font-serif font-medium text-slate-900 leading-relaxed mb-8">{currentQ.text}</h2>
+                    <h2 className="text-xl md:text-2xl font-serif font-medium text-slate-900 dark:text-white leading-relaxed mb-8">{currentQ.text}</h2>
                     <div className="space-y-3">
                         {currentQ.options.map((opt, idx) => (
                             <button
                                 key={idx}
                                 onClick={() => handleAnswer(idx)}
-                                className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600 bg-indigo-50 text-indigo-900' : 'border-slate-100 hover:border-indigo-200 text-slate-600'}`}
+                                className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-900 dark:text-indigo-200' : 'border-slate-100 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-500 text-slate-600 dark:text-slate-300'}`}
                             >
-                                <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border ${userAnswers[currentQuestionIndex] === idx ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white border-slate-300 text-slate-400'}`}>{String.fromCharCode(65+idx)}</span>
+                                <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border ${userAnswers[currentQuestionIndex] === idx ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-400'}`}>{String.fromCharCode(65+idx)}</span>
                                 <span className="font-medium">{opt}</span>
                             </button>
                         ))}
                     </div>
                 </div>
-                <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-between">
+                <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex justify-between">
                     <button 
                         disabled={currentQuestionIndex === 0}
                         onClick={() => setCurrentQuestionIndex(p => p - 1)}
-                        className="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-white disabled:opacity-50"
+                        className="px-6 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50"
                     >
                         Previous
                     </button>
@@ -533,20 +594,20 @@ export const TestPage: React.FC = () => {
             </div>
 
             {/* Sidebar Map */}
-            <div className="w-full md:w-72 shrink-0 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col h-fit">
-                <div className="p-4 border-b border-slate-100 font-bold text-center text-sm text-slate-800 uppercase">Question Map</div>
+            <div className="w-full md:w-72 shrink-0 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col h-fit">
+                <div className="p-4 border-b border-slate-100 dark:border-slate-700 font-bold text-center text-sm text-slate-800 dark:text-slate-200 uppercase">Question Map</div>
                 <div className="p-4 grid grid-cols-5 gap-2">
                     {questions.map((_, idx) => (
                         <button
                             key={idx}
                             onClick={() => setCurrentQuestionIndex(idx)}
-                            className={`aspect-square rounded-lg font-bold text-xs flex items-center justify-center transition-all ${currentQuestionIndex === idx ? 'ring-2 ring-indigo-600 bg-indigo-50 text-indigo-700' : userAnswers[idx] !== undefined ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}`}
+                            className={`aspect-square rounded-lg font-bold text-xs flex items-center justify-center transition-all ${currentQuestionIndex === idx ? 'ring-2 ring-indigo-600 bg-indigo-50 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : userAnswers[idx] !== undefined ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}
                         >
                             {idx + 1}
                         </button>
                     ))}
                 </div>
-                <div className="p-4 border-t border-slate-100 space-y-2">
+                <div className="p-4 border-t border-slate-100 dark:border-slate-700 space-y-2">
                     <button onClick={() => window.confirm("Submit Exam?") && finishTest()} className="w-full py-3 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 text-sm">Submit All</button>
                 </div>
             </div>
