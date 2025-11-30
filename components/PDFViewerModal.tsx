@@ -12,6 +12,7 @@ interface PDFViewerModalProps {
 export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose, fileUrl, title }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [fileType, setFileType] = useState<'image' | 'pdf' | 'other'>('other');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -22,6 +23,7 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
   }, [onClose]);
 
   useEffect(() => {
+      setLoading(true);
       if (fileUrl) {
           const lower = fileUrl.toLowerCase();
           
@@ -30,7 +32,6 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
                           lower.includes('imgbb') || 
                           lower.includes('alt=media');
 
-          // Dropbox PDFs often end in ?raw=1, or might be dl.dropboxusercontent
           const isPdf = /\.(pdf)(\?.*)?$/i.test(lower) || 
                         fileUrl.startsWith('blob:') ||
                         (lower.includes('dropbox') && !isImage); 
@@ -45,14 +46,16 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
       }
   }, [fileUrl]);
 
+  const handleIframeLoad = () => setLoading(false);
+
   if (!isOpen) return null;
 
   const isLocalBlob = fileUrl.startsWith('blob:');
   
-  // Google Docs Viewer is great for Dropbox links (using the raw=1 url)
+  // Google Docs Viewer is extremely reliable for Dropbox links (raw=1 or dl=1)
   const googleDocsUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(fileUrl)}`;
 
-  // For the download button, we want the forced download link
+  // For the download button, we want the forced download link (dl=1)
   const downloadLink = isLocalBlob ? fileUrl : getDropboxDownloadUrl(fileUrl);
 
   return (
@@ -81,20 +84,29 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
         </div>
         
         <div className="flex-grow bg-slate-100 relative flex items-center justify-center overflow-auto">
+            {loading && (
+                <div className="absolute inset-0 flex items-center justify-center z-10">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                </div>
+            )}
+            
             {fileType === 'image' ? (
-                <img src={fileUrl} alt="Preview" className="max-w-full max-h-full object-contain" />
+                <img 
+                    src={fileUrl} 
+                    alt="Preview" 
+                    className="max-w-full max-h-full object-contain" 
+                    onLoad={() => setLoading(false)}
+                />
             ) : fileType === 'pdf' ? (
-                // Robust PDF Embedding
-                <div className="w-full h-full">
+                <div className="w-full h-full relative">
                      {isLocalBlob ? (
-                         <iframe src={fileUrl} className="w-full h-full" title="PDF Preview" />
+                         <iframe src={fileUrl} className="w-full h-full" title="PDF Preview" onLoad={handleIframeLoad} />
                      ) : (
-                        // Google Docs Viewer is extremely reliable for Dropbox links
-                        <iframe src={googleDocsUrl} className="w-full h-full" title="Google Docs Viewer" />
+                        <iframe src={googleDocsUrl} className="w-full h-full" title="Google Docs Viewer" onLoad={handleIframeLoad} />
                      )}
                 </div>
             ) : (
-                 <iframe src={googleDocsUrl} className="w-full h-full" title="Document Viewer" />
+                 <iframe src={googleDocsUrl} className="w-full h-full" title="Document Viewer" onLoad={handleIframeLoad} />
             )}
         </div>
         

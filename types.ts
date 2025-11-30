@@ -81,3 +81,14 @@ export interface GalleryItem {
   caption: string;
   date: string;
 }
+
+export interface TestResult {
+  id: string;
+  userId: string;
+  username: string;
+  avatarUrl?: string;
+  score: number;
+  totalQuestions: number;
+  level: Level;
+  date: string;
+}

@@ -4,9 +4,13 @@ import { db } from '../firebase';
 import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
 
+const ALLOWED_ROLES = ['student', 'executive', 'lecturer', 'admin'];
+
 export const AdminUsersPage: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [successId, setSuccessId] = useState<string | null>(null);
   const { showNotification } = useNotification();
 
   useEffect(() => {
@@ -22,11 +26,27 @@ export const AdminUsersPage: React.FC = () => {
   };
 
   const updateUserRole = async (uid: string, role: string) => {
+      if (!ALLOWED_ROLES.includes(role)) {
+          showNotification("Invalid role selected.", "error");
+          return;
+      }
+
+      setUpdatingId(uid);
       try {
           await updateDoc(doc(db, 'users', uid), { role });
-          showNotification("User role updated", "success");
-          fetchUsers();
-      } catch (e) { showNotification("Failed to update role", "error"); }
+          setSuccessId(uid);
+          // showNotification("User role updated", "success");
+          
+          // Clear success message after 2 seconds
+          setTimeout(() => setSuccessId(null), 2000);
+          
+          // Update local state without full refetch for speed
+          setUsers(prev => prev.map(u => u.id === uid ? { ...u, role } : u));
+      } catch (e) { 
+          showNotification("Failed to update role", "error"); 
+      } finally {
+          setUpdatingId(null);
+      }
   };
 
   return (
@@ -53,18 +73,34 @@ export const AdminUsersPage: React.FC = () => {
                             </div>
                         </div>
                         
-                        <div className="w-full sm:w-auto">
+                        <div className="w-full sm:w-auto flex items-center gap-2">
                             <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1 sm:hidden">Role</label>
-                            <select 
-                                value={u.role} 
-                                onChange={(e) => updateUserRole(u.id, e.target.value)} 
-                                className="w-full sm:w-32 p-2 text-sm border border-slate-300 rounded-lg bg-white font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
-                            >
-                                <option value="student">Student</option>
-                                <option value="admin">Admin</option>
-                                <option value="executive">Executive</option>
-                                <option value="lecturer">Lecturer</option>
-                            </select>
+                            <div className="relative">
+                                <select 
+                                    value={u.role} 
+                                    onChange={(e) => updateUserRole(u.id, e.target.value)} 
+                                    disabled={updatingId === u.id}
+                                    className={`w-full sm:w-32 p-2 text-sm border rounded-lg font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${
+                                        successId === u.id 
+                                        ? 'border-emerald-500 text-emerald-700 bg-emerald-50' 
+                                        : 'border-slate-300 bg-white text-slate-700'
+                                    }`}
+                                >
+                                    {ALLOWED_ROLES.map(role => (
+                                        <option key={role} value={role}>{role.charAt(0).toUpperCase() + role.slice(1)}</option>
+                                    ))}
+                                </select>
+                                {successId === u.id && (
+                                    <div className="absolute top-1/2 -right-6 -translate-y-1/2 text-emerald-500 animate-bounce">
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                    </div>
+                                )}
+                                {updatingId === u.id && (
+                                    <div className="absolute top-1/2 -right-6 -translate-y-1/2">
+                                        <div className="animate-spin h-4 w-4 border-2 border-indigo-600 border-t-transparent rounded-full"></div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 ))}

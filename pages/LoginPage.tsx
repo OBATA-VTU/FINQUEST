@@ -74,7 +74,9 @@ export const LoginPage: React.FC = () => {
           let url = auth.user.avatarUrl;
           if (profileImage) {
               url = await uploadToImgBB(profileImage);
-              if (firebaseAuth.currentUser) await updateProfile(firebaseAuth.currentUser, { photoURL: url });
+              if (firebaseAuth.currentUser) {
+                  await updateProfile(firebaseAuth.currentUser, { photoURL: url });
+              }
           }
           const userRef = doc(db, 'users', auth.user.id);
           const updates: any = { avatarUrl: url };
@@ -95,7 +97,24 @@ export const LoginPage: React.FC = () => {
             await auth.login(email, password);
             navigate('/dashboard');
         } else {
-            if (usernameStatus === 'taken' || usernameStatus === 'short') return;
+            // Strict Validation on Submit
+            if (usernameStatus === 'taken') {
+                showNotification("Username is unavailable. Please choose another.", "error");
+                return;
+            }
+            if (usernameStatus === 'short') {
+                showNotification("Username must be at least 3 characters.", "error");
+                return;
+            }
+            
+            // Double check strict availability before proceeding
+            const isActuallyAvailable = await auth.checkUsernameAvailability(username.trim().toLowerCase());
+            if (!isActuallyAvailable) {
+                setUsernameStatus('taken');
+                showNotification("Username is unavailable.", "error");
+                return;
+            }
+
             setLoadingMessage('Creating account...');
             await auth.signup({ name, email, pass: password, level, username: username.trim().toLowerCase(), matricNumber });
             setViewState('upload_photo');
@@ -165,7 +184,13 @@ export const LoginPage: React.FC = () => {
                     {!isLogin && (
                         <>
                             <div><label className="block text-sm font-bold text-slate-700 mb-2">Full Name</label><input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full px-5 py-3.5 rounded-xl border border-slate-200 text-slate-900 font-medium" /></div>
-                            <div><label className="block text-sm font-bold text-slate-700 mb-2">Username</label><input type="text" required value={username} onChange={e => setUsername(e.target.value)} className={`w-full px-5 py-3.5 rounded-xl border text-slate-900 font-medium ${usernameStatus === 'taken' ? 'border-rose-500' : 'border-slate-200'}`} /></div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Username</label>
+                                <input type="text" required value={username} onChange={e => setUsername(e.target.value)} className={`w-full px-5 py-3.5 rounded-xl border text-slate-900 font-medium ${usernameStatus === 'taken' ? 'border-rose-500' : 'border-slate-200'}`} />
+                                {usernameStatus === 'checking' && <p className="text-xs text-indigo-500 mt-1">Checking...</p>}
+                                {usernameStatus === 'taken' && <p className="text-xs text-rose-500 mt-1 font-bold">Username is taken!</p>}
+                                {usernameStatus === 'available' && <p className="text-xs text-emerald-500 mt-1 font-bold">Username is available!</p>}
+                            </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div><label className="block text-sm font-bold text-slate-700 mb-2">Level</label><select value={level} onChange={e => setLevel(Number(e.target.value) as Level)} className="w-full px-5 py-3.5 rounded-xl border border-slate-200 text-slate-900">{LEVELS.map(l => <option key={l} value={l}>{l}</option>)}</select></div>
                                 <div><label className="block text-sm font-bold text-slate-700 mb-2">Matric No</label><input type="text" required value={matricNumber} onChange={e => setMatricNumber(e.target.value)} className="w-full px-5 py-3.5 rounded-xl border border-slate-200 text-slate-900" /></div>

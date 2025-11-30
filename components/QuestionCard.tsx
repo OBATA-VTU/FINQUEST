@@ -15,15 +15,22 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
 
   const handlePreview = (e: React.MouseEvent) => {
       e.preventDefault();
+      e.stopPropagation();
+      
       let url = '';
       
       // If AI generated text exists, generate a local blob
       if (question.textContent) {
-          const doc = generatePDF(question.courseTitle, question.textContent, question.courseCode, question.year);
-          const pdfBlob = doc.output('blob');
-          url = URL.createObjectURL(pdfBlob);
+          try {
+            const doc = generatePDF(question.courseTitle, question.textContent, question.courseCode, question.year);
+            const pdfBlob = doc.output('blob');
+            url = URL.createObjectURL(pdfBlob);
+          } catch (err) {
+              console.error("Error generating PDF preview", err);
+              return;
+          }
       } else if (question.fileUrl) {
-          // Use stored URL (which is ?raw=1 for previewing)
+          // Use stored URL (usually has ?raw=1 from upload logic)
           url = question.fileUrl;
       }
       
@@ -34,23 +41,24 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
   };
 
   const handleDownload = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (question.textContent) {
         e.preventDefault();
         downloadPDF(question.courseTitle, question.textContent, question.courseCode, question.year);
     }
-    // For regular files, we let the anchor tag handle it via href, but we intercept here just in case logic is needed
+    // For regular files, the anchor tag href handles it
   };
 
   const handleClosePreview = () => {
       setIsPreviewOpen(false);
-      // Clean up blob URL if it was generated locally to avoid memory leaks
+      // Clean up blob URL if it was generated locally
       if (previewUrl && previewUrl.startsWith('blob:')) {
           URL.revokeObjectURL(previewUrl);
       }
       setPreviewUrl('');
   }
 
-  // Calculate the forced download URL (swaps ?raw=1 to ?dl=1)
+  // Calculate the forced download URL
   const downloadLink = question.textContent ? '#' : getDropboxDownloadUrl(question.fileUrl);
 
   return (
@@ -84,10 +92,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
             ) : (
                  <a 
                     href={downloadLink} 
-                    // target="_blank" is often safer for forced downloads to prevent navigation
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="flex-1 py-2 text-xs font-bold text-white bg-indigo-600 rounded hover:bg-indigo-700 transition shadow-sm flex items-center justify-center gap-1 text-center"
+                    onClick={(e) => e.stopPropagation()}
                  >
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                     Download

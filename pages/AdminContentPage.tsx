@@ -3,9 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
-import { uploadToImgBB } from '../utils/api';
+import { uploadToImgBB, uploadFile, deleteFile } from '../utils/api';
+import { LEVELS } from '../constants';
 
-type ContentType = 'news' | 'executives' | 'lecturers' | 'community' | 'gallery';
+type ContentType = 'news' | 'executives' | 'lecturers' | 'community' | 'gallery' | 'materials';
 
 export const AdminContentPage: React.FC = () => {
   const [activeContent, setActiveContent] = useState<ContentType>('news');
@@ -31,9 +32,20 @@ export const AdminContentPage: React.FC = () => {
   const fetchContent = async (type: ContentType) => {
       setLoading(true);
       try {
-          let colName = type === 'news' ? 'announcements' : type === 'community' ? 'groups' : type;
+          let colName = '';
+          if (type === 'news') colName = 'announcements';
+          else if (type === 'community') colName = 'groups';
+          else if (type === 'materials') colName = 'questions';
+          else colName = type;
+
           const snap = await getDocs(collection(db, colName));
-          setContentItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          let docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          
+          if (type === 'materials') {
+              // Sort materials by creation date
+              docs.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+          }
+          setContentItems(docs);
           
           if (type === 'news') {
                const hDoc = await getDoc(doc(db, 'content', 'hod_message'));
@@ -51,11 +63,21 @@ export const AdminContentPage: React.FC = () => {
       } catch (e) { showNotification("Update failed", "error"); }
   };
 
-  const handleDeleteContent = async (id: string) => {
-      if (!window.confirm("Delete this item?")) return;
+  const handleDeleteContent = async (item: any) => {
+      if (!window.confirm("Permanently delete this item?")) return;
       try {
-          let colName = activeContent === 'news' ? 'announcements' : activeContent === 'community' ? 'groups' : activeContent;
-          await deleteDoc(doc(db, colName, id));
+          let colName = '';
+          if (activeContent === 'news') colName = 'announcements';
+          else if (activeContent === 'community') colName = 'groups';
+          else if (activeContent === 'materials') colName = 'questions';
+          else colName = activeContent;
+
+          // If material, delete from storage first
+          if (activeContent === 'materials' && item.storagePath) {
+              await deleteFile(item.storagePath);
+          }
+
+          await deleteDoc(doc(db, colName, item.id));
           showNotification("Deleted", "info");
           fetchContent(activeContent);
       } catch (e) { showNotification("Delete failed", "error"); }
@@ -72,12 +94,34 @@ export const AdminContentPage: React.FC = () => {
       e.preventDefault();
       setIsSubmitting(true);
       try {
-          let url = formData.imageUrl;
-          if (formFile) url = await uploadToImgBB(formFile);
-          
-          let colName = activeContent === 'news' ? 'announcements' : activeContent === 'community' ? 'groups' : activeContent;
+          let colName = '';
+          if (activeContent === 'news') colName = 'announcements';
+          else if (activeContent === 'community') colName = 'groups';
+          else if (activeContent === 'materials') colName = 'questions';
+          else colName = activeContent;
+
           const payload = { ...formData };
-          if (url) payload.imageUrl = url; // Only update if new image exists or existing one is there
+
+          // Handle File Uploads
+          if (activeContent === 'materials') {
+              if (!editingItem && !formFile) throw new Error("File is required for new materials");
+              if (formFile) {
+                  const { url, path } = await uploadFile(formFile, 'past_questions');
+                  payload.fileUrl = url;
+                  payload.storagePath = path;
+                  payload.status = 'approved'; // Admin uploads are auto-approved
+              }
+              // Ensure numeric types
+              payload.year = Number(payload.year);
+              payload.level = Number(payload.level);
+              if (!editingItem) payload.createdAt = new Date().toISOString();
+          } else {
+              // Images for other types
+              if (formFile) {
+                  const url = await uploadToImgBB(formFile);
+                  payload.imageUrl = url;
+              }
+          }
           
           if (activeContent === 'news' && !editingItem) payload.date = new Date().toISOString();
           if (activeContent === 'gallery' && !editingItem) payload.date = new Date().toISOString();
@@ -90,7 +134,7 @@ export const AdminContentPage: React.FC = () => {
           setIsModalOpen(false);
           fetchContent(activeContent);
           showNotification("Saved successfully", "success");
-      } catch (e) { showNotification("Error saving item", "error"); }
+      } catch (e: any) { showNotification(e.message || "Error saving item", "error"); }
       finally { setIsSubmitting(false); }
   };
 
@@ -100,7 +144,7 @@ export const AdminContentPage: React.FC = () => {
         
         {/* SCROLLABLE PILL TABS */}
         <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
-            {['news', 'executives', 'lecturers', 'community', 'gallery'].map(c => (
+            {['news', 'executives', 'lecturers', 'community', 'gallery', 'materials'].map(c => (
                 <button 
                     key={c} 
                     onClick={() => setActiveContent(c as ContentType)} 
@@ -149,12 +193,12 @@ export const AdminContentPage: React.FC = () => {
                                 <img src={item.imageUrl} className="w-full h-full object-cover" alt="preview" />
                             </div>
                         )}
-                        <h4 className="font-bold text-slate-800 line-clamp-1 mb-1">{item.title || item.name || item.caption}</h4>
-                        <p className="text-xs text-slate-500 line-clamp-2 mb-4">{item.position || item.description || item.content}</p>
+                        <h4 className="font-bold text-slate-800 line-clamp-1 mb-1">{item.title || item.name || item.caption || item.courseTitle}</h4>
+                        <p className="text-xs text-slate-500 line-clamp-2 mb-4">{item.position || item.description || item.content || item.courseCode}</p>
                         
                         <div className="mt-auto flex gap-2">
                             <button onClick={() => openModal(item)} className="flex-1 py-2 text-xs font-bold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100">Edit</button>
-                            <button onClick={() => handleDeleteContent(item.id)} className="px-3 py-2 text-xs font-bold text-rose-600 bg-rose-50 rounded-lg hover:bg-rose-100">
+                            <button onClick={() => handleDeleteContent(item)} className="px-3 py-2 text-xs font-bold text-rose-600 bg-rose-50 rounded-lg hover:bg-rose-100">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
                         </div>
@@ -173,6 +217,8 @@ export const AdminContentPage: React.FC = () => {
                     </div>
                     
                     <form onSubmit={handleFormSubmit} className="p-6 space-y-4 overflow-y-auto">
+                        
+                        {/* NEWS / COMMUNITY / GALLERY FIELDS */}
                         {(activeContent === 'news' || activeContent === 'community' || activeContent === 'gallery') && (
                             <div>
                                 <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Title / Name</label>
@@ -185,6 +231,8 @@ export const AdminContentPage: React.FC = () => {
                                 <textarea className="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" rows={4} placeholder="Content..." value={formData.content || formData.description || ''} onChange={e => setFormData({...formData, content: e.target.value, description: e.target.value})} required />
                             </div>
                         )}
+
+                        {/* EXECUTIVES / LECTURERS FIELDS */}
                         {(activeContent === 'executives' || activeContent === 'lecturers') && (
                             <>
                                 <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Name</label><input className="w-full border border-slate-300 p-3 rounded-xl" placeholder="Full Name" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} required /></div>
@@ -209,12 +257,34 @@ export const AdminContentPage: React.FC = () => {
                                 </select>
                              </div>
                         )}
+
+                        {/* MATERIALS FIELDS */}
+                        {activeContent === 'materials' && (
+                            <>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Course Code</label><input className="w-full border p-3 rounded-xl uppercase" placeholder="FIN 101" value={formData.courseCode || ''} onChange={e => setFormData({...formData, courseCode: e.target.value})} required /></div>
+                                    <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Year</label><input type="number" className="w-full border p-3 rounded-xl" placeholder="2023" value={formData.year || ''} onChange={e => setFormData({...formData, year: e.target.value})} required /></div>
+                                </div>
+                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Course Title</label><input className="w-full border p-3 rounded-xl" placeholder="Intro to Finance" value={formData.courseTitle || ''} onChange={e => setFormData({...formData, courseTitle: e.target.value})} required /></div>
+                                <div>
+                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Level</label>
+                                    <select className="w-full border p-3 rounded-xl bg-white" value={formData.level || '100'} onChange={e => setFormData({...formData, level: e.target.value})}>
+                                        {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                                    </select>
+                                </div>
+                            </>
+                        )}
+
+                        {/* FILE UPLOAD SECTION */}
                         <div className="pt-4">
                             <label className="block w-full border-2 border-dashed border-slate-300 p-4 rounded-xl text-center cursor-pointer hover:bg-slate-50 transition-colors">
-                                <span className="text-sm font-bold text-slate-500">{formFile ? 'Image Selected' : 'Tap to Upload Image (Optional)'}</span>
-                                <input type="file" className="hidden" onChange={e => e.target.files && setFormFile(e.target.files[0])} />
+                                <span className="text-sm font-bold text-slate-500">
+                                    {formFile ? `File Selected: ${formFile.name}` : (activeContent === 'materials' ? 'Upload PDF/Doc' : 'Upload Image (Optional)')}
+                                </span>
+                                <input type="file" className="hidden" onChange={e => e.target.files && setFormFile(e.target.files[0])} accept={activeContent === 'materials' ? ".pdf,.doc,.docx" : "image/*"} />
                             </label>
                         </div>
+
                         <button type="submit" disabled={isSubmitting} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg mt-4 disabled:opacity-70">
                             {isSubmitting ? 'Saving...' : 'Save Changes'}
                         </button>

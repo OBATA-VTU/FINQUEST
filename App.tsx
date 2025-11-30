@@ -19,6 +19,7 @@ import { CommunityPage } from './pages/CommunityPage';
 import { GalleryPage } from './pages/GalleryPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { TermsPage } from './pages/TermsPage';
+import { TestPage } from './pages/TestPage'; // New Page
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { Logo } from './components/Logo';
@@ -105,6 +106,7 @@ const AppContent: React.FC = () => {
                 <Route path="/questions" element={<RequireAuth><PastQuestionsPage /></RequireAuth>} />
                 <Route path="/community" element={<RequireAuth><CommunityPage /></RequireAuth>} />
                 <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+                <Route path="/test" element={<RequireAuth><TestPage /></RequireAuth>} />
             </Route>
 
             {/* Admin Routes - Nested Layout */}
