@@ -28,12 +28,14 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
       if (fileUrl) {
           const lower = fileUrl.toLowerCase();
           
-          // Ensure we are using raw=1 for previewing if it's dropbox
+          // STRICT FIX: Ensure we use 'raw=1' for embedding PDFs in iframe.
+          // This forces Dropbox to serve the file content, not the preview page.
           let cleanUrl = fileUrl;
           if (lower.includes('dropbox.com')) {
-              if (lower.includes('?dl=0')) cleanUrl = fileUrl.replace('?dl=0', '?raw=1');
-              else if (lower.includes('?dl=1')) cleanUrl = fileUrl.replace('?dl=1', '?raw=1');
-              else if (!lower.includes('?')) cleanUrl = `${fileUrl}?raw=1`;
+              // Remove existing parameters
+              cleanUrl = fileUrl.replace(/(\?|&)(dl=0|dl=1|raw=1)/g, '');
+              // Append raw=1
+              cleanUrl += cleanUrl.includes('?') ? '&raw=1' : '?raw=1';
           }
           setDisplayUrl(cleanUrl);
 
@@ -42,7 +44,6 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
                           lower.includes('imgbb') || 
                           lower.includes('alt=media');
 
-          // Check for PDF: either extension, blob, or if it's dropbox (assuming PDF for now if not image/doc)
           const isPdf = /\.(pdf)(\?.*)?$/i.test(lower) || 
                         cleanUrl.startsWith('blob:') ||
                         (lower.includes('dropbox') && !isImage && !/\.(doc|docx|ppt|pptx|xls|xlsx)(\?.*)?$/i.test(lower));

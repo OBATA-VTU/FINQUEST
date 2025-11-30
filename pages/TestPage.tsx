@@ -37,13 +37,51 @@ export const TestPage: React.FC = () => {
   const [score, setScore] = useState(0);
   const [leaderboard, setLeaderboard] = useState<TestResult[]>([]);
 
+  // --- PERSISTENCE LOGIC ---
   useEffect(() => {
+      // Restore state on mount
+      const savedState = localStorage.getItem('finquest_exam_state');
+      if (savedState) {
+          try {
+              const parsed = JSON.parse(savedState);
+              // Only restore if it's the same user and not finished
+              if (parsed.userId === auth?.user?.id && parsed.stage === 'exam') {
+                  setStage('exam');
+                  setMode(parsed.mode);
+                  setQuestions(parsed.questions);
+                  setCurrentQuestionIndex(parsed.currentQuestionIndex);
+                  setUserAnswers(parsed.userAnswers);
+                  setSelectedLevel(parsed.selectedLevel);
+                  setTopic(parsed.topic || '');
+                  showNotification("Exam session restored.", "info");
+              }
+          } catch (e) { localStorage.removeItem('finquest_exam_state'); }
+      }
       fetchLeaderboard();
-  }, []);
+  }, [auth?.user?.id]);
+
+  useEffect(() => {
+      // Save state on change during exam
+      if (stage === 'exam' && auth?.user?.id) {
+          const stateToSave = {
+              userId: auth.user.id,
+              stage,
+              mode,
+              questions,
+              currentQuestionIndex,
+              userAnswers,
+              selectedLevel,
+              topic
+          };
+          localStorage.setItem('finquest_exam_state', JSON.stringify(stateToSave));
+      } else if (stage === 'menu' || stage === 'result') {
+          localStorage.removeItem('finquest_exam_state');
+      }
+  }, [stage, mode, questions, currentQuestionIndex, userAnswers, selectedLevel, topic, auth?.user?.id]);
 
   const fetchLeaderboard = async () => {
       try {
-          const q = query(collection(db, 'test_results'), orderBy('score', 'desc'), limit(5));
+          const q = query(collection(db, 'test_results'), orderBy('score', 'desc'), limit(10));
           const snap = await getDocs(q);
           setLeaderboard(snap.docs.map(d => ({ id: d.id, ...d.data() } as TestResult)));
       } catch (e) { console.error("Leaderboard error", e); }
@@ -67,9 +105,9 @@ export const TestPage: React.FC = () => {
         
         let prompt = "";
         if (mode === 'topic') {
-            prompt = `Generate 20 very difficult, rigid, and exam-standard multiple-choice questions for ${selectedLevel} Level Finance university students specifically on the topic: "${topic}". The questions must rigorously test understanding of this topic at this academic level. Ensure options are plausible, tricky, and complex to simulate a hard university exam. Return ONLY a JSON array.`;
+            prompt = `Generate 20 difficult, exam-standard multiple-choice questions for ${selectedLevel} Level Finance students specifically on the topic: "${topic}". Ensure options are tricky.`;
         } else {
-            prompt = `Generate 20 very difficult, rigid, and complex multiple-choice questions for ${selectedLevel} Level Finance university students. The questions must be selected randomly from the standard curriculum for this specific level (covering courses like Financial Accounting, Corporate Finance, Business Law, Quantitative Analysis, Macroeconomics, etc.). The difficulty must be high, simulating a tough university semester examination. Do not include easy questions. Ensure the options are tricky. Return ONLY a JSON array.`;
+            prompt = `Generate 20 difficult, complex, and rigid multiple-choice questions for ${selectedLevel} Level Finance students. Questions should cover a random mix of core courses typically taught at this level (e.g., Corporate Finance, Accounting, Economics, Quantitative Analysis). Do not group them by subject.`;
         }
 
         const response = await ai.models.generateContent({
@@ -101,12 +139,11 @@ export const TestPage: React.FC = () => {
                 correctAnswer: q.answerIndex
             })));
             
-            // Simulate "fetching" delay for system realism
             setTimeout(() => {
                 setStage('exam');
                 setCurrentQuestionIndex(0);
                 setUserAnswers({});
-            }, 2000);
+            }, 1500);
         } else {
             throw new Error("Invalid format received");
         }
@@ -128,19 +165,18 @@ export const TestPage: React.FC = () => {
           if (userAnswers[idx] === q.correctAnswer) s++;
       });
       
-      // Calculate exact percentage (integer)
       const finalPercentage = Math.round((s / questions.length) * 100);
       setScore(finalPercentage);
       setStage('result');
+      localStorage.removeItem('finquest_exam_state');
 
-      // Save to Leaderboard
       if (auth?.user) {
           try {
               await addDoc(collection(db, 'test_results'), {
                   userId: auth.user.id,
                   username: auth.user.username,
                   avatarUrl: auth.user.avatarUrl || '',
-                  score: finalPercentage, // Save as percentage for ranking
+                  score: finalPercentage,
                   totalQuestions: questions.length,
                   level: selectedLevel,
                   date: new Date().toISOString()
@@ -185,19 +221,22 @@ export const TestPage: React.FC = () => {
                       </button>
                   </div>
 
-                  {/* Mini Leaderboard */}
-                  <div className="mt-16 max-w-2xl mx-auto">
-                      <h3 className="text-center font-bold text-slate-400 uppercase tracking-widest text-xs mb-6">Recent Top Performers</h3>
-                      <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+                  {/* Leaderboard */}
+                  <div className="mt-16 max-w-2xl mx-auto w-full">
+                      <h3 className="text-center font-bold text-slate-400 uppercase tracking-widest text-xs mb-6">Hall of Fame</h3>
+                      <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
                           {leaderboard.length > 0 ? leaderboard.map((entry, idx) => (
-                              <div key={idx} className="flex items-center justify-between p-4">
-                                  <div className="flex items-center gap-3">
-                                      <span className={`w-6 text-center font-bold ${idx===0?'text-amber-500':idx===1?'text-slate-400':'text-orange-700'}`}>#{idx+1}</span>
-                                      <span className="font-bold text-slate-700">@{entry.username}</span>
+                              <div key={idx} className={`flex items-center justify-between p-4 ${idx === 0 ? 'bg-amber-50' : idx === 1 ? 'bg-slate-50' : idx === 2 ? 'bg-orange-50' : ''}`}>
+                                  <div className="flex items-center gap-4">
+                                      <div className={`w-8 h-8 flex items-center justify-center rounded-full font-bold text-sm 
+                                          ${idx===0?'bg-amber-100 text-amber-600':idx===1?'bg-slate-200 text-slate-600':idx===2?'bg-orange-100 text-orange-600':'bg-slate-100 text-slate-400'}`}>
+                                          {idx + 1}
+                                      </div>
+                                      <span className={`font-bold ${idx < 3 ? 'text-slate-900' : 'text-slate-600'}`}>@{entry.username}</span>
                                   </div>
-                                  <div className="flex gap-4">
-                                      <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500">{entry.level}L</span>
-                                      <span className="font-mono font-bold text-emerald-600">{entry.score}%</span>
+                                  <div className="flex gap-4 items-center">
+                                      <span className="text-[10px] bg-white border border-slate-200 px-2 py-1 rounded text-slate-500 uppercase tracking-wide">{entry.level}L</span>
+                                      <span className={`font-mono font-bold text-lg ${idx === 0 ? 'text-amber-500' : 'text-emerald-600'}`}>{entry.score}%</span>
                                   </div>
                               </div>
                           )) : <div className="p-4 text-center text-slate-400 text-sm">No records yet. Be the first!</div>}

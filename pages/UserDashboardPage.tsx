@@ -37,7 +37,8 @@ export const UserDashboardPage: React.FC = () => {
       chat: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>,
       user: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
       users: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
-      upload: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+      upload: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>,
+      bell: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
   };
 
   const quickActions = [
@@ -57,27 +58,32 @@ export const UserDashboardPage: React.FC = () => {
                 <h1 className="text-3xl font-serif font-bold text-slate-900">{greeting}, {user.name.split(' ')[0]}</h1>
                 <p className="text-slate-500">Welcome to your student dashboard.</p>
             </div>
-            <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 text-sm font-medium text-slate-600">
-                {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            <div className="flex items-center gap-3">
+                <button className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-50 border border-slate-200 relative">
+                    {icons.bell}
+                    {/* Mock Notification Dot - Logic can be added later */}
+                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
+                </button>
+                <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 text-sm font-medium text-slate-600">
+                    {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </div>
             </div>
         </div>
 
-        {/* Profile Completeness Widget */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 relative overflow-hidden">
-             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
-             <div className="flex justify-between items-center mb-2">
-                 <h3 className="font-bold text-slate-800">Profile Completeness</h3>
-                 <span className={`font-bold text-sm ${profileComplete === 100 ? 'text-emerald-500' : 'text-indigo-600'}`}>{profileComplete}%</span>
-             </div>
-             <div className="w-full bg-slate-100 rounded-full h-2.5 mb-2">
-                 <div className={`h-2.5 rounded-full transition-all duration-1000 ${profileComplete === 100 ? 'bg-emerald-500' : 'bg-indigo-600'}`} style={{ width: `${profileComplete}%` }}></div>
-             </div>
-             {profileComplete < 100 ? (
+        {/* Profile Completeness Widget - Hidden if 100% */}
+        {profileComplete < 100 && (
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 relative overflow-hidden">
+                 <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                 <div className="flex justify-between items-center mb-2">
+                     <h3 className="font-bold text-slate-800">Profile Completeness</h3>
+                     <span className="font-bold text-sm text-indigo-600">{profileComplete}%</span>
+                 </div>
+                 <div className="w-full bg-slate-100 rounded-full h-2.5 mb-2">
+                     <div className="h-2.5 rounded-full bg-indigo-600 transition-all duration-1000" style={{ width: `${profileComplete}%` }}></div>
+                 </div>
                  <p className="text-xs text-slate-500 cursor-pointer hover:text-indigo-600 hover:underline" onClick={() => navigate('/profile')}>Complete your profile to unlock full features &rarr;</p>
-             ) : (
-                 <p className="text-xs text-emerald-600 font-medium">Your profile is up to date!</p>
-             )}
-        </div>
+            </div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
