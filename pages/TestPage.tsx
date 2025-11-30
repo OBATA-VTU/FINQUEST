@@ -9,6 +9,7 @@ import { db } from '../firebase';
 import { collection, addDoc, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { LEVELS } from '../constants';
 import { Level, TestResult } from '../types';
+import { generateTestReviewPDF } from '../utils/pdfGenerator';
 
 interface Question {
   id: number;
@@ -21,15 +22,15 @@ export const TestPage: React.FC = () => {
   const auth = useContext(AuthContext);
   const { showNotification } = useNotification();
   
-  // Stages: Menu -> Setup -> Loading -> Exam -> Result
-  const [stage, setStage] = useState<'menu' | 'setup' | 'loading' | 'exam' | 'result'>('menu');
+  // Stages: Menu -> Setup -> Loading -> Exam -> Result -> Review
+  const [stage, setStage] = useState<'menu' | 'setup' | 'loading' | 'exam' | 'result' | 'review'>('menu');
   const [mode, setMode] = useState<'topic' | 'mock'>('topic');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
   const [showCalculator, setShowCalculator] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const [loadingMessage, setLoadingMessage] = useState('Initializing AI...');
+  const [loadingMessage, setLoadingMessage] = useState('Initializing Session...');
   
   // Setup State
   const [topic, setTopic] = useState('');
@@ -110,15 +111,15 @@ export const TestPage: React.FC = () => {
     
     setStage('loading');
     setLoadingProgress(5);
-    setLoadingMessage('Contacting Gemini AI...');
+    setLoadingMessage('Contacting Secure Server...');
 
     // Progress Bar Simulation
     const progressInterval = setInterval(() => {
         setLoadingProgress(prev => {
             const next = prev + Math.floor(Math.random() * 8) + 1;
-            if (next > 30 && next < 50) setLoadingMessage('Generating Questions...');
-            if (next > 50 && next < 80) setLoadingMessage('Formatting Response...');
-            if (next > 80 && next < 95) setLoadingMessage('Finalizing...');
+            if (next > 30 && next < 50) setLoadingMessage('Retrieving Questions...');
+            if (next > 50 && next < 80) setLoadingMessage('Formatting Assessment...');
+            if (next > 80 && next < 95) setLoadingMessage('Finalizing Packet...');
             if (next >= 95) return 95; 
             return next;
         });
@@ -136,7 +137,7 @@ export const TestPage: React.FC = () => {
 
         // Timeout Promise (30 seconds)
         const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("AI generation timed out. Please try again.")), 30000)
+            setTimeout(() => reject(new Error("Request timed out. Please try again.")), 30000)
         );
 
         const aiPromise = ai.models.generateContent({
@@ -165,7 +166,7 @@ export const TestPage: React.FC = () => {
         clearInterval(progressInterval);
         setLoadingProgress(100);
 
-        if (!response.text) throw new Error("Empty response from AI");
+        if (!response.text) throw new Error("Empty response received");
 
         const data = JSON.parse(response.text);
         if (Array.isArray(data) && data.length > 0) {
@@ -182,13 +183,13 @@ export const TestPage: React.FC = () => {
                 setUserAnswers({});
             }, 500);
         } else {
-            throw new Error("Invalid format received");
+            throw new Error("Invalid question format received");
         }
 
     } catch (e: any) {
         clearInterval(progressInterval);
         console.error(e);
-        showNotification(e.message || "Connection failed. Please try again.", "error");
+        showNotification("Failed to generate questions. Check connection.", "error");
         setStage('setup');
     }
   };
@@ -228,6 +229,11 @@ export const TestPage: React.FC = () => {
               fetchLeaderboard();
           } catch (e) { console.error("Error saving result", e); }
       }
+  };
+
+  const downloadReview = () => {
+      generateTestReviewPDF(questions, userAnswers, score, auth?.user);
+      showNotification("Test result downloaded.", "success");
   };
 
   // --- RENDERERS ---
@@ -366,8 +372,8 @@ export const TestPage: React.FC = () => {
                   </div>
               </div>
               
-              <h2 className="text-xl font-mono font-bold tracking-wide animate-pulse text-center mb-4">ESTABLISHING SECURE CONNECTION...</h2>
-              <p className="text-indigo-300 text-sm mt-3 text-center opacity-80 mb-8">Retrieving {selectedLevel} Level Examination Packet from AI Core</p>
+              <h2 className="text-xl font-mono font-bold tracking-wide animate-pulse text-center mb-4">INITIALIZING SECURE SESSION...</h2>
+              <p className="text-indigo-300 text-sm mt-3 text-center opacity-80 mb-8">Downloading {selectedLevel} Level Examination Data</p>
 
               <button 
                 onClick={handleCancelLoading}
@@ -391,13 +397,70 @@ export const TestPage: React.FC = () => {
                   
                   <div className="p-8 bg-slate-50">
                       <div className="flex gap-4">
-                          <button onClick={() => { setStage('menu'); setQuestions([]); setScore(0); }} className="flex-1 py-4 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition shadow-sm">
-                              Back to Menu
+                          <button onClick={() => setStage('review')} className="flex-1 py-4 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition shadow-sm">
+                              Review Answers
                           </button>
                           <Link to="/dashboard" className="flex-1 py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg text-center flex items-center justify-center">
                               Dashboard
                           </Link>
                       </div>
+                  </div>
+              </div>
+          </div>
+      );
+  }
+
+  if (stage === 'review') {
+      return (
+          <div className="min-h-screen bg-slate-50 py-8 px-4 flex flex-col items-center animate-fade-in">
+              <div className="max-w-4xl w-full">
+                  <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-2xl font-bold text-slate-900">Test Review</h2>
+                      <div className="flex gap-3">
+                          <button onClick={downloadReview} className="px-4 py-2 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 flex items-center gap-2">
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                              Download PDF
+                          </button>
+                          <button onClick={() => { setStage('menu'); setQuestions([]); setScore(0); }} className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700">
+                              New Test
+                          </button>
+                      </div>
+                  </div>
+
+                  <div className="space-y-6">
+                      {questions.map((q, idx) => {
+                          const userAns = userAnswers[idx];
+                          const isCorrect = userAns === q.correctAnswer;
+                          return (
+                              <div key={idx} className={`bg-white p-6 rounded-xl border-l-4 shadow-sm ${isCorrect ? 'border-emerald-500' : 'border-rose-500'}`}>
+                                  <div className="flex justify-between mb-4">
+                                      <span className="font-bold text-slate-500">Question {idx + 1}</span>
+                                      {isCorrect ? (
+                                          <span className="text-xs font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded">Correct</span>
+                                      ) : (
+                                          <span className="text-xs font-bold bg-rose-100 text-rose-700 px-2 py-1 rounded">Incorrect</span>
+                                      )}
+                                  </div>
+                                  <p className="text-lg font-medium text-slate-900 mb-4">{q.text}</p>
+                                  <div className="space-y-2">
+                                      {q.options.map((opt, optIdx) => {
+                                          let bgClass = "bg-slate-50 border-slate-200 text-slate-600";
+                                          if (optIdx === q.correctAnswer) bgClass = "bg-emerald-100 border-emerald-300 text-emerald-800 font-bold";
+                                          else if (optIdx === userAns && !isCorrect) bgClass = "bg-rose-100 border-rose-300 text-rose-800";
+                                          
+                                          return (
+                                              <div key={optIdx} className={`p-3 rounded-lg border text-sm ${bgClass}`}>
+                                                  <span className="mr-2 font-bold">{String.fromCharCode(65+optIdx)}.</span>
+                                                  {opt}
+                                                  {optIdx === q.correctAnswer && <span className="ml-2 text-[10px] uppercase font-bold">(Correct Answer)</span>}
+                                                  {optIdx === userAns && optIdx !== q.correctAnswer && <span className="ml-2 text-[10px] uppercase font-bold">(Your Answer)</span>}
+                                              </div>
+                                          );
+                                      })}
+                                  </div>
+                              </div>
+                          );
+                      })}
                   </div>
               </div>
           </div>

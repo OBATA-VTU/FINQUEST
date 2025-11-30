@@ -1,16 +1,25 @@
 
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Executive } from '../types';
 
 export const ExecutivesPage: React.FC = () => {
   const [executives, setExecutives] = useState<Executive[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sessionYear, setSessionYear] = useState('2025/2026');
 
   useEffect(() => {
-    const fetchExecutives = async () => {
+    const fetchExecutivesAndSettings = async () => {
         try {
+            // Fetch Settings first for header
+            const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
+            if (settingsDoc.exists()) {
+                const data = settingsDoc.data();
+                if (data.session) setSessionYear(data.session);
+            }
+
+            // Fetch Executives
             const snapshot = await getDocs(collection(db, 'executives'));
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Executive));
             
@@ -62,7 +71,7 @@ export const ExecutivesPage: React.FC = () => {
             setLoading(false);
         }
     };
-    fetchExecutives();
+    fetchExecutivesAndSettings();
   }, []);
 
   // Returns SVG path data based on role keywords
@@ -120,7 +129,7 @@ export const ExecutivesPage: React.FC = () => {
       <div className="bg-indigo-900 text-white py-16 text-center shadow-lg relative overflow-hidden">
          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1521737711867-e3b97375f902?ixlib=rb-4.0.3')] bg-cover opacity-10"></div>
          <h1 className="text-4xl font-extrabold mb-2 font-serif relative z-10">Meet Your Leaders</h1>
-         <p className="text-indigo-200 relative z-10">Executive Council 2025/2026 Session</p>
+         <p className="text-indigo-200 relative z-10">Executive Council {sessionYear} Session</p>
       </div>
 
       <div className="container mx-auto px-4 py-12">

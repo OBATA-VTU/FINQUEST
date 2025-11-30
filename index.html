@@ -1,14 +1,17 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎓</text></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FINQUEST | AAUA Finance Department Portal</title>
+    <title>FINQUEST | AAUA Finance Department Portal - Past Questions, CBT Practice & News</title>
     
     <!-- SEO Meta Tags -->
-    <meta name="description" content="FINQUEST is the premier academic portal for Finance students at AAUA. Download past questions, view results, read announcements, and connect with the community.">
-    <meta name="keywords" content="AAUA, Finance, Past Questions, FINSA, FINQUEST, Adekunle Ajasin University, Students Association">
+    <meta name="description" content="FINQUEST is the official academic portal for Finance students at Adekunle Ajasin University (AAUA). Download past questions, practice CBT tests, connect with lecturers, check results, and stay updated with department news.">
+    <meta name="keywords" content="AAUA, Finance Department, Past Questions, CBT Practice, FINSA, Adekunle Ajasin University, Student Portal, Academic Resources, Lecture Notes, Finance Students Association, Akungba">
+    <meta name="author" content="FINSA AAUA Chapter">
+    <meta name="robots" content="index, follow">
     
     <!-- Google AdSense Account Meta Tag -->
     <meta name="google-adsense-account" content="ca-pub-8962985509315843">
@@ -17,13 +20,13 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://finquest-aaua.web.app/">
     <meta property="og:title" content="FINQUEST | AAUA Finance Portal">
-    <meta property="og:description" content="Access past questions, connect with lecturers, and stay updated with the Finance Department at AAUA.">
+    <meta property="og:description" content="Access past questions, practice for exams, connect with lecturers, and stay updated with the Finance Department at AAUA.">
     <meta property="og:image" content="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:title" content="FINQUEST | AAUA Finance Portal">
-    <meta property="twitter:description" content="The ultimate resource hub for Finance students.">
+    <meta property="twitter:description" content="The ultimate resource hub for Finance students. Past questions, CBT, and News.">
     <meta property="twitter:image" content="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80">
 
     <!-- Google AdSense Script -->
@@ -31,6 +34,14 @@
      crossorigin="anonymous"></script>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {},
+        },
+      }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <style>
       body {
@@ -110,7 +121,7 @@
 }
 </script>
 </head>
-  <body class="bg-slate-50 antialiased">
+  <body class="bg-slate-50 dark:bg-slate-900 antialiased transition-colors">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

@@ -22,18 +22,19 @@ import { TermsPage } from './pages/TermsPage';
 import { TestPage } from './pages/TestPage'; // New Page
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { Logo } from './components/Logo';
 import { Layout } from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
 
 // Professional Splash Screen
 const LoadingScreen = () => (
-  <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white transition-opacity duration-500">
+  <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white dark:bg-slate-900 transition-opacity duration-500">
       <div className="relative mb-8">
           <Logo className="h-32 w-32 animate-pulse" />
           <div className="absolute -inset-4 bg-indigo-500/20 rounded-full blur-xl animate-pulse"></div>
       </div>
-      <h1 className="text-3xl font-serif font-bold text-indigo-900 tracking-wider mb-2">FINQUEST</h1>
+      <h1 className="text-3xl font-serif font-bold text-indigo-900 dark:text-indigo-100 tracking-wider mb-2">FINQUEST</h1>
       <p className="text-xs text-indigo-400 uppercase tracking-[0.3em] font-medium mb-8">Official Department Portal</p>
       
       <div className="flex gap-2">
@@ -55,12 +56,12 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
 
     if (adminOnly && auth.user.role !== 'admin') {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[80vh] text-center px-4 bg-slate-50">
-                <div className="bg-red-100 p-6 rounded-full mb-6">
-                    <svg className="w-10 h-10 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+            <div className="flex flex-col items-center justify-center min-h-[80vh] text-center px-4 bg-slate-50 dark:bg-slate-900">
+                <div className="bg-red-100 dark:bg-red-900/30 p-6 rounded-full mb-6">
+                    <svg className="w-10 h-10 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                 </div>
-                <h2 className="text-3xl font-serif font-bold text-slate-800 mb-4">Restricted Access</h2>
-                <p className="text-slate-600 mb-8 max-w-md">You do not have the necessary administrative privileges to view this page.</p>
+                <h2 className="text-3xl font-serif font-bold text-slate-800 dark:text-slate-100 mb-4">Restricted Access</h2>
+                <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-md">You do not have the necessary administrative privileges to view this page.</p>
                 <a href="/dashboard" className="px-8 py-3 bg-indigo-900 text-white rounded-lg hover:bg-indigo-800 transition shadow-lg font-medium">Return to Dashboard</a>
             </div>
         );
@@ -72,7 +73,6 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
 const AppContent: React.FC = () => {
   const auth = useContext(AuthContext);
 
-  // Removed artificial splash delay to improve LCP for AdSense bots
   if (auth?.loading) {
       return <LoadingScreen />;
   }
@@ -88,18 +88,20 @@ const AppContent: React.FC = () => {
             <Route element={<Layout />}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/announcements" element={<AnnouncementsPage />} />
-                <Route path="/executives" element={<ExecutivesPage />} />
-                <Route path="/lecturers" element={<LecturersPage />} />
                 <Route path="/gallery" element={<GalleryPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
                 
-                {/* Protected Routes */}
+                {/* Protected Routes (Authenticated Users Only) */}
                 <Route path="/dashboard" element={<RequireAuth><UserDashboardPage /></RequireAuth>} />
                 <Route path="/questions" element={<RequireAuth><PastQuestionsPage /></RequireAuth>} />
                 <Route path="/community" element={<RequireAuth><CommunityPage /></RequireAuth>} />
                 <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
                 <Route path="/test" element={<RequireAuth><TestPage /></RequireAuth>} />
+                
+                {/* Gated Public-ish Pages (Hidden from Guests) */}
+                <Route path="/executives" element={<RequireAuth><ExecutivesPage /></RequireAuth>} />
+                <Route path="/lecturers" element={<RequireAuth><LecturersPage /></RequireAuth>} />
             </Route>
 
             {/* Admin Routes - Nested Layout */}
@@ -121,11 +123,13 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <NotificationProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </NotificationProvider>
+    <ThemeProvider>
+        <NotificationProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </NotificationProvider>
+    </ThemeProvider>
   );
 };
 

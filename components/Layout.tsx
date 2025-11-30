@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
@@ -8,6 +8,14 @@ import { Footer } from './Footer';
 export const Layout: React.FC = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { pathname } = useLocation();
+    const mainRef = useRef<HTMLDivElement>(null);
+
+    // Scroll to top of the main content area whenever the route changes
+    useEffect(() => {
+        if (mainRef.current) {
+            mainRef.current.scrollTo(0, 0);
+        }
+    }, [pathname]);
 
     // Pages where the footer should NOT appear
     const hideFooter = ['/community', '/test'].includes(pathname) || pathname.startsWith('/admin');
@@ -27,7 +35,10 @@ export const Layout: React.FC = () => {
                 {/* Main Content with Fade Animation */}
                 {/* We use h-full and overflow-y-auto here so normal pages scroll, 
                     but pages like Chat (Community) can opt to hide overflow and manage scrolling internally */}
-                <main className={`flex-1 relative z-0 animate-fade-in ${pathname === '/community' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+                <main 
+                    ref={mainRef}
+                    className={`flex-1 relative z-0 animate-fade-in ${pathname === '/community' ? 'overflow-hidden' : 'overflow-y-auto'}`}
+                >
                     <div className={pathname === '/community' ? 'h-full' : 'min-h-full flex flex-col'}>
                         <Outlet />
                         {!hideFooter && <Footer />}

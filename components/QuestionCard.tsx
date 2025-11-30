@@ -75,24 +75,25 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
 
   return (
     <>
-      <div className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md hover:border-indigo-300 transition-all duration-200 flex flex-col h-full group">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-500 transition-all duration-200 flex flex-col h-full group">
         <div className="flex justify-between items-start mb-2">
-             <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200">
+             <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600">
                 {question.year}
             </span>
-            {question.textContent && <span className="text-[10px] font-bold text-emerald-600 border border-emerald-100 bg-emerald-50 px-1 rounded">AI GEN</span>}
+            {question.textContent && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1 rounded border border-emerald-100">AI GEN</span>}
+            {question.pages && question.pages.length > 1 && <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1 rounded border border-indigo-100 dark:border-indigo-800">{question.pages.length} Pages</span>}
         </div>
         
         <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-black text-indigo-900 bg-indigo-50 px-2 py-1 rounded">{question.courseCode}</span>
+            <span className="text-xs font-black text-indigo-900 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-900/50 px-2 py-1 rounded">{question.courseCode}</span>
         </div>
 
-        <h4 className="text-sm font-bold text-slate-800 leading-snug mb-3 line-clamp-2 min-h-[2.5em]">
+        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug mb-3 line-clamp-2 min-h-[2.5em]">
             {question.courseTitle}
         </h4>
 
-        <div className="flex gap-2 mt-auto pt-2 border-t border-slate-50">
-            <button onClick={handlePreview} className="flex-1 py-2 text-xs font-bold text-slate-600 bg-slate-50 rounded hover:bg-white hover:text-indigo-600 hover:shadow-sm border border-transparent hover:border-slate-200 transition flex items-center justify-center gap-1">
+        <div className="flex gap-2 mt-auto pt-2 border-t border-slate-50 dark:border-slate-700">
+            <button onClick={handlePreview} className="flex-1 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700 rounded hover:bg-white dark:hover:bg-slate-600 hover:text-indigo-600 dark:hover:text-indigo-300 hover:shadow-sm border border-transparent hover:border-slate-200 transition flex items-center justify-center gap-1">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 Preview
             </button>
@@ -120,6 +121,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
         isOpen={isPreviewOpen} 
         onClose={handleClosePreview} 
         fileUrl={previewUrl}
+        pages={question.pages}
         title={`${question.courseCode} (${question.year})`}
       />
     </>

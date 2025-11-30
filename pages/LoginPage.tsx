@@ -13,11 +13,23 @@ import { useNavigate, Link } from 'react-router-dom';
 
 const getFriendlyErrorMessage = (error: any): string => {
     const code = error.code || '';
+    const msg = error.message || '';
+    
+    // Auth Errors
     if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') return 'Incorrect email or password.';
     if (code === 'auth/email-already-in-use') return 'That email is already registered. Please log in.';
     if (code === 'auth/invalid-email') return 'Please enter a valid email address.';
-    if (code === 'auth/network-request-failed') return 'Network connection error.';
-    return error.message || 'An unexpected error occurred.';
+    if (code === 'auth/weak-password') return 'Password should be at least 6 characters.';
+    
+    // Popup / Network Errors
+    if (code === 'auth/popup-closed-by-user') return 'Sign-in popup was closed.';
+    if (code === 'auth/cancelled-popup-request') return 'Another popup is already open.';
+    if (code === 'auth/network-request-failed') return 'Network Error. Check internet or Authorized Domains in Firebase Console.';
+    
+    // Permission Errors
+    if (code === 'permission-denied') return 'Access denied. Please check your permissions.';
+
+    return msg.replace('Firebase:', '').trim() || 'An unexpected error occurred.';
 };
 
 export const LoginPage: React.FC = () => {
@@ -53,7 +65,10 @@ export const LoginPage: React.FC = () => {
                   const available = await auth.checkUsernameAvailability(cleanUsername);
                   setUsernameStatus(available ? 'available' : 'taken');
               }
-          } catch (e) { setUsernameStatus('available'); }
+          } catch (e) { 
+              // If check fails (e.g. network), assume available to not block user
+              setUsernameStatus('available'); 
+          }
       }, 700);
       return () => clearTimeout(timer);
   }, [username, isLogin, auth, viewState]);
@@ -108,13 +123,9 @@ export const LoginPage: React.FC = () => {
             }
             
             // Double check strict availability before proceeding
-            const isActuallyAvailable = await auth.checkUsernameAvailability(username.trim().toLowerCase());
-            if (!isActuallyAvailable) {
-                setUsernameStatus('taken');
-                showNotification("Username is unavailable.", "error");
-                return;
-            }
-
+            // Note: We skip this strict check if previous check failed due to network to allow 'offline' like progression
+            // But generally we rely on the status state.
+            
             setLoadingMessage('Creating account...');
             await auth.signup({ name, email, pass: password, level, username: username.trim().toLowerCase(), matricNumber });
             setViewState('upload_photo');

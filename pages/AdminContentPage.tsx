@@ -102,6 +102,27 @@ export const AdminContentPage: React.FC = () => {
 
           const payload = { ...formData };
 
+          // Handle WhatsApp Logic for Executives
+          if (activeContent === 'executives' && payload.whatsapp) {
+              let wa = payload.whatsapp.trim();
+              // Check if it's already a link
+              if (!wa.startsWith('http')) {
+                  // It's a number, clean it
+                  let cleanNumber = wa.replace(/[^\d+]/g, ''); // Remove spaces, dashes, parens
+                  
+                  // Handle Nigerian format (080...) -> 23480...
+                  if (cleanNumber.startsWith('0')) {
+                      cleanNumber = '234' + cleanNumber.substring(1);
+                  }
+                  // Handle international format (+234...) -> 234...
+                  if (cleanNumber.startsWith('+')) {
+                      cleanNumber = cleanNumber.substring(1);
+                  }
+                  
+                  payload.whatsapp = `https://wa.me/${cleanNumber}`;
+              }
+          }
+
           // Handle File Uploads
           if (activeContent === 'materials') {
               if (!editingItem && !formFile) throw new Error("File is required for new materials");
@@ -241,7 +262,7 @@ export const AdminContentPage: React.FC = () => {
                         )}
                         {activeContent === 'executives' && (
                             <>
-                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">WhatsApp Link or Number</label><input className="w-full border border-slate-300 p-3 rounded-xl" placeholder="https://wa.me/..." value={formData.whatsapp || ''} onChange={e => setFormData({...formData, whatsapp: e.target.value})} /></div>
+                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">WhatsApp Number</label><input className="w-full border border-slate-300 p-3 rounded-xl" placeholder="e.g. 08012345678" value={formData.whatsapp || ''} onChange={e => setFormData({...formData, whatsapp: e.target.value})} /></div>
                                 <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Email</label><input className="w-full border border-slate-300 p-3 rounded-xl" placeholder="email@aaua.edu.ng" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} /></div>
                                 <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Favorite Quote</label><textarea className="w-full border border-slate-300 p-3 rounded-xl" rows={2} placeholder="Quote..." value={formData.quote || ''} onChange={e => setFormData({...formData, quote: e.target.value})} /></div>
                             </>

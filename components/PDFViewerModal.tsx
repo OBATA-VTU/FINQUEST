@@ -6,10 +6,11 @@ interface PDFViewerModalProps {
   isOpen: boolean;
   onClose: () => void;
   fileUrl: string;
+  pages?: string[]; // New prop for multiple image pages
   title: string;
 }
 
-export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose, fileUrl, title }) => {
+export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose, fileUrl, pages, title }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [fileType, setFileType] = useState<'image' | 'pdf' | 'other'>('other');
   const [loading, setLoading] = useState(true);
@@ -37,7 +38,8 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
 
           const isImage = /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(lower) || 
                           lower.includes('imgbb') || 
-                          lower.includes('alt=media');
+                          lower.includes('alt=media') ||
+                          (pages && pages.length > 0); // If pages exist, treat as image set
 
           const isPdf = /\.(pdf)(\?.*)?$/i.test(lower) || 
                         cleanUrl.startsWith('blob:') ||
@@ -51,7 +53,7 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
               setFileType('other');
           }
       }
-  }, [fileUrl]);
+  }, [fileUrl, pages]);
 
   const handleIframeLoad = () => setLoading(false);
 
@@ -68,18 +70,18 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
     >
       <div 
         ref={modalRef}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden relative animate-fade-in-down border border-slate-700"
+        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden relative animate-fade-in-down border border-slate-700 transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 bg-slate-50">
+        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
           <div className="flex flex-col min-w-0">
-             <h3 className="font-bold text-lg text-slate-900 truncate pr-4">{title}</h3>
-             <p className="text-xs text-slate-500">Preview Mode</p>
+             <h3 className="font-bold text-lg text-slate-900 dark:text-white truncate pr-4">{title}</h3>
+             <p className="text-xs text-slate-500 dark:text-slate-400">Preview Mode</p>
           </div>
           <button 
             onClick={onClose} 
-            className="w-8 h-8 flex items-center justify-center bg-white border border-slate-300 rounded-full hover:bg-rose-50 hover:text-rose-500 hover:border-rose-200 transition-all shadow-sm"
+            className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-full hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-500 hover:border-rose-200 transition-all shadow-sm"
             title="Close Preview"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -89,21 +91,35 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
         </div>
         
         {/* Content */}
-        <div className="flex-grow bg-slate-100 relative flex items-center justify-center overflow-hidden">
+        <div className="flex-grow bg-slate-100 dark:bg-slate-950 relative flex items-center justify-center overflow-hidden">
             {loading && (
-                <div className="absolute inset-0 flex flex-col gap-3 items-center justify-center z-10 pointer-events-none bg-white/50 backdrop-blur-sm">
+                <div className="absolute inset-0 flex flex-col gap-3 items-center justify-center z-10 pointer-events-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
                     <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div>
-                    <span className="font-bold text-indigo-900 animate-pulse">Loading Document...</span>
+                    <span className="font-bold text-indigo-900 dark:text-indigo-300 animate-pulse">Loading Document...</span>
                 </div>
             )}
             
             {fileType === 'image' ? (
-                <img 
-                    src={displayUrl} 
-                    alt="Preview" 
-                    className="max-w-full max-h-full object-contain p-4" 
-                    onLoad={() => setLoading(false)}
-                />
+                <div className="w-full h-full overflow-y-auto p-4 space-y-4 flex flex-col items-center">
+                    {pages && pages.length > 0 ? (
+                        pages.map((pageUrl, idx) => (
+                            <img 
+                                key={idx}
+                                src={pageUrl} 
+                                alt={`Page ${idx + 1}`} 
+                                className="max-w-full shadow-lg rounded"
+                                onLoad={() => idx === 0 && setLoading(false)}
+                            />
+                        ))
+                    ) : (
+                        <img 
+                            src={displayUrl} 
+                            alt="Preview" 
+                            className="max-w-full max-h-full object-contain shadow-lg rounded" 
+                            onLoad={() => setLoading(false)}
+                        />
+                    )}
+                </div>
             ) : fileType === 'pdf' ? (
                 <iframe 
                     src={displayUrl} 
@@ -122,10 +138,10 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
         </div>
         
         {/* Footer */}
-        <div className="p-4 border-t border-slate-200 bg-white flex justify-between items-center gap-4">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-between items-center gap-4">
              <button 
                 onClick={onClose}
-                className="px-6 py-2.5 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition border border-transparent hover:border-slate-200"
+                className="px-6 py-2.5 rounded-xl font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
              >
                 Close Preview
              </button>

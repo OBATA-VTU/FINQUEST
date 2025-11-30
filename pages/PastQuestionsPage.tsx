@@ -140,7 +140,7 @@ export const PastQuestionsPage: React.FC = () => {
                      <div className="relative flex-1 sm:w-80">
                         <input
                             type="text"
-                            placeholder="Search by Course Code or Title..."
+                            placeholder="Search by Course Code or Title"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm placeholder:text-slate-400"

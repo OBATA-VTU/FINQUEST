@@ -13,6 +13,7 @@ export interface PastQuestion {
   year: number;
   fileUrl?: string; 
   storagePath?: string; // Path in Dropbox/Storage for deletion
+  pages?: string[]; // Array of image URLs if uploaded as multiple images
   textContent?: string;
   uploadedBy?: string;
   uploadedByEmail?: string;

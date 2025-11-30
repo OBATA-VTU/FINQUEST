@@ -1,11 +1,13 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { Logo } from './Logo';
 import { Link } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { AuthContext } from '../contexts/AuthContext';
 
 export const Footer: React.FC = () => {
+  const auth = useContext(AuthContext);
   const [socials, setSocials] = useState({
       facebook: '',
       twitter: '',
@@ -14,22 +16,20 @@ export const Footer: React.FC = () => {
   });
 
   useEffect(() => {
-      const fetchSocials = async () => {
+      const fetchContent = async () => {
           try {
-              const docRef = doc(db, 'content', 'social_links');
-              const snap = await getDoc(docRef);
-              if (snap.exists()) {
-                  setSocials(snap.data() as any);
-              }
+              // Fetch Socials
+              const socDoc = await getDoc(doc(db, 'content', 'social_links'));
+              if (socDoc.exists()) setSocials(socDoc.data() as any);
           } catch (e) {
-              console.error("Failed to fetch social links");
+              console.error("Failed to fetch footer content");
           }
       };
-      fetchSocials();
+      fetchContent();
   }, []);
 
   return (
-    <footer className="bg-indigo-950 text-white mt-16 border-t border-indigo-900">
+    <footer className="bg-indigo-950 dark:bg-slate-950 text-white mt-16 border-t border-indigo-900 dark:border-slate-800 transition-colors">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 text-center md:text-left">
           
@@ -75,10 +75,12 @@ export const Footer: React.FC = () => {
           <div>
             <h3 className="font-bold mb-6 text-indigo-200">Quick Access</h3>
             <ul className="space-y-3 text-sm">
-              <li><Link to="/dashboard" className="hover:text-white text-indigo-400 transition-colors">My Dashboard</Link></li>
-              <li><Link to="/questions" className="hover:text-white text-indigo-400 transition-colors">Past Questions</Link></li>
-              <li><Link to="/announcements" className="hover:text-white text-indigo-400 transition-colors">Announcements</Link></li>
-              <li><Link to="/lecturers" className="hover:text-white text-indigo-400 transition-colors">Directory</Link></li>
+                {/* CONDITIONAL LINKS BASED ON AUTH */}
+                {auth?.user && <li><Link to="/dashboard" className="hover:text-white text-indigo-400 transition-colors">My Dashboard</Link></li>}
+                {auth?.user && <li><Link to="/questions" className="hover:text-white text-indigo-400 transition-colors">Past Questions</Link></li>}
+                <li><Link to="/announcements" className="hover:text-white text-indigo-400 transition-colors">Announcements</Link></li>
+                {auth?.user && <li><Link to="/lecturers" className="hover:text-white text-indigo-400 transition-colors">Directory</Link></li>}
+                {!auth?.user && <li><Link to="/login" className="hover:text-white text-indigo-400 transition-colors">Login / Register</Link></li>}
             </ul>
           </div>
 
@@ -97,11 +99,11 @@ export const Footer: React.FC = () => {
         </div>
         
         {/* Copyright */}
-        <div className="border-t border-indigo-900 mt-12 pt-8 text-center text-xs text-indigo-500 flex flex-col md:flex-row justify-between items-center">
+        <div className="border-t border-indigo-900 dark:border-slate-800 mt-12 pt-8 text-center text-xs text-indigo-500 dark:text-slate-500 flex flex-col md:flex-row justify-between items-center">
           <div className="flex flex-col md:flex-row gap-2 items-center">
               <p>&copy; {new Date().getFullYear()} FINQUEST.</p>
-              <span className="hidden md:inline text-indigo-700">•</span>
-              <p className="text-indigo-400 font-bold">Crafted with ❤️ by OBA - PRO '25/26</p>
+              <span className="hidden md:inline text-indigo-700 dark:text-slate-700">•</span>
+              <p className="text-indigo-400 dark:text-slate-400 font-bold">Crafted with ❤️ by OBA - PRO '25/26</p>
           </div>
           <div className="flex gap-4 mt-2 md:mt-0">
               <Link to="/privacy" className="hover:text-indigo-300">Privacy Policy</Link>

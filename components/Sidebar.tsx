@@ -1,3 +1,4 @@
+
 import React, { useContext, useState } from 'react';
 import { Logo } from './Logo';
 import { AuthContext } from '../contexts/AuthContext';
@@ -99,13 +100,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         {/* Sidebar Container */}
         <aside 
             className={`
-                fixed xl:sticky top-0 left-0 h-[100dvh] w-72 bg-indigo-900 z-50 
+                fixed xl:sticky top-0 left-0 h-[100dvh] w-72 bg-indigo-900 dark:bg-slate-950 z-50 
                 transform transition-transform duration-300 ease-in-out shrink-0 flex flex-col shadow-2xl xl:shadow-none
                 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'}
             `}
         >
           {/* Header (Fixed) */}
-          <div className="p-6 flex items-center justify-between border-b border-indigo-800/50 shrink-0">
+          <div className="p-6 flex items-center justify-between border-b border-indigo-800/50 dark:border-slate-800 shrink-0">
             <div className="flex items-center gap-3">
                 <div className="bg-white rounded-full p-1 shadow-lg">
                     <Logo className="h-8 w-8" />
@@ -182,31 +183,37 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>}
                     onClose={onClose}
                 />
-                {auth?.user && (
-                     <NavItem 
-                        to="/gallery" 
-                        label="Gallery" 
-                        icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
-                        onClose={onClose}
-                    />
-                )}
+                
+                {/* GALLERY IS PUBLIC, BUT LECTURERS & EXECUTIVES ARE RESTRICTED TO AUTH USERS */}
                 
                 <NavItem 
-                    to="/lecturers" 
-                    label="Lecturers" 
-                    icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
+                    to="/gallery" 
+                    label="Gallery" 
+                    icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
                     onClose={onClose}
                 />
-                <NavItem 
-                    to="/executives" 
-                    label="Executives" 
-                    icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
-                    onClose={onClose}
-                />
+                
+                {/* RESTRICTED MENU ITEMS */}
+                {auth?.user && (
+                    <>
+                        <NavItem 
+                            to="/lecturers" 
+                            label="Lecturers" 
+                            icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
+                            onClose={onClose}
+                        />
+                        <NavItem 
+                            to="/executives" 
+                            label="Executives" 
+                            icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
+                            onClose={onClose}
+                        />
+                    </>
+                )}
             </NavSection>
           </nav>
 
-          <div className="p-4 border-t border-indigo-800 bg-indigo-950 shrink-0">
+          <div className="p-4 border-t border-indigo-800 bg-indigo-950 dark:bg-slate-900 shrink-0">
             {auth?.user ? (
                 <div>
                     <div 
