@@ -18,6 +18,30 @@ interface Question {
   correctAnswer: number;
 }
 
+// Fallback questions in case AI service is down or rate-limited
+const FALLBACK_QUESTIONS: Question[] = [
+    { id: 101, text: "Which of the following is NOT a capital budgeting technique?", options: ["Net Present Value (NPV)", "Internal Rate of Return (IRR)", "Depreciation Method", "Payback Period"], correctAnswer: 2 },
+    { id: 102, text: "In the context of the Time Value of Money, a dollar today is worth _____ than a dollar tomorrow.", options: ["Less", "The same", "More", "None of the above"], correctAnswer: 2 },
+    { id: 103, text: "Which financial statement reports a company's financial position at a specific point in time?", options: ["Income Statement", "Statement of Cash Flows", "Balance Sheet", "Retained Earnings Statement"], correctAnswer: 2 },
+    { id: 104, text: "What is the primary goal of financial management?", options: ["Maximizing Profit", "Maximizing Shareholder Wealth", "Minimizing Costs", "Maximizing Market Share"], correctAnswer: 1 },
+    { id: 105, text: "A bond that pays no interest but is sold at a deep discount is called a:", options: ["Junk Bond", "Zero-Coupon Bond", "Convertible Bond", "Treasury Bond"], correctAnswer: 1 },
+    { id: 106, text: "Which ratio measures a firm's ability to pay off short-term obligations?", options: ["Debt-to-Equity Ratio", "Current Ratio", "Return on Assets", "Price-Earnings Ratio"], correctAnswer: 1 },
+    { id: 107, text: "The cost of the next best alternative foregone is known as:", options: ["Sunk Cost", "Fixed Cost", "Opportunity Cost", "Variable Cost"], correctAnswer: 2 },
+    { id: 108, text: "Which market deals with the trading of long-term debt and equity instruments?", options: ["Money Market", "Capital Market", "Forex Market", "Derivatives Market"], correctAnswer: 1 },
+    { id: 109, text: "Diversification allows an investor to:", options: ["Eliminate all risk", "Increase returns guaranteed", "Reduce unsystematic risk", "Reduce systematic risk"], correctAnswer: 2 },
+    { id: 110, text: "Beta (β) is a measure of:", options: ["Total Risk", "Unsystematic Risk", "Systematic Risk", "Liquidity Risk"], correctAnswer: 2 },
+    { id: 111, text: "If the NPV of a project is positive, the project should be:", options: ["Rejected", "Accepted", "Ignored", "Deferred"], correctAnswer: 1 },
+    { id: 112, text: "Which institution is the apex bank in Nigeria?", options: ["First Bank", "CBN (Central Bank of Nigeria)", "NDIC", "SEC"], correctAnswer: 1 },
+    { id: 113, text: "The Du Pont Identity breaks down Return on Equity (ROE) into:", options: ["Profit Margin x Asset Turnover x Equity Multiplier", "Net Income / Sales", "Assets / Equity", "Sales / Assets"], correctAnswer: 0 },
+    { id: 114, text: "An annuity with an infinite life is called a:", options: ["Perpetuity", "Ordinary Annuity", "Annuity Due", "Growing Annuity"], correctAnswer: 0 },
+    { id: 115, text: "The relationship between risk and required return is depicted by the:", options: ["CML (Capital Market Line)", "SML (Security Market Line)", "Efficient Frontier", "Indifference Curve"], correctAnswer: 1 },
+    { id: 116, text: "Working Capital is defined as:", options: ["Total Assets - Total Liabilities", "Current Assets - Current Liabilities", "Fixed Assets - Long Term Debt", "Equity - Debt"], correctAnswer: 1 },
+    { id: 117, text: "Inflation is best described as:", options: ["A decrease in the price level", "A persistent increase in the general price level", "An increase in purchasing power", "Stable prices"], correctAnswer: 1 },
+    { id: 118, text: "Which of these is an example of an intangible asset?", options: ["Inventory", "Machinery", "Goodwill", "Cash"], correctAnswer: 2 },
+    { id: 119, text: "The breakeven point is where:", options: ["Total Revenue = Total Costs", "Total Revenue > Total Costs", "Total Revenue < Total Costs", "Fixed Costs = Variable Costs"], correctAnswer: 0 },
+    { id: 120, text: "Which of the following is considered a risk-free asset?", options: ["Corporate Bond", "Treasury Bill", "Common Stock", "Real Estate"], correctAnswer: 1 }
+];
+
 export const TestPage: React.FC = () => {
   const auth = useContext(AuthContext);
   const { showNotification } = useNotification();
@@ -103,6 +127,12 @@ export const TestPage: React.FC = () => {
       setStage('setup');
   };
 
+  // Helper to strip Markdown code blocks
+  const cleanJson = (text: string) => {
+      if (!text) return "";
+      return text.replace(/```json/g, '').replace(/```/g, '').trim();
+  };
+
   const startExam = async () => {
     if (mode === 'topic' && !topic.trim()) {
         showNotification("Please enter a topic.", "error");
@@ -130,14 +160,14 @@ export const TestPage: React.FC = () => {
         
         let prompt = "";
         if (mode === 'topic') {
-            prompt = `Generate 20 difficult, exam-standard multiple-choice questions for ${selectedLevel} Level Finance students specifically on the topic: "${topic}". Ensure options are tricky.`;
+            prompt = `Generate 20 difficult, exam-standard multiple-choice questions for ${selectedLevel} Level Finance students specifically on the topic: "${topic}". Ensure options are tricky. Return only raw JSON.`;
         } else {
-            prompt = `Generate 20 difficult, complex, and rigid multiple-choice questions for ${selectedLevel} Level Finance students. Questions should cover a random mix of core courses typically taught at this level (e.g., Corporate Finance, Accounting, Economics, Quantitative Analysis). Do not group them by subject.`;
+            prompt = `Generate 20 difficult, complex, and rigid multiple-choice questions for ${selectedLevel} Level Finance students. Questions should cover a random mix of core courses typically taught at this level. Do not group them by subject. Return only raw JSON.`;
         }
 
-        // Timeout Promise (30 seconds)
+        // Timeout Promise (25 seconds) to ensure fallback triggers reasonably fast if net is slow
         const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Request timed out. Please try again.")), 30000)
+            setTimeout(() => reject(new Error("Request timed out")), 25000)
         );
 
         const aiPromise = ai.models.generateContent({
@@ -168,7 +198,10 @@ export const TestPage: React.FC = () => {
 
         if (!response.text) throw new Error("Empty response received");
 
-        const data = JSON.parse(response.text);
+        // Clean text before parsing to handle markdown wrappers
+        const cleanText = cleanJson(response.text);
+        const data = JSON.parse(cleanText);
+
         if (Array.isArray(data) && data.length > 0) {
             setQuestions(data.map((q: any, idx: number) => ({
                 id: idx,
@@ -188,9 +221,22 @@ export const TestPage: React.FC = () => {
 
     } catch (e: any) {
         clearInterval(progressInterval);
-        console.error(e);
-        showNotification("Failed to generate questions. Check connection.", "error");
-        setStage('setup');
+        console.warn("AI Generation failed:", e);
+        
+        // --- FALLBACK MECHANISM ---
+        setLoadingMessage('Loading Standard Set...');
+        setLoadingProgress(100);
+        
+        setTimeout(() => {
+            // Shuffle fallback questions for variety
+            const shuffled = [...FALLBACK_QUESTIONS].sort(() => 0.5 - Math.random());
+            setQuestions(shuffled);
+            
+            showNotification("AI Service busy. Loaded standard practice set.", "info");
+            setStage('exam');
+            setCurrentQuestionIndex(0);
+            setUserAnswers({});
+        }, 1000);
     }
   };
 
