@@ -8,15 +8,22 @@ export const ExecutivesPage: React.FC = () => {
   const [executives, setExecutives] = useState<Executive[]>([]);
   const [loading, setLoading] = useState(true);
   const [sessionYear, setSessionYear] = useState('2025/2026');
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
     const fetchExecutivesAndSettings = async () => {
         try {
-            // Fetch Settings first for header
+            // Fetch Settings first for header and visibility
             const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
             if (settingsDoc.exists()) {
                 const data = settingsDoc.data();
                 if (data.session) setSessionYear(data.session);
+                // Default to true if undefined, but respect explicit false
+                if (data.showExecutives === false) {
+                    setIsVisible(false);
+                    setLoading(false);
+                    return; // Stop fetching if hidden
+                }
             }
 
             // Fetch Executives
@@ -78,12 +85,12 @@ export const ExecutivesPage: React.FC = () => {
   const getRoleIcon = (position: string) => {
       const p = position.toLowerCase();
       
-      // Sport - Football (Soccer Ball) - Clearer Icon
+      // Sport - Football (Soccer Ball)
       if (p.includes('sport')) return (
           <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
       );
 
-      // Social - Music Note / Party - Clearer Icon
+      // Social - Music Note / Party
       if (p.includes('social')) return (
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z" />
       );
@@ -115,7 +122,7 @@ export const ExecutivesPage: React.FC = () => {
 
       // President OR VP - Crown / Badge
       if (p.includes('president')) return (
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 011.043 3.296A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
       );
 
       // Default - User Badge
@@ -133,14 +140,24 @@ export const ExecutivesPage: React.FC = () => {
       </div>
 
       <div className="container mx-auto px-4 py-12">
-        {loading ? <div className="text-center py-20">Loading executives...</div> : (
+        {!isVisible ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+                <div className="bg-white dark:bg-slate-800 p-8 rounded-full shadow-lg mb-6">
+                    <svg className="w-16 h-16 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                </div>
+                <h2 className="text-3xl font-serif font-bold text-slate-900 dark:text-white mb-2">Coming Soon</h2>
+                <p className="text-slate-500 dark:text-slate-400 max-w-md">The list of executives for the {sessionYear} session is currently being updated. Please check back later.</p>
+            </div>
+        ) : loading ? (
+            <div className="text-center py-20">Loading executives...</div>
+        ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {executives.map((exec) => (
                     <article key={exec.id} className="relative bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 dark:border-slate-700 group h-full" itemScope itemType="https://schema.org/Person">
                         
                         {/* Unique Background Icon - High Visibility Watermark */}
-                        <div className="absolute -right-6 -bottom-6 w-40 h-40 text-indigo-100 dark:text-slate-700 opacity-60 transform rotate-12 group-hover:scale-110 transition-all duration-500 z-0 pointer-events-none">
-                             <svg className="w-full h-full" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                        <div className="absolute -right-6 -bottom-6 w-40 h-40 text-indigo-200 dark:text-slate-600 opacity-40 transform rotate-12 group-hover:scale-110 transition-all duration-500 z-0 pointer-events-none">
+                             <svg className="w-full h-full" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                                 {getRoleIcon(exec.position)}
                              </svg>
                         </div>

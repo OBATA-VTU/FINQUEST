@@ -103,7 +103,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         const result = await signInWithPopup(auth, provider);
         const firebaseUser = result.user;
         
-        let isNewUser = false;
+        let isIncompleteProfile = false;
 
         try {
             const userDocRef = doc(db, 'users', firebaseUser.uid);
@@ -122,14 +122,14 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
               });
 
               await setDoc(doc(db, 'users', firebaseUser.uid), cleanData);
-              showNotification("Account created! Please set up your profile.", "success");
-              isNewUser = true;
+              showNotification("Account created! Please complete your profile.", "success");
+              isIncompleteProfile = true;
             } else {
               const data = userDoc.data();
-              // CHECK FOR MISSING FIELDS (Legacy users or incomplete setups)
+              // STRICT CHECK FOR MISSING FIELDS
               if (!data.matricNumber || !data.username) {
-                  isNewUser = true;
-                  showNotification("Please complete your profile setup.", "info");
+                  isIncompleteProfile = true;
+                  showNotification("Profile incomplete. Please finish setup.", "info");
               } else {
                   showNotification("Welcome back!", "success");
               }
@@ -139,7 +139,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             showNotification("Logged in (Profile sync issue)", "info");
         }
         
-        return isNewUser;
+        return isIncompleteProfile;
     } catch (error: any) {
         console.error("Google Sign-in Error Full:", error);
         if (error.code === 'auth/unauthorized-domain') {
@@ -221,7 +221,6 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     try {
         await signOut(auth);
         setUser(null);
-        showNotification("Logged out successfully", "info");
     } catch (e) {
         console.error("Logout failed", e);
     }

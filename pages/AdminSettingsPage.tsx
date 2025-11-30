@@ -14,7 +14,7 @@ export const AdminSettingsPage: React.FC = () => {
       tiktok: '' 
   });
   const [adConfig, setAdConfig] = useState({ client: '', slot: '' });
-  const [siteSettings, setSiteSettings] = useState({ session: '2025/2026' });
+  const [siteSettings, setSiteSettings] = useState({ session: '2025/2026', showExecutives: true });
   const { showNotification } = useNotification();
 
   useEffect(() => {
@@ -29,7 +29,10 @@ export const AdminSettingsPage: React.FC = () => {
             const sSetDoc = await getDoc(doc(db, 'content', 'site_settings'));
             if (sSetDoc.exists()) {
                 const data = sSetDoc.data();
-                setSiteSettings({ session: data.session || '2025/2026' });
+                setSiteSettings({ 
+                    session: data.session || '2025/2026',
+                    showExecutives: data.showExecutives !== undefined ? data.showExecutives : true
+                });
             }
         } catch (e) { console.error(e); }
     };
@@ -40,7 +43,12 @@ export const AdminSettingsPage: React.FC = () => {
       try {
           await setDoc(doc(db, 'content', 'social_links'), socialLinks);
           await setDoc(doc(db, 'content', 'adsense_config'), adConfig);
-          await setDoc(doc(db, 'content', 'site_settings'), { ...siteSettings, credit: "OBA - PRO '25/26" }, { merge: true });
+          // Only allowing Session and Visibility update, not Credits as requested previously
+          await setDoc(doc(db, 'content', 'site_settings'), { 
+              session: siteSettings.session, 
+              showExecutives: siteSettings.showExecutives 
+          }, { merge: true });
+          
           showNotification("Settings saved successfully", "success");
       } catch (e) { showNotification("Failed to save settings", "error"); }
   };
@@ -52,7 +60,6 @@ export const AdminSettingsPage: React.FC = () => {
         {/* General Site Config */}
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
              <h3 className="text-xl font-bold text-slate-800 mb-6">General Configuration</h3>
-             <p className="text-sm text-slate-500 mb-4">Update these values when a new administration takes over.</p>
              <div className="space-y-4">
                  <div>
                      <label className="block text-xs font-bold uppercase mb-1">Current Academic Session</label>
@@ -66,6 +73,23 @@ export const AdminSettingsPage: React.FC = () => {
              </div>
         </div>
 
+        {/* Module Visibility */}
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
+             <h3 className="text-xl font-bold text-slate-800 mb-6">Module Visibility</h3>
+             <div className="flex items-center justify-between">
+                 <div>
+                     <h4 className="font-bold text-slate-700">Show Executives Page</h4>
+                     <p className="text-xs text-slate-500">Toggle to hide the entire executive list from the public.</p>
+                 </div>
+                 <button 
+                    onClick={() => setSiteSettings({...siteSettings, showExecutives: !siteSettings.showExecutives})}
+                    className={`w-14 h-8 rounded-full p-1 transition-colors duration-300 ${siteSettings.showExecutives ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                 >
+                     <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${siteSettings.showExecutives ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                 </button>
+             </div>
+        </div>
+
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
              <h3 className="text-xl font-bold text-slate-800 mb-6">Social Media & Community Links</h3>
              <div className="space-y-4">
@@ -75,14 +99,6 @@ export const AdminSettingsPage: React.FC = () => {
                  <div><label className="block text-xs font-bold uppercase mb-1">Instagram URL</label><input className="w-full border p-2 rounded" value={socialLinks.instagram} onChange={e => setSocialLinks({...socialLinks, instagram: e.target.value})} /></div>
                  <div><label className="block text-xs font-bold uppercase mb-1">Twitter / X URL</label><input className="w-full border p-2 rounded" value={socialLinks.twitter} onChange={e => setSocialLinks({...socialLinks, twitter: e.target.value})} /></div>
                  <div><label className="block text-xs font-bold uppercase mb-1">TikTok Handle/URL</label><input className="w-full border p-2 rounded" value={socialLinks.tiktok} onChange={e => setSocialLinks({...socialLinks, tiktok: e.target.value})} /></div>
-             </div>
-        </div>
-
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
-             <h3 className="text-xl font-bold text-slate-800 mb-6">Google AdSense</h3>
-             <div className="space-y-4">
-                 <div><label className="block text-xs font-bold uppercase mb-1">Publisher ID (ca-pub-xxx)</label><input className="w-full border p-2 rounded" value={adConfig.client} onChange={e => setAdConfig({...adConfig, client: e.target.value})} /></div>
-                 <div><label className="block text-xs font-bold uppercase mb-1">Ad Slot ID</label><input className="w-full border p-2 rounded" value={adConfig.slot} onChange={e => setAdConfig({...adConfig, slot: e.target.value})} /></div>
              </div>
         </div>
 
