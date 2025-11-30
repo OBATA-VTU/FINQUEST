@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /dashboard
 
-Sitemap: https://finquest-aaua.web.app/sitemap.xml
+Sitemap: https://finsa.vercel.app/sitemap.xml
