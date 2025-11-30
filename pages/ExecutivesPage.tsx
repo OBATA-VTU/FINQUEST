@@ -14,19 +14,43 @@ export const ExecutivesPage: React.FC = () => {
             const snapshot = await getDocs(collection(db, 'executives'));
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Executive));
             
-            // STRICT RANKING LOGIC
+            // STRICT RANKING LOGIC (001 - 011)
             const getRank = (pos: string) => {
-                const p = pos.toLowerCase();
-                if (p.includes('president') && !p.includes('vice')) return 1;
-                if (p.includes('vice president')) return 2;
-                if (p.includes('general secretary') && !p.includes('assistant')) return 3;
-                if (p.includes('financial')) return 4;
-                if (p.includes('treasurer')) return 5;
-                if (p.includes('public relations') || p.includes('pro')) return 6;
-                if (p.includes('welfare')) return 7;
+                const p = pos.toLowerCase().trim();
+                
+                // 001 President
+                if (p === 'president' || (p.includes('president') && !p.includes('vice'))) return 1;
+                
+                // 002 Vice President
+                if (p.includes('vice president') || p === 'vp') return 2;
+                
+                // 003 General Secretary (exclude assistant)
+                if ((p.includes('general secretary') || p === 'gen sec') && !p.includes('assistant')) return 3;
+                
+                // 004 Public Relations Officer (PRO)
+                if (p.includes('public relations') || p.includes('pro')) return 4;
+                
+                // 005 Financial Secretary
+                if (p.includes('financial') || p === 'fin sec') return 5;
+                
+                // 006 Welfare
+                if (p.includes('welfare')) return 6;
+                
+                // 007 Treasurer
+                if (p.includes('treasurer')) return 7;
+                
+                // 008 Social Director
                 if (p.includes('social')) return 8;
+                
+                // 009 Sport Director
                 if (p.includes('sport')) return 9;
-                if (p.includes('academic') || p.includes('librarian')) return 10;
+                
+                // 010 Assistant General Secretary
+                if (p.includes('assistant general secretary') || p === 'ags') return 10;
+                
+                // 011 Librarian
+                if (p.includes('librarian')) return 11;
+                
                 return 99;
             };
 
@@ -45,49 +69,49 @@ export const ExecutivesPage: React.FC = () => {
   const getRoleIcon = (position: string) => {
       const p = position.toLowerCase();
       
-      // Sport - Trophy/Ball
+      // Sport - Football (Soccer Ball)
       if (p.includes('sport')) return (
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-      ); // Trophy shape roughly
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+      );
 
-      // Social - Music/Party
+      // Social - Music Notes / Party
       if (p.includes('social')) return (
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z" />
       );
 
-      // Welfare - Heart/Care
+      // Welfare - Heart / Care
       if (p.includes('welfare')) return (
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
       );
 
-      // Finance/Treasurer - Money
+      // Finance/Treasurer - Money / Banknotes
       if (p.includes('financ') || p.includes('treasurer')) return (
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       );
 
-      // PRO - Megaphone
+      // PRO - Megaphone / Broadcast
       if (p.includes('public') || p.includes('pro')) return (
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 01-1.44-4.282m3.102.069a18.03 18.03 0 01-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 018.835 2.535M10.34 6.66a23.847 23.847 0 008.835-2.535m0 0A23.74 23.74 0 0018.795 3m.38 1.125a23.91 23.91 0 011.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 001.014-5.395m0-3.46c.495.43.816 1.035.816 1.73 0 .695-.32 1.3-.816 1.73" />
       );
 
       // Librarian/Academic - Book
       if (p.includes('lib') || p.includes('academic')) return (
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
       );
 
-      // Gen Sec - Pen
+      // Gen Sec OR AGS - Document / Pen
       if (p.includes('secretary')) return (
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
       );
 
-      // President - Star/Badge
+      // President OR VP - Badge / Crown / Star
       if (p.includes('president')) return (
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
       );
 
-      // Default - User
+      // Default - User Badge
       return (
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-9.375 0" />
       );
   };
 
@@ -103,35 +127,35 @@ export const ExecutivesPage: React.FC = () => {
         {loading ? <div className="text-center py-20">Loading executives...</div> : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {executives.map((exec) => (
-                    <div key={exec.id} className="relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 group">
+                    <div key={exec.id} className="relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 group h-full">
                         
-                        {/* Unique Background Icon */}
-                        <div className="absolute -right-4 -bottom-4 w-40 h-40 text-slate-100 transform rotate-12 opacity-50 group-hover:text-indigo-50 group-hover:scale-110 transition-all duration-500 z-0">
-                             <svg className="w-full h-full" fill="currentColor" viewBox="0 0 24 24">
+                        {/* Unique Background Icon - Fixed position and style */}
+                        <div className="absolute -right-8 -bottom-8 w-48 h-48 text-slate-100 transform rotate-12 opacity-40 group-hover:text-indigo-50 group-hover:scale-110 transition-all duration-500 z-0 pointer-events-none">
+                             <svg className="w-full h-full" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
                                 {getRoleIcon(exec.position)}
                              </svg>
                         </div>
 
                         <div className="relative z-10 p-6 flex flex-col items-center text-center h-full">
-                            <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-slate-200 to-indigo-100 mb-5 shadow-inner">
+                            <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-slate-200 to-indigo-100 mb-5 shadow-inner shrink-0">
                                 <div className="w-full h-full rounded-full overflow-hidden bg-slate-50">
                                     {exec.imageUrl ? (
                                         <img src={exec.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={exec.name} />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-4xl text-slate-300">
+                                        <div className="w-full h-full flex items-center justify-center text-4xl text-slate-300 font-bold bg-slate-50">
                                             {exec.name[0]}
                                         </div>
                                     )}
                                 </div>
                             </div>
                             
-                            <span className="inline-block px-3 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold uppercase tracking-widest rounded-full mb-3 border border-indigo-100">
+                            <span className="inline-block px-3 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold uppercase tracking-widest rounded-full mb-3 border border-indigo-100 shrink-0">
                                 {exec.position}
                             </span>
                             
                             <h3 className="text-xl font-bold text-slate-900 font-serif mb-2">{exec.name}</h3>
                             
-                            <p className="text-sm text-slate-500 italic mb-6 line-clamp-2 px-4">
+                            <p className="text-sm text-slate-500 italic mb-6 line-clamp-2 px-4 min-h-[2.5em]">
                                 "{exec.quote || 'Serving with integrity and passion.'}"
                             </p>
                             

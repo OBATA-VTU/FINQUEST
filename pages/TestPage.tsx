@@ -63,6 +63,13 @@ export const TestPage: React.FC = () => {
   }, [auth?.user?.id]);
 
   useEffect(() => {
+      // Refresh leaderboard whenever we return to the menu
+      if (stage === 'menu') {
+          fetchLeaderboard();
+      }
+  }, [stage]);
+
+  useEffect(() => {
       // Save state on change during exam
       if (stage === 'exam' && auth?.user?.id) {
           const stateToSave = {
@@ -85,7 +92,8 @@ export const TestPage: React.FC = () => {
       try {
           const q = query(collection(db, 'test_results'), orderBy('score', 'desc'), limit(10));
           const snap = await getDocs(q);
-          setLeaderboard(snap.docs.map(d => ({ id: d.id, ...d.data() } as TestResult)));
+          const results = snap.docs.map(d => ({ id: d.id, ...d.data() } as TestResult));
+          setLeaderboard(results);
       } catch (e) { console.error("Leaderboard error", e); }
   };
 
@@ -216,6 +224,7 @@ export const TestPage: React.FC = () => {
                   level: selectedLevel,
                   date: new Date().toISOString()
               });
+              // Fetch immediate to ensure data is there if they navigate back quickly
               fetchLeaderboard();
           } catch (e) { console.error("Error saving result", e); }
       }
@@ -225,7 +234,7 @@ export const TestPage: React.FC = () => {
 
   if (stage === 'menu') {
       return (
-          <div className="min-h-screen bg-slate-50 py-12 px-4 flex flex-col items-center">
+          <div className="min-h-screen bg-slate-50 py-12 px-4 flex flex-col items-center animate-fade-in">
               <div className="max-w-4xl w-full">
                   <h1 className="text-3xl font-serif font-bold text-slate-900 text-center mb-2">Finance Assessment Portal</h1>
                   <p className="text-slate-500 text-center mb-12">Select an examination mode to begin your practice session.</p>
@@ -258,8 +267,11 @@ export const TestPage: React.FC = () => {
 
                   {/* Leaderboard */}
                   <div className="mt-16 max-w-2xl mx-auto w-full">
-                      <h3 className="text-center font-bold text-slate-400 uppercase tracking-widest text-xs mb-6">Hall of Fame</h3>
-                      <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
+                      <div className="flex justify-between items-end mb-6">
+                        <h3 className="text-center font-bold text-slate-400 uppercase tracking-widest text-xs">Hall of Fame</h3>
+                        <button onClick={fetchLeaderboard} className="text-xs text-indigo-500 font-bold hover:underline">Refresh</button>
+                      </div>
+                      <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-sm">
                           {leaderboard.length > 0 ? leaderboard.map((entry, idx) => (
                               <div key={idx} className={`flex items-center justify-between p-4 ${idx === 0 ? 'bg-amber-50' : idx === 1 ? 'bg-slate-50' : idx === 2 ? 'bg-orange-50' : ''}`}>
                                   <div className="flex items-center gap-4">
@@ -267,14 +279,17 @@ export const TestPage: React.FC = () => {
                                           ${idx===0?'bg-amber-100 text-amber-600':idx===1?'bg-slate-200 text-slate-600':idx===2?'bg-orange-100 text-orange-600':'bg-slate-100 text-slate-400'}`}>
                                           {idx + 1}
                                       </div>
-                                      <span className={`font-bold ${idx < 3 ? 'text-slate-900' : 'text-slate-600'}`}>@{entry.username}</span>
+                                      <div>
+                                        <span className={`block font-bold ${idx < 3 ? 'text-slate-900' : 'text-slate-600'}`}>@{entry.username}</span>
+                                        <span className="text-[10px] text-slate-400">{new Date(entry.date).toLocaleDateString()}</span>
+                                      </div>
                                   </div>
                                   <div className="flex gap-4 items-center">
                                       <span className="text-[10px] bg-white border border-slate-200 px-2 py-1 rounded text-slate-500 uppercase tracking-wide">{entry.level}L</span>
                                       <span className={`font-mono font-bold text-lg ${idx === 0 ? 'text-amber-500' : 'text-emerald-600'}`}>{entry.score}%</span>
                                   </div>
                               </div>
-                          )) : <div className="p-4 text-center text-slate-400 text-sm">No records yet. Be the first!</div>}
+                          )) : <div className="p-8 text-center text-slate-400 text-sm">No records yet. Be the first!</div>}
                       </div>
                   </div>
               </div>

@@ -13,23 +13,26 @@ export const Layout: React.FC = () => {
     const hideFooter = ['/community', '/test'].includes(pathname) || pathname.startsWith('/admin');
 
     return (
-        <div className="min-h-screen bg-slate-50 text-slate-800 flex font-sans">
+        <div className="h-screen bg-slate-50 text-slate-800 flex font-sans overflow-hidden">
             {/* Sidebar for Desktop & Mobile */}
             <Sidebar 
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
             />
             
-            <div className="flex-1 min-w-0 flex flex-col">
+            <div className="flex-1 min-w-0 flex flex-col h-full">
                 {/* Header for Mobile (Triggers Sidebar) */}
                 <Header onOpenSidebar={() => setIsSidebarOpen(true)} />
                 
                 {/* Main Content with Fade Animation */}
-                <main className="flex-grow animate-fade-in relative z-0">
-                    <Outlet />
+                {/* We use h-full and overflow-y-auto here so normal pages scroll, 
+                    but pages like Chat (Community) can opt to hide overflow and manage scrolling internally */}
+                <main className={`flex-1 relative z-0 animate-fade-in ${pathname === '/community' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+                    <div className={pathname === '/community' ? 'h-full' : 'min-h-full flex flex-col'}>
+                        <Outlet />
+                        {!hideFooter && <Footer />}
+                    </div>
                 </main>
-                
-                {!hideFooter && <Footer />}
             </div>
         </div>
     );
