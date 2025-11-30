@@ -100,13 +100,13 @@ export const PastQuestionsPage: React.FC = () => {
   }, [questions, selectedLevel, searchTerm, selectedYear, sortOrder]);
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-20">
+    <div className="bg-slate-50 dark:bg-slate-900 min-h-screen pb-20 transition-colors duration-300">
       
       {/* HEADER & FILTERS */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm py-4">
+      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-20 shadow-sm py-4 transition-colors">
         <div className="container mx-auto px-4">
              <div className="flex flex-col lg:flex-row gap-4 justify-between items-center">
-                 <h1 className="text-2xl font-serif font-bold text-slate-900">Archives</h1>
+                 <h1 className="text-2xl font-serif font-bold text-slate-900 dark:text-white">Archives</h1>
                  
                  {/* SMART FILTER BAR */}
                  <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
@@ -115,12 +115,12 @@ export const PastQuestionsPage: React.FC = () => {
                          <select 
                             value={selectedLevel} 
                             onChange={(e) => setSelectedLevel(e.target.value)}
-                            className="w-full sm:w-32 pl-4 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none"
+                            className="w-full sm:w-32 pl-4 pr-8 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none cursor-pointer"
                          >
                              <option value="all">All Levels</option>
                              {LEVELS.map(l => <option key={l} value={l}>{l} Level</option>)}
                          </select>
-                         <svg className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                         <svg className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                      </div>
 
                      {/* Year Filter */}
@@ -128,12 +128,12 @@ export const PastQuestionsPage: React.FC = () => {
                          <select 
                             value={selectedYear} 
                             onChange={(e) => setSelectedYear(e.target.value)}
-                            className="w-full sm:w-32 pl-4 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none"
+                            className="w-full sm:w-32 pl-4 pr-8 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none cursor-pointer"
                          >
                              <option value="all">All Years</option>
                              {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
                          </select>
-                         <svg className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                         <svg className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                      </div>
 
                      {/* Search */}
@@ -143,9 +143,9 @@ export const PastQuestionsPage: React.FC = () => {
                             placeholder="Search by Course Code or Title"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm placeholder:text-slate-400"
+                            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm placeholder:text-slate-400 dark:placeholder:text-slate-500"
                         />
-                        <svg className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        <svg className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                      </div>
                  </div>
              </div>
@@ -158,8 +158,8 @@ export const PastQuestionsPage: React.FC = () => {
         {recommendedQuestions.length > 0 && !searchTerm && selectedLevel === 'all' && (
             <div className="mb-10 animate-fade-in">
                 <div className="flex items-center gap-2 mb-4">
-                    <span className="bg-amber-100 text-amber-700 p-1 rounded"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></span>
-                    <h2 className="text-lg font-bold text-slate-800">Recommended for You ({auth?.user?.level}L)</h2>
+                    <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 p-1 rounded"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></span>
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-white">Recommended for You ({auth?.user?.level}L)</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {recommendedQuestions.map(q => <QuestionCard key={q.id} question={q} />)}
@@ -167,7 +167,7 @@ export const PastQuestionsPage: React.FC = () => {
             </div>
         )}
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-8 flex items-center gap-3 text-xs text-blue-800 font-medium">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/50 rounded-lg p-3 mb-8 flex items-center gap-3 text-xs text-blue-800 dark:text-blue-300 font-medium">
              <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
              <span>Showing {filteredQuestions.length} materials. Uploads require approval.</span>
         </div>
@@ -175,9 +175,9 @@ export const PastQuestionsPage: React.FC = () => {
         {loading ? (
             <div className="flex justify-center py-32"><div className="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600"></div></div>
         ) : filteredQuestions.length === 0 ? (
-            <div className="text-center py-24 bg-white rounded-2xl border border-slate-200 border-dashed animate-fade-in">
-                <h3 className="text-lg font-bold text-slate-900">No Materials Found</h3>
-                <p className="text-slate-500 mt-2">Try adjusting your level or search filters.</p>
+            <div className="text-center py-24 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 border-dashed animate-fade-in">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Materials Found</h3>
+                <p className="text-slate-500 dark:text-slate-400 mt-2">Try adjusting your level or search filters.</p>
             </div>
         ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fade-in">

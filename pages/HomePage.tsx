@@ -56,7 +56,7 @@ export const HomePage: React.FC = () => {
   }, []);
 
   return (
-    <div className="font-sans bg-white text-slate-800 overflow-x-hidden">
+    <div className="font-sans bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 overflow-x-hidden transition-colors duration-300">
       
       {/* 1. HERO SECTION */}
       <div className="relative h-[90vh] min-h-[500px] flex items-center justify-center bg-slate-900 overflow-hidden">
@@ -107,11 +107,11 @@ export const HomePage: React.FC = () => {
       </div>
 
       {/* 2. HOD WELCOME */}
-      <section className="py-12 md:py-32 bg-white reveal">
+      <section className="py-12 md:py-32 bg-white dark:bg-slate-900 transition-colors reveal">
           <div className="container mx-auto px-4">
               <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
                   <div className="lg:w-1/2 relative w-full">
-                      <div className="absolute top-4 left-4 w-full h-full border-2 border-indigo-100 -z-10 hidden md:block"></div>
+                      <div className="absolute top-4 left-4 w-full h-full border-2 border-indigo-100 dark:border-indigo-900/30 -z-10 hidden md:block"></div>
                       <img 
                         src={hodData?.imageUrl || "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"} 
                         alt="Head of Department" 
@@ -123,14 +123,14 @@ export const HomePage: React.FC = () => {
                       </div>
                   </div>
                   <div className="lg:w-1/2 mt-8 lg:mt-0">
-                      <h2 className="text-indigo-600 font-bold tracking-widest uppercase text-xs md:text-sm mb-4">From the Desk of the H.O.D</h2>
-                      <h3 className="text-3xl md:text-5xl font-serif font-bold text-slate-900 mb-6 md:mb-8 leading-tight">
+                      <h2 className="text-indigo-600 dark:text-indigo-400 font-bold tracking-widest uppercase text-xs md:text-sm mb-4">From the Desk of the H.O.D</h2>
+                      <h3 className="text-3xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white mb-6 md:mb-8 leading-tight">
                          {hodData?.title || "Breeding Financial Experts."}
                       </h3>
-                      <div className="prose prose-base md:prose-lg text-slate-600 mb-8">
+                      <div className="prose prose-base md:prose-lg text-slate-600 dark:text-slate-300 mb-8">
                         <p>{hodData?.message || "Welcome to the Department of Finance at AAUA. Our curriculum is designed not just to teach market theories, but to instill the critical thinking and ethical grounding necessary for the modern financial landscape. We are committed to fostering an environment where innovation meets tradition."}</p>
                       </div>
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Signature_sample.svg/1200px-Signature_sample.svg.png" alt="Signature" className="h-12 md:h-16 opacity-40" />
+                      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Signature_sample.svg/1200px-Signature_sample.svg.png" alt="Signature" className="h-12 md:h-16 opacity-40 invert dark:invert-0" />
                   </div>
               </div>
           </div>
@@ -184,31 +184,31 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* 4. NEWS & EVENTS */}
-      <section className="py-12 md:py-24 bg-white border-y border-slate-100 reveal">
+      <section className="py-12 md:py-24 bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800 transition-colors reveal">
           <div className="container mx-auto px-4">
               <div className="flex flex-col lg:flex-row gap-12">
                   <div className="lg:w-1/3">
-                      <h2 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-6">Departmental News</h2>
-                      <p className="text-slate-600 text-base md:text-lg mb-8">Stay updated with official announcements, exam schedules, seminar notifications, and scholarship opportunities.</p>
+                      <h2 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 dark:text-white mb-6">Departmental News</h2>
+                      <p className="text-slate-600 dark:text-slate-400 text-base md:text-lg mb-8">Stay updated with official announcements, exam schedules, seminar notifications, and scholarship opportunities.</p>
                       <button onClick={() => navigate('/announcements')} className="px-8 py-4 bg-indigo-900 text-white font-bold hover:bg-indigo-800 transition shadow-xl uppercase tracking-widest text-xs md:text-sm">View All Updates</button>
                   </div>
                   <div className="lg:w-2/3">
                       <div className="grid gap-6">
                           {announcements.length > 0 ? (
                               announcements.map((news) => (
-                                  <div key={news.id} className="group flex flex-col sm:flex-row gap-6 p-6 border border-slate-100 hover:border-indigo-100 hover:shadow-lg transition-all bg-white cursor-pointer rounded-lg" onClick={() => navigate('/announcements')}>
-                                      <div className="w-auto sm:w-24 shrink-0 flex flex-row sm:flex-col items-center sm:items-center text-center border-b sm:border-b-0 sm:border-r border-slate-100 pb-4 sm:pb-0 sm:pr-6 justify-center gap-2 sm:gap-0">
-                                          <span className="block text-3xl md:text-4xl font-serif font-bold text-indigo-200 group-hover:text-indigo-600 transition-colors">{new Date(news.date).getDate()}</span>
-                                          <span className="text-xs font-bold uppercase text-slate-400">{new Date(news.date).toLocaleDateString(undefined, {month: 'short'})}</span>
+                                  <div key={news.id} className="group flex flex-col sm:flex-row gap-6 p-6 border border-slate-100 dark:border-slate-700 hover:border-indigo-100 dark:hover:border-indigo-800 hover:shadow-lg transition-all bg-white dark:bg-slate-800 cursor-pointer rounded-lg" onClick={() => navigate('/announcements')}>
+                                      <div className="w-auto sm:w-24 shrink-0 flex flex-row sm:flex-col items-center sm:items-center text-center border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-700 pb-4 sm:pb-0 sm:pr-6 justify-center gap-2 sm:gap-0">
+                                          <span className="block text-3xl md:text-4xl font-serif font-bold text-indigo-200 dark:text-indigo-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">{new Date(news.date).getDate()}</span>
+                                          <span className="text-xs font-bold uppercase text-slate-400 dark:text-slate-500">{new Date(news.date).toLocaleDateString(undefined, {month: 'short'})}</span>
                                       </div>
                                       <div>
-                                          <h3 className="text-lg md:text-xl font-bold text-slate-800 mb-2 group-hover:text-indigo-700 transition-colors font-serif">{news.title}</h3>
-                                          <p className="text-sm text-slate-600 line-clamp-2">{news.content}</p>
+                                          <h3 className="text-lg md:text-xl font-bold text-slate-800 dark:text-slate-100 mb-2 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors font-serif">{news.title}</h3>
+                                          <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">{news.content}</p>
                                       </div>
                                   </div>
                               ))
                           ) : (
-                              <div className="text-slate-400 italic p-8 border border-dashed border-slate-200 text-center rounded-lg">No recent announcements found.</div>
+                              <div className="text-slate-400 italic p-8 border border-dashed border-slate-200 dark:border-slate-700 text-center rounded-lg">No recent announcements found.</div>
                           )}
                       </div>
                   </div>
@@ -217,10 +217,10 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* 5. CAMPUS LIFE GALLERY */}
-      <section className="py-12 md:py-24 bg-slate-50 reveal">
+      <section className="py-12 md:py-24 bg-slate-50 dark:bg-slate-950 transition-colors reveal">
           <div className="container mx-auto px-4 text-center mb-12">
-              <span className="text-indigo-600 font-bold uppercase tracking-widest text-xs">Student Experience</span>
-              <h2 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 mt-3">Life at FINSA</h2>
+              <span className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-xs">Student Experience</span>
+              <h2 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 dark:text-white mt-3">Life at FINSA</h2>
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 h-auto md:h-[600px]">
@@ -242,7 +242,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* 6. FOOTER CTA */}
-      <section className="py-20 md:py-28 bg-indigo-900 text-white text-center reveal">
+      <section className="py-20 md:py-28 bg-indigo-900 dark:bg-indigo-950 text-white text-center reveal transition-colors">
           <div className="container mx-auto px-4 max-w-4xl">
               <h2 className="text-3xl md:text-5xl font-serif font-bold mb-6">Ready to Excel?</h2>
               <p className="text-indigo-200 text-lg md:text-xl mb-10 font-light">Join thousands of students using the FINQUEST portal to access resources, connect with mentors, and master their degree.</p>
