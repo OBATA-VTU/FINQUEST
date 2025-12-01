@@ -119,9 +119,11 @@ export const AdminUsersPage: React.FC = () => {
           showNotification("Notification sent successfully!", "success");
           setNotifyUser(null);
           setNotificationMsg('');
-      } catch (e) {
+      } catch (e: any) {
           console.error(e);
-          showNotification("Failed to send notification.", "error");
+          // Show specific error message to help debugging (e.g., permissions)
+          const msg = e.message || "Unknown error";
+          showNotification(`Failed: ${msg}`, "error");
       }
   };
 

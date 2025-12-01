@@ -19,7 +19,8 @@ import { CommunityPage } from './pages/CommunityPage';
 import { GalleryPage } from './pages/GalleryPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { TermsPage } from './pages/TermsPage';
-import { TestPage } from './pages/TestPage'; // New Page
+import { TestPage } from './pages/TestPage'; 
+import { LostFoundPage } from './pages/LostFoundPage'; // New Page
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -91,6 +92,7 @@ const AppContent: React.FC = () => {
                 <Route path="/gallery" element={<GalleryPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
+                <Route path="/lost-and-found" element={<LostFoundPage />} />
                 
                 {/* Protected Routes (Authenticated Users Only) */}
                 <Route path="/dashboard" element={<RequireAuth><UserDashboardPage /></RequireAuth>} />
