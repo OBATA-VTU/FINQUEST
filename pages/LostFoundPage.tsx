@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
-import { collection, addDoc, getDocs, query, orderBy, where, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, updateDoc } from 'firebase/firestore';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { uploadToImgBB } from '../utils/api';
@@ -47,14 +47,20 @@ export const LostFoundPage: React.FC = () => {
             // Fetch based on tab
             const statusFilter = activeTab === 'active' ? 'approved' : 'recovered';
             
+            // NOTE: We removed orderBy('dateFound', 'desc') from the query to avoid 
+            // "Missing Index" errors from Firestore. We sort client-side instead.
             const q = query(
                 collection(db, 'lost_items'), 
-                where('status', '==', statusFilter),
-                orderBy('dateFound', 'desc')
+                where('status', '==', statusFilter)
             );
             
             const snap = await getDocs(q);
-            setItems(snap.docs.map(d => ({ id: d.id, ...d.data() } as LostItem)));
+            const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as LostItem));
+            
+            // Client-side sorting (Newest first)
+            data.sort((a, b) => new Date(b.dateFound).getTime() - new Date(a.dateFound).getTime());
+            
+            setItems(data);
         } catch (e) {
             console.error(e);
         } finally {
