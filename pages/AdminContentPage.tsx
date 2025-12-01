@@ -149,7 +149,7 @@ export const AdminContentPage: React.FC = () => {
                       contents: prompt,
                   });
                   
-                  const textContent = result.response.text();
+                  const textContent = result.text;
                   if (!textContent) throw new Error("AI failed to generate content.");
                   
                   payload.textContent = textContent;
