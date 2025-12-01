@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { PastQuestion } from '../types';
 import { downloadPDF, generatePDF } from '../utils/pdfGenerator';
 import { PDFViewerModal } from './PDFViewerModal';
-import { getDropboxDownloadUrl } from '../utils/api';
+import { getDropboxDownloadUrl, forceDownload } from '../utils/api';
 import { useNotification } from '../contexts/NotificationContext';
 
 interface QuestionCardProps {
@@ -52,13 +52,39 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
       }
   };
 
-  const handleDownload = (e: React.MouseEvent) => {
+  const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
+
     if (question.textContent) {
-        e.preventDefault();
         downloadPDF(question.courseTitle, question.textContent, question.courseCode, question.year);
+        return;
     }
-    // For regular files, the anchor tag href handles it
+
+    if (question.fileUrl) {
+        const url = question.fileUrl;
+        
+        // Dropbox handling (standard download link)
+        if (url.includes('dropbox.com')) {
+             const dlUrl = getDropboxDownloadUrl(url);
+             const link = document.createElement('a');
+             link.href = dlUrl;
+             link.setAttribute('download', '');
+             link.target = "_blank"; // Fallback
+             document.body.appendChild(link);
+             link.click();
+             document.body.removeChild(link);
+        } else {
+             // ImgBB / Other logic -> Force Download using Blob
+             try {
+                 const ext = url.split('.').pop()?.split('?')[0] || 'jpg';
+                 const filename = `${question.courseCode}_${question.year}_${question.courseTitle.substring(0, 10)}.${ext}`;
+                 await forceDownload(url, filename);
+             } catch (err) {
+                 showNotification("Download started in new tab.", "info");
+             }
+        }
+    }
   };
 
   const handleClosePreview = () => {
@@ -69,9 +95,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
       }
       setPreviewUrl('');
   }
-
-  // Calculate the forced download URL
-  const downloadLink = question.textContent ? '#' : getDropboxDownloadUrl(question.fileUrl);
 
   return (
     <>
@@ -97,23 +120,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 Preview
             </button>
-            {question.textContent ? (
-                 <button onClick={handleDownload} className="flex-1 py-2 text-xs font-bold text-white bg-indigo-600 rounded hover:bg-indigo-700 transition shadow-sm flex items-center justify-center gap-1">
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    PDF
-                 </button>
-            ) : (
-                 <a 
-                    href={downloadLink} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex-1 py-2 text-xs font-bold text-white bg-indigo-600 rounded hover:bg-indigo-700 transition shadow-sm flex items-center justify-center gap-1 text-center"
-                    onClick={(e) => e.stopPropagation()}
-                 >
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    Download
-                 </a>
-            )}
+            <button 
+                onClick={handleDownload} 
+                className="flex-1 py-2 text-xs font-bold text-white bg-indigo-600 rounded hover:bg-indigo-700 transition shadow-sm flex items-center justify-center gap-1 text-center"
+            >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                {question.textContent ? 'PDF' : 'Download'}
+            </button>
         </div>
       </div>
       

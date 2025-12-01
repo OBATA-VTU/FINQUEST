@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { getDropboxDownloadUrl } from '../utils/api';
+import { getDropboxDownloadUrl, forceDownload } from '../utils/api';
 
 interface PDFViewerModalProps {
   isOpen: boolean;
@@ -57,11 +57,37 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
 
   const handleIframeLoad = () => setLoading(false);
 
+  const handleDownload = async (e: React.MouseEvent) => {
+      e.preventDefault();
+      
+      const isLocalBlob = fileUrl.startsWith('blob:');
+      
+      if (isLocalBlob) {
+          const link = document.createElement('a');
+          link.href = fileUrl;
+          link.download = title;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+      } else if (fileUrl.includes('dropbox.com')) {
+           const url = getDropboxDownloadUrl(fileUrl);
+           const link = document.createElement('a');
+           link.href = url;
+           link.setAttribute('download', '');
+           link.target = "_blank";
+           document.body.appendChild(link);
+           link.click();
+           document.body.removeChild(link);
+      } else {
+           // ImgBB or other image hosts
+           const ext = fileUrl.split('.').pop()?.split('?')[0] || 'jpg';
+           await forceDownload(fileUrl, `${title.replace(/\s+/g, '_')}.${ext}`);
+      }
+  };
+
   if (!isOpen) return null;
 
-  const isLocalBlob = fileUrl.startsWith('blob:');
   const googleDocsUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(displayUrl)}`;
-  const downloadLink = isLocalBlob ? fileUrl : getDropboxDownloadUrl(fileUrl);
 
   return (
     <div 
@@ -146,16 +172,13 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
                 Close Preview
              </button>
 
-             <a 
-                href={downloadLink} 
-                download={isLocalBlob ? title : undefined} 
-                target="_blank" 
-                rel="noreferrer" 
+             <button 
+                onClick={handleDownload}
                 className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg hover:-translate-y-0.5"
              >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                 Download File
-            </a>
+            </button>
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+
 import { Dropbox } from 'dropbox';
 
 // Environment Variables
@@ -23,6 +24,31 @@ export const getDropboxDownloadUrl = (url: string | undefined): string => {
         return url.replace('?dl=0', '?dl=1');
     }
     return url;
+};
+
+/**
+ * Forces a download of a file from a URL by fetching it as a blob
+ * and creating a temporary anchor tag.
+ */
+export const forceDownload = async (url: string, filename: string) => {
+  try {
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) throw new Error('Network response was not ok');
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (error) {
+    console.error('Download failed:', error);
+    // Fallback to opening in new tab if fetch fails (e.g. CORS)
+    window.open(url, '_blank');
+  }
 };
 
 /**
