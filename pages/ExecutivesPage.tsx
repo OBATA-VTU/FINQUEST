@@ -132,8 +132,8 @@ export const ExecutivesPage: React.FC = () => {
   };
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-20 font-sans">
-      <div className="bg-indigo-900 text-white py-16 text-center shadow-lg relative overflow-hidden">
+    <div className="bg-slate-50 dark:bg-slate-900 min-h-screen pb-20 font-sans transition-colors">
+      <div className="bg-indigo-900 dark:bg-indigo-950 text-white py-16 text-center shadow-lg relative overflow-hidden">
          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1521737711867-e3b97375f902?ixlib=rb-4.0.3')] bg-cover opacity-10"></div>
          <h1 className="text-4xl font-extrabold mb-2 font-serif relative z-10">Meet Your Leaders</h1>
          <p className="text-indigo-200 relative z-10">Executive Council {sessionYear} Session</p>
@@ -149,26 +149,26 @@ export const ExecutivesPage: React.FC = () => {
                 <p className="text-slate-500 dark:text-slate-400 max-w-md">The list of executives for the {sessionYear} session is currently being updated. Please check back later.</p>
             </div>
         ) : loading ? (
-            <div className="text-center py-20">Loading executives...</div>
+            <div className="text-center py-20 dark:text-slate-400">Loading executives...</div>
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {executives.map((exec) => (
                     <article key={exec.id} className="relative bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 dark:border-slate-700 group h-full" itemScope itemType="https://schema.org/Person">
                         
                         {/* Unique Background Icon - High Visibility Watermark */}
-                        <div className="absolute -right-6 -bottom-6 w-40 h-40 text-indigo-200 dark:text-slate-600 opacity-40 transform rotate-12 group-hover:scale-110 transition-all duration-500 z-0 pointer-events-none">
+                        <div className="absolute -right-6 -bottom-6 w-40 h-40 text-indigo-200 dark:text-indigo-900/40 opacity-40 transform rotate-12 group-hover:scale-110 transition-all duration-500 z-0 pointer-events-none">
                              <svg className="w-full h-full" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                                 {getRoleIcon(exec.position)}
                              </svg>
                         </div>
 
                         <div className="relative z-10 p-6 flex flex-col items-center text-center h-full">
-                            <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-slate-200 to-indigo-100 mb-5 shadow-inner shrink-0">
-                                <div className="w-full h-full rounded-full overflow-hidden bg-slate-50">
+                            <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-slate-200 to-indigo-100 dark:from-slate-700 dark:to-indigo-900 mb-5 shadow-inner shrink-0">
+                                <div className="w-full h-full rounded-full overflow-hidden bg-slate-50 dark:bg-slate-700">
                                     {exec.imageUrl ? (
                                         <img src={exec.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={exec.name} itemProp="image" />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-4xl text-slate-300 font-bold bg-slate-50">
+                                        <div className="w-full h-full flex items-center justify-center text-4xl text-slate-300 dark:text-slate-500 font-bold bg-slate-50 dark:bg-slate-700">
                                             {exec.name[0]}
                                         </div>
                                     )}
@@ -179,7 +179,7 @@ export const ExecutivesPage: React.FC = () => {
                                 {exec.position}
                             </span>
                             
-                            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 font-serif mb-2" itemProp="name">{exec.name}</h3>
+                            <h3 className="text-xl font-bold text-slate-900 dark:text-white font-serif mb-2" itemProp="name">{exec.name}</h3>
                             
                             <p className="text-sm text-slate-500 dark:text-slate-400 italic mb-6 line-clamp-2 px-4 min-h-[2.5em]">
                                 "{exec.quote || 'Serving with integrity and passion.'}"

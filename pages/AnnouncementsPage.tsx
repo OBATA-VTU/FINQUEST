@@ -6,13 +6,18 @@ import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { Announcement } from '../types';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useNotification } from '../contexts/NotificationContext';
 
 export const AnnouncementsPage: React.FC = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [subEmail, setSubEmail] = useState('');
+  
   const auth = useContext(AuthContext);
   const navigate = useNavigate();
+  const { showNotification } = useNotification();
 
   useEffect(() => {
       const fetchNews = async () => {
@@ -35,6 +40,21 @@ export const AnnouncementsPage: React.FC = () => {
           return;
       }
       setSelectedAnnouncement(announcement);
+  };
+
+  const handleSubscribe = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!subEmail || !subEmail.includes('@')) {
+          showNotification("Please enter a valid email.", "error");
+          return;
+      }
+      setIsSubscribing(true);
+      // Simulate API call
+      setTimeout(() => {
+          setIsSubscribing(false);
+          showNotification("Subscribed successfully! You'll receive updates.", "success");
+          setSubEmail('');
+      }, 1500);
   };
 
   const handleShare = (platform: 'whatsapp' | 'twitter' | 'facebook', announcement: Announcement) => {
@@ -64,9 +84,6 @@ export const AnnouncementsPage: React.FC = () => {
                 <h1 className="text-3xl font-bold text-slate-900 dark:text-white">News & Updates</h1>
                 <p className="text-slate-500 dark:text-slate-400">Stay informed about departmental activities.</p>
             </div>
-            <button className="hidden md:block px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors">
-                Subscribe to RSS
-            </button>
         </header>
 
         {loading ? (
@@ -130,8 +147,21 @@ export const AnnouncementsPage: React.FC = () => {
                         <div className="bg-indigo-900 dark:bg-slate-800 p-6 rounded-xl shadow-lg text-white">
                             <h3 className="font-bold text-lg mb-2">Don't Miss Out</h3>
                             <p className="text-indigo-200 dark:text-slate-400 text-sm mb-4">Get the latest past questions and updates sent directly to your inbox.</p>
-                            <input type="email" placeholder="Your email address" className="w-full px-4 py-2 rounded-lg text-slate-900 mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-                            <button className="w-full py-2 bg-indigo-500 hover:bg-indigo-600 rounded-lg font-bold transition-colors">Subscribe</button>
+                            <form onSubmit={handleSubscribe}>
+                                <input 
+                                    type="email" 
+                                    placeholder="Your email address" 
+                                    className="w-full px-4 py-2 rounded-lg text-slate-900 mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-400" 
+                                    value={subEmail}
+                                    onChange={(e) => setSubEmail(e.target.value)}
+                                    required
+                                />
+                                <button disabled={isSubscribing} className="w-full py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-70 rounded-lg font-bold transition-colors flex justify-center">
+                                    {isSubscribing ? (
+                                        <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
+                                    ) : 'Subscribe'}
+                                </button>
+                            </form>
                         </div>
                         
                         <AdBanner />
