@@ -1,6 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 export const PrivacyPage: React.FC = () => {
+  useEffect(() => {
+    window.scrollTo(0,0);
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-50 py-16">
       <div className="container mx-auto px-4 max-w-4xl">
@@ -10,7 +14,7 @@ export const PrivacyPage: React.FC = () => {
           
           <section>
             <h2 className="text-xl font-bold text-slate-900 mb-2">1. Introduction</h2>
-            <p>Welcome to FINQUEST ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains what information we collect, how we use it, and your rights.</p>
+            <p>Welcome to FINSA ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains what information we collect, how we use it, and your rights.</p>
           </section>
 
           <section>
@@ -43,7 +47,17 @@ export const PrivacyPage: React.FC = () => {
 
           <section>
             <h2 className="text-xl font-bold text-slate-900 mb-2">5. Contact Us</h2>
-            <p>If you have questions or comments about this policy, you may email us at support@finquest.aaua.edu.ng.</p>
+            <p>If you have questions or comments about this policy, you may contact us at:</p>
+            <ul className="list-none mt-2 space-y-2">
+              <li className="flex items-center gap-2">
+                  <span className="font-bold text-slate-900">Email:</span> 
+                  <a href="mailto:obaofaaua@gmail.com" className="text-indigo-600 hover:underline">obaofaaua@gmail.com</a>
+              </li>
+              <li className="flex items-center gap-2">
+                  <span className="font-bold text-slate-900">Phone / WhatsApp:</span> 
+                  <a href="tel:08142452729" className="text-indigo-600 hover:underline">08142452729</a>
+              </li>
+            </ul>
           </section>
         </div>
       </div>

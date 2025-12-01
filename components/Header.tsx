@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Logo } from './Logo';
 import { Link } from 'react-router-dom';
@@ -91,7 +90,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
             <Link to="/" className="flex items-center gap-2 xl:hidden">
               <Logo className="h-8 w-8" />
               <div>
-                <h1 className="text-lg font-bold text-indigo-900 dark:text-indigo-100 leading-none font-serif">FINQUEST</h1>
+                <h1 className="text-lg font-bold text-indigo-900 dark:text-indigo-100 leading-none font-serif">FINSA</h1>
               </div>
             </Link>
           </div>

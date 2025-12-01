@@ -1,4 +1,3 @@
-
 import React, { useContext, useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
@@ -35,7 +34,7 @@ const LoadingScreen = () => (
           <Logo className="h-32 w-32 animate-pulse" />
           <div className="absolute -inset-4 bg-indigo-500/20 rounded-full blur-xl animate-pulse"></div>
       </div>
-      <h1 className="text-3xl font-serif font-bold text-indigo-900 dark:text-indigo-100 tracking-wider mb-2">FINQUEST</h1>
+      <h1 className="text-3xl font-serif font-bold text-indigo-900 dark:text-indigo-100 tracking-wider mb-2">FINSA</h1>
       <p className="text-xs text-indigo-400 uppercase tracking-[0.3em] font-medium mb-8">Official Department Portal</p>
       
       <div className="flex gap-2">

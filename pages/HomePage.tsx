@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Announcement, GalleryItem } from '../types';
@@ -136,14 +135,14 @@ export const HomePage: React.FC = () => {
           </div>
       </section>
 
-      {/* 3. FINQUEST HUB */}
+      {/* 3. FINSA HUB */}
       <section className="py-12 md:py-24 bg-slate-900 text-white relative overflow-hidden reveal">
           <div className="absolute top-0 right-0 w-2/3 h-full bg-slate-800/50 -skew-x-12 transform origin-top-right pointer-events-none"></div>
           
           <div className="container mx-auto px-4 relative z-10">
               <div className="flex flex-col md:flex-row justify-between items-end mb-12">
                   <div className="max-w-2xl mb-6 md:mb-0">
-                    <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">The FINQUEST Hub</h2>
+                    <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">The FINSA Hub</h2>
                     <p className="text-slate-400 text-base md:text-lg">A centralized digital ecosystem designed to support your academic journey from admission to graduation.</p>
                   </div>
                   <button onClick={() => navigate('/dashboard')} className="text-indigo-300 hover:text-white font-bold border-b border-indigo-300 hover:border-white pb-1 transition-colors">Enter Student Portal &rarr;</button>
@@ -245,7 +244,7 @@ export const HomePage: React.FC = () => {
       <section className="py-20 md:py-28 bg-indigo-900 dark:bg-indigo-950 text-white text-center reveal transition-colors">
           <div className="container mx-auto px-4 max-w-4xl">
               <h2 className="text-3xl md:text-5xl font-serif font-bold mb-6">Ready to Excel?</h2>
-              <p className="text-indigo-200 text-lg md:text-xl mb-10 font-light">Join thousands of students using the FINQUEST portal to access resources, connect with mentors, and master their degree.</p>
+              <p className="text-indigo-200 text-lg md:text-xl mb-10 font-light">Join thousands of students using the FINSA portal to access resources, connect with mentors, and master their degree.</p>
               <button onClick={() => navigate('/login')} className="px-10 py-5 bg-white text-indigo-900 font-bold rounded shadow-2xl hover:bg-indigo-50 transition uppercase tracking-widest text-xs md:text-sm">
                   Access Student Portal
               </button>

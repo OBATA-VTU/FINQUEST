@@ -1,4 +1,3 @@
-
 import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { Calculator } from '../components/Calculator';
@@ -288,7 +287,7 @@ export const TestPage: React.FC = () => {
       return (
           <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 flex flex-col items-center animate-fade-in transition-colors">
               <div className="max-w-4xl w-full">
-                  <h1 className="text-3xl font-serif font-bold text-slate-900 dark:text-white text-center mb-2">Finance Assessment Portal</h1>
+                  <h1 className="text-3xl font-serif font-bold text-slate-900 dark:text-white text-center mb-2">FINQUEST Assessment Portal</h1>
                   <p className="text-slate-500 dark:text-slate-400 text-center mb-12">Select an examination mode to begin your practice session.</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

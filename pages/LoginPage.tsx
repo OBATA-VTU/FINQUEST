@@ -1,4 +1,3 @@
-
 import React, { useState, useContext, FormEvent, useEffect } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -271,13 +270,13 @@ export const LoginPage: React.FC = () => {
             <div className="hidden md:flex md:w-5/12 bg-indigo-950 relative flex-col justify-between p-12 text-white">
                 <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1621640786029-22ad596541f9?q=80&w=1974')] bg-cover bg-center opacity-30 mix-blend-overlay"></div>
                 <div className="relative z-10">
-                    <div className="flex items-center gap-3 mb-8"><Logo className="h-14 w-14 text-white" /><span className="font-bold text-2xl tracking-tight font-serif">FINQUEST</span></div>
+                    <div className="flex items-center gap-3 mb-8"><Logo className="h-14 w-14 text-white" /><span className="font-bold text-2xl tracking-tight font-serif">FINSA</span></div>
                     <h2 className="text-4xl font-extrabold mb-6 leading-tight font-serif">{isLogin ? 'Welcome Back.' : 'Begin Journey.'}</h2>
                     <p className="text-indigo-200 text-lg">{isLogin ? 'Access your dashboard and resources.' : 'Join the official Finance Department portal.'}</p>
                 </div>
             </div>
             <div className="w-full md:w-7/12 p-6 sm:p-8 md:p-12 bg-white overflow-y-auto max-h-[90vh]">
-                <div className="md:hidden flex flex-col items-center mb-8"><Logo className="h-16 w-16 mb-2" /><h1 className="text-xl font-bold text-indigo-900 font-serif">FINQUEST</h1></div>
+                <div className="md:hidden flex flex-col items-center mb-8"><Logo className="h-16 w-16 mb-2" /><h1 className="text-xl font-bold text-indigo-900 font-serif">FINSA</h1></div>
                 <div className="flex justify-end mb-4"><button onClick={() => setIsLogin(!isLogin)} className="text-sm font-semibold text-indigo-600 hover:text-indigo-800">{isLogin ? 'Create an account' : 'Log in instead'}</button></div>
                 <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-6">{isLogin ? 'Sign In' : 'Sign Up'}</h3>
                 <button onClick={handleGoogleLogin} type="button" className="w-full flex items-center justify-center gap-3 px-6 py-4 border border-slate-200 rounded-xl hover:bg-slate-50 mb-8"><img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" /><span className="text-slate-900 font-bold">Continue with Google</span></button>

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useContext } from 'react';
 import { AdBanner } from '../components/AdBanner';
 import { db } from '../firebase';
@@ -59,7 +58,7 @@ export const AnnouncementsPage: React.FC = () => {
 
   const handleShare = (platform: 'whatsapp' | 'twitter' | 'facebook', announcement: Announcement) => {
       const url = encodeURIComponent(window.location.origin + '/announcements');
-      const text = encodeURIComponent(`Check out this update from FINQUEST: ${announcement.title}`);
+      const text = encodeURIComponent(`Check out this update from FINSA: ${announcement.title}`);
       
       let shareUrl = '';
       if (platform === 'whatsapp') {

@@ -5,6 +5,7 @@ import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc, getDoc, setDoc 
 import { useNotification } from '../contexts/NotificationContext';
 import { uploadToImgBB, uploadFile, deleteFile } from '../utils/api';
 import { LEVELS } from '../constants';
+import { GoogleGenAI } from "@google/genai";
 
 type ContentType = 'news' | 'executives' | 'lecturers' | 'community' | 'gallery' | 'materials';
 
@@ -20,6 +21,9 @@ export const AdminContentPage: React.FC = () => {
   const [formData, setFormData] = useState<any>({});
   const [formFile, setFormFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // AI Gen State
+  const [isAiMode, setIsAiMode] = useState(false);
 
   // HOD
   const [hodData, setHodData] = useState({ name: '', title: '', message: '', imageUrl: '' });
@@ -88,6 +92,7 @@ export const AdminContentPage: React.FC = () => {
       setFormData(item || {});
       setFormFile(null);
       setIsModalOpen(true);
+      setIsAiMode(false); // Reset AI mode
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -123,18 +128,46 @@ export const AdminContentPage: React.FC = () => {
               }
           }
 
-          // Handle File Uploads
+          // Handle File Uploads or AI Gen
           if (activeContent === 'materials') {
-              if (!editingItem && !formFile) throw new Error("File is required for new materials");
-              if (formFile) {
-                  const { url, path } = await uploadFile(formFile, 'past_questions');
-                  payload.fileUrl = url;
-                  payload.storagePath = path;
-                  payload.status = 'approved'; // Admin uploads are auto-approved
-              }
               // Ensure numeric types
-              payload.year = Number(payload.year);
-              payload.level = Number(payload.level);
+              payload.year = Number(payload.year || new Date().getFullYear());
+              payload.level = Number(payload.level || 100);
+              payload.courseCode = (payload.courseCode || 'GEN').toUpperCase();
+              
+              if (isAiMode) {
+                  // AI GENERATION LOGIC
+                  if (!payload.courseTitle) throw new Error("Topic is compulsory for AI generation.");
+                  
+                  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                  const prompt = `Generate comprehensive, university-level study notes/lecture material on the topic: "${payload.courseTitle}". 
+                  Course Code: ${payload.courseCode}. Level: ${payload.level}. 
+                  Format the output in clean Markdown. Include a summary, key concepts, detailed explanation, and conclusion.`;
+                  
+                  const result = await ai.models.generateContent({
+                      model: 'gemini-2.5-flash',
+                      contents: prompt,
+                  });
+                  
+                  const textContent = result.response.text();
+                  if (!textContent) throw new Error("AI failed to generate content.");
+                  
+                  payload.textContent = textContent;
+                  payload.fileUrl = null; // No physical file
+                  payload.storagePath = null;
+                  payload.status = 'approved';
+
+              } else {
+                  // FILE UPLOAD LOGIC
+                  if (!editingItem && !formFile) throw new Error("File is required for new materials");
+                  if (formFile) {
+                      const { url, path } = await uploadFile(formFile, 'past_questions');
+                      payload.fileUrl = url;
+                      payload.storagePath = path;
+                      payload.status = 'approved'; // Admin uploads are auto-approved
+                  }
+              }
+              
               if (!editingItem) payload.createdAt = new Date().toISOString();
           } else {
               // Images for other types
@@ -154,7 +187,7 @@ export const AdminContentPage: React.FC = () => {
           }
           setIsModalOpen(false);
           fetchContent(activeContent);
-          showNotification("Saved successfully", "success");
+          showNotification(isAiMode ? "Material generated & saved!" : "Saved successfully", "success");
       } catch (e: any) { showNotification(e.message || "Error saving item", "error"); }
       finally { setIsSubmitting(false); }
   };
@@ -209,6 +242,7 @@ export const AdminContentPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {contentItems.map(item => (
                     <div key={item.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col relative group hover:border-indigo-200 transition-colors">
+                        {item.textContent && <div className="absolute top-4 right-4 bg-emerald-100 text-emerald-600 text-[10px] font-bold px-2 py-1 rounded">AI Generated</div>}
                         {item.imageUrl && (
                             <div className="w-full h-32 rounded-xl bg-slate-100 overflow-hidden mb-3">
                                 <img src={item.imageUrl} className="w-full h-full object-cover" alt="preview" />
@@ -282,32 +316,82 @@ export const AdminContentPage: React.FC = () => {
                         {/* MATERIALS FIELDS */}
                         {activeContent === 'materials' && (
                             <>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Course Code</label><input className="w-full border p-3 rounded-xl uppercase" placeholder="FIN 101" value={formData.courseCode || ''} onChange={e => setFormData({...formData, courseCode: e.target.value})} required /></div>
-                                    <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Year</label><input type="number" className="w-full border p-3 rounded-xl" placeholder="2023" value={formData.year || ''} onChange={e => setFormData({...formData, year: e.target.value})} required /></div>
+                                <div className="flex gap-4 p-1 bg-slate-100 rounded-lg mb-4">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setIsAiMode(false)}
+                                        className={`flex-1 py-2 rounded-md font-bold text-sm transition-all ${!isAiMode ? 'bg-white text-indigo-600 shadow' : 'text-slate-500'}`}
+                                    >
+                                        Upload Document
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setIsAiMode(true)}
+                                        className={`flex-1 py-2 rounded-md font-bold text-sm transition-all ${isAiMode ? 'bg-emerald-100 text-emerald-700 shadow' : 'text-slate-500'}`}
+                                    >
+                                        AI Generate Notes
+                                    </button>
                                 </div>
-                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Course Title</label><input className="w-full border p-3 rounded-xl" placeholder="Intro to Finance" value={formData.courseTitle || ''} onChange={e => setFormData({...formData, courseTitle: e.target.value})} required /></div>
+
                                 <div>
-                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Level</label>
-                                    <select className="w-full border p-3 rounded-xl bg-white" value={formData.level || '100'} onChange={e => setFormData({...formData, level: e.target.value})}>
-                                        {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
-                                    </select>
+                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
+                                        {isAiMode ? 'Topic (Compulsory)' : 'Course Title'}
+                                    </label>
+                                    <input 
+                                        className="w-full border p-3 rounded-xl font-bold" 
+                                        placeholder={isAiMode ? "e.g. Introduction to Capital Budgeting" : "Intro to Finance"} 
+                                        value={formData.courseTitle || ''} 
+                                        onChange={e => setFormData({...formData, courseTitle: e.target.value})} 
+                                        required 
+                                    />
                                 </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
+                                            Course Code {isAiMode && '(Optional)'}
+                                        </label>
+                                        <input 
+                                            className="w-full border p-3 rounded-xl uppercase" 
+                                            placeholder="FIN 101" 
+                                            value={formData.courseCode || ''} 
+                                            onChange={e => setFormData({...formData, courseCode: e.target.value})} 
+                                            required={!isAiMode} 
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
+                                            Level {isAiMode && '(Optional)'}
+                                        </label>
+                                        <select className="w-full border p-3 rounded-xl bg-white" value={formData.level || '100'} onChange={e => setFormData({...formData, level: e.target.value})}>
+                                            {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                {!isAiMode && (
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Year</label>
+                                        <input type="number" className="w-full border p-3 rounded-xl" placeholder="2023" value={formData.year || ''} onChange={e => setFormData({...formData, year: e.target.value})} required />
+                                    </div>
+                                )}
                             </>
                         )}
 
                         {/* FILE UPLOAD SECTION */}
-                        <div className="pt-4">
-                            <label className="block w-full border-2 border-dashed border-slate-300 p-4 rounded-xl text-center cursor-pointer hover:bg-slate-50 transition-colors">
-                                <span className="text-sm font-bold text-slate-500">
-                                    {formFile ? `File Selected: ${formFile.name}` : (activeContent === 'materials' ? 'Upload PDF/Doc' : 'Upload Image (Optional)')}
-                                </span>
-                                <input type="file" className="hidden" onChange={e => e.target.files && setFormFile(e.target.files[0])} accept={activeContent === 'materials' ? ".pdf,.doc,.docx" : "image/*"} />
-                            </label>
-                        </div>
+                        {(!isAiMode) && (
+                            <div className="pt-4">
+                                <label className="block w-full border-2 border-dashed border-slate-300 p-4 rounded-xl text-center cursor-pointer hover:bg-slate-50 transition-colors">
+                                    <span className="text-sm font-bold text-slate-500">
+                                        {formFile ? `File Selected: ${formFile.name}` : (activeContent === 'materials' ? 'Upload PDF/Doc' : 'Upload Image (Optional)')}
+                                    </span>
+                                    <input type="file" className="hidden" onChange={e => e.target.files && setFormFile(e.target.files[0])} accept={activeContent === 'materials' ? ".pdf,.doc,.docx" : "image/*"} />
+                                </label>
+                            </div>
+                        )}
 
-                        <button type="submit" disabled={isSubmitting} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg mt-4 disabled:opacity-70">
-                            {isSubmitting ? 'Saving...' : 'Save Changes'}
+                        <button type="submit" disabled={isSubmitting} className={`w-full py-4 text-white font-bold rounded-xl shadow-lg mt-4 disabled:opacity-70 ${isAiMode ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+                            {isSubmitting ? (isAiMode ? 'Generating...' : 'Saving...') : (isAiMode ? 'Generate Material with AI' : 'Save Changes')}
                         </button>
                     </form>
                 </div>

@@ -1,6 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 export const TermsPage: React.FC = () => {
+  useEffect(() => {
+    window.scrollTo(0,0);
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-50 py-16">
       <div className="container mx-auto px-4 max-w-4xl">
@@ -10,7 +14,7 @@ export const TermsPage: React.FC = () => {
 
           <section>
             <h2 className="text-xl font-bold text-slate-900 mb-2">1. Agreement to Terms</h2>
-            <p>These Terms of Use constitute a legally binding agreement made between you, whether personally or on behalf of an entity ("you") and FINQUEST ("we," "us" or "our"), concerning your access to and use of the website as well as any other media form, media channel, mobile website or mobile application related, linked, or otherwise connected thereto (collectively, the "Site").</p>
+            <p>These Terms of Use constitute a legally binding agreement made between you, whether personally or on behalf of an entity ("you") and FINSA ("we," "us" or "our"), concerning your access to and use of the website as well as any other media form, media channel, mobile website or mobile application related, linked, or otherwise connected thereto (collectively, the "Site").</p>
           </section>
 
           <section>
