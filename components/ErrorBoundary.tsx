@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -9,8 +9,8 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Explicitly declare state as a class property
+export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // Use class property initialization to satisfy strict TypeScript rules
   public state: ErrorBoundaryState = {
     hasError: false,
     error: null
