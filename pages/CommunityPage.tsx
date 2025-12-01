@@ -91,10 +91,13 @@ export const CommunityPage: React.FC = () => {
 
       setSending(true);
       try {
+          // Use username if available, fallback to name, fallback to "User"
+          const displayName = auth.user.username ? `@${auth.user.username}` : (auth.user.name || 'User');
+
           await addDoc(collection(db, 'community_messages'), {
               text: newMessage.trim(),
               senderId: auth.user.id,
-              senderName: auth.user.name,
+              senderName: displayName,
               avatarUrl: auth.user.avatarUrl || '',
               createdAt: new Date().toISOString()
           });
@@ -253,7 +256,7 @@ export const CommunityPage: React.FC = () => {
                 return (
                     <div key={msg.id} className={`flex gap-2 md:gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
                         <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 border border-slate-100 dark:border-slate-600">
-                            {msg.avatarUrl ? <img src={msg.avatarUrl} className="w-full h-full object-cover" alt="avatar" /> : <div className="w-full h-full flex items-center justify-center font-bold text-slate-500 dark:text-slate-400 text-xs">{msg.senderName[0]}</div>}
+                            {msg.avatarUrl ? <img src={msg.avatarUrl} className="w-full h-full object-cover" alt="avatar" /> : <div className="w-full h-full flex items-center justify-center font-bold text-slate-500 dark:text-slate-400 text-xs">{msg.senderName[0]?.toUpperCase() || 'U'}</div>}
                         </div>
                         <div className={`max-w-[75%] p-3 rounded-2xl text-sm shadow-sm ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-tl-none'}`}>
                             {!isMe && <p className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 mb-1 leading-none">{msg.senderName}</p>}

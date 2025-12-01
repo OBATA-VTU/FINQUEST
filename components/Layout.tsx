@@ -17,8 +17,13 @@ export const Layout: React.FC = () => {
         }
     }, [pathname]);
 
-    // Pages where the footer should NOT appear
-    const hideFooter = ['/community', '/test'].includes(pathname) || pathname.startsWith('/admin');
+    // Intelligent Footer Logic
+    // We strictly define pages where the footer IS expected (Public/Info pages)
+    // It will be hidden on Dashboard, Profile, Test, Chat, Admin, etc to give a native app feel
+    const showFooterPages = ['/', '/announcements', '/gallery', '/lecturers', '/executives', '/privacy', '/terms'];
+    
+    // Check if current path matches exact public pages or is NOT a dashboard/app route
+    const showFooter = showFooterPages.includes(pathname);
 
     return (
         <div className="h-screen bg-slate-50 text-slate-800 flex font-sans overflow-hidden">
@@ -41,7 +46,7 @@ export const Layout: React.FC = () => {
                 >
                     <div className={pathname === '/community' ? 'h-full' : 'min-h-full flex flex-col'}>
                         <Outlet />
-                        {!hideFooter && <Footer />}
+                        {showFooter && <Footer />}
                     </div>
                 </main>
             </div>

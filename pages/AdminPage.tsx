@@ -1,12 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, addDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
+import { useNotification } from '../contexts/NotificationContext';
 
 export const AdminPage: React.FC = () => {
   const navigate = useNavigate();
+  const { showNotification } = useNotification();
   const [stats, setStats] = useState({ users: 0, pending: 0, questions: 0 });
+  const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
+  const [broadcastMsg, setBroadcastMsg] = useState('');
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -19,6 +23,22 @@ export const AdminPage: React.FC = () => {
     };
     fetchStats();
   }, []);
+
+  const handleBroadcast = async () => {
+      if (!broadcastMsg.trim()) return;
+      try {
+          await addDoc(collection(db, 'notifications'), {
+              userId: 'all',
+              message: broadcastMsg,
+              type: 'info',
+              read: false,
+              createdAt: new Date().toISOString()
+          });
+          showNotification("Broadcast sent to all users!", "success");
+          setIsBroadcastOpen(false);
+          setBroadcastMsg('');
+      } catch (e) { showNotification("Broadcast failed", "error"); }
+  };
 
   const StatCard = ({ title, value, color, icon, link }: any) => (
       <div onClick={() => navigate(link)} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group cursor-pointer transition-all hover:shadow-md hover:-translate-y-1">
@@ -75,9 +95,9 @@ export const AdminPage: React.FC = () => {
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                     <span className="text-xs font-bold">Post News</span>
                 </button>
-                <button onClick={() => navigate('/admin/content')} className="p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-200 text-slate-600 hover:text-emerald-700 transition flex flex-col items-center gap-2 text-center">
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                    <span className="text-xs font-bold">Add Executive</span>
+                <button onClick={() => setIsBroadcastOpen(true)} className="p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-sky-50 hover:border-sky-200 text-slate-600 hover:text-sky-700 transition flex flex-col items-center gap-2 text-center">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+                    <span className="text-xs font-bold">Broadcast Alert</span>
                 </button>
                 <button onClick={() => navigate('/admin/approvals')} className="p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-rose-50 hover:border-rose-200 text-slate-600 hover:text-rose-700 transition flex flex-col items-center gap-2 text-center">
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -89,6 +109,27 @@ export const AdminPage: React.FC = () => {
                 </button>
             </div>
         </div>
+
+        {/* Broadcast Modal */}
+        {isBroadcastOpen && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl animate-fade-in-down">
+                    <h3 className="font-bold text-lg mb-2">Global Broadcast</h3>
+                    <p className="text-xs text-slate-500 mb-4">Send a notification to ALL users.</p>
+                    <textarea 
+                        className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none mb-4" 
+                        rows={4} 
+                        placeholder="Type announcement..."
+                        value={broadcastMsg}
+                        onChange={(e) => setBroadcastMsg(e.target.value)}
+                    ></textarea>
+                    <div className="flex gap-2">
+                        <button onClick={() => setIsBroadcastOpen(false)} className="flex-1 py-2 border rounded-lg font-bold text-slate-600">Cancel</button>
+                        <button onClick={handleBroadcast} className="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700">Send All</button>
+                    </div>
+                </div>
+            </div>
+        )}
     </div>
   );
 };
