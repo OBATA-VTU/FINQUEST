@@ -5,6 +5,7 @@ import { collection, addDoc, getDocs, query, where, doc, updateDoc } from 'fireb
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { uploadToImgBB } from '../utils/api';
+import { AdBanner } from '../components/AdBanner';
 
 interface LostItem {
     id: string;
@@ -232,6 +233,10 @@ export const LostFoundPage: React.FC = () => {
                         ))}
                     </div>
                 )}
+
+                <div className="mt-8">
+                    <AdBanner />
+                </div>
 
                 {/* Reporting Modal */}
                 {isModalOpen && (

@@ -1,3 +1,4 @@
+
 import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { Calculator } from '../components/Calculator';
@@ -9,6 +10,7 @@ import { collection, addDoc, query, orderBy, limit, getDocs } from 'firebase/fir
 import { LEVELS } from '../constants';
 import { Level, TestResult } from '../types';
 import { generateTestReviewPDF } from '../utils/pdfGenerator';
+import { AdBanner } from '../components/AdBanner';
 
 interface Question {
   id: number;
@@ -290,7 +292,7 @@ export const TestPage: React.FC = () => {
                   <h1 className="text-3xl font-serif font-bold text-slate-900 dark:text-white text-center mb-2">FINQUEST Assessment Portal</h1>
                   <p className="text-slate-500 dark:text-slate-400 text-center mb-12">Select an examination mode to begin your practice session.</p>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                       {/* Topic Mode */}
                       <button 
                         onClick={() => handleModeSelect('topic')}
@@ -315,6 +317,8 @@ export const TestPage: React.FC = () => {
                           <p className="text-slate-500 dark:text-slate-400 text-sm">Randomized, rigid questions covering various courses for your level. Simulates real exam conditions.</p>
                       </button>
                   </div>
+
+                  <AdBanner />
 
                   {/* Leaderboard */}
                   <div className="mt-16 max-w-2xl mx-auto w-full">
@@ -509,6 +513,9 @@ export const TestPage: React.FC = () => {
                           <Link to="/dashboard" className="flex-1 py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg text-center flex items-center justify-center">
                               Dashboard
                           </Link>
+                      </div>
+                      <div className="mt-6">
+                          <AdBanner />
                       </div>
                   </div>
               </div>

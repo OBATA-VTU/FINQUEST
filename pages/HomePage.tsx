@@ -1,8 +1,10 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Announcement, GalleryItem } from '../types';
 import { db } from '../firebase';
 import { collection, query, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore';
+import { AdBanner } from '../components/AdBanner';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -212,6 +214,7 @@ export const HomePage: React.FC = () => {
                       </div>
                   </div>
               </div>
+              <AdBanner />
           </div>
       </section>
 

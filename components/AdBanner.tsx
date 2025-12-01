@@ -1,43 +1,50 @@
+
 import React, { useEffect, useState, useRef } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+
+// HARDCODED ADSTERRA SCRIPTS - PERMANENT CONFIGURATION
+const DESKTOP_SCRIPT = `
+<script type="text/javascript">
+	atOptions = {
+		'key' : '9078612da20b1ce9585fe7ae6da13c7d',
+		'format' : 'iframe',
+		'height' : 90,
+		'width' : 728,
+		'params' : {}
+	};
+</script>
+<script type="text/javascript" src="//www.highperformanceformat.com/9078612da20b1ce9585fe7ae6da13c7d/invoke.js"></script>
+`;
+
+const MOBILE_SCRIPT = `
+<script type="text/javascript">
+	atOptions = {
+		'key' : 'b5ca8bfdd2704d183e51010a99639ff8',
+		'format' : 'iframe',
+		'height' : 250,
+		'width' : 300,
+		'params' : {}
+	};
+</script>
+<script type="text/javascript" src="//www.highperformanceformat.com/b5ca8bfdd2704d183e51010a99639ff8/invoke.js"></script>
+`;
 
 export const AdBanner: React.FC = () => {
-  const [adConfig, setAdConfig] = useState<{ desktopScript: string, mobileScript: string }>({
-      desktopScript: "", 
-      mobileScript: ""
-  });
   const containerRef = useRef<HTMLDivElement>(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   useEffect(() => {
-    const fetchAdConfig = async () => {
-        try {
-            const docRef = doc(db, 'content', 'adsterra_config');
-            const snap = await getDoc(docRef);
-            if (snap.exists()) {
-                setAdConfig(snap.data() as any);
-            }
-        } catch (e) {
-            console.error("Failed to load ad config");
-        }
-    };
-    fetchAdConfig();
-
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const isMobile = windowWidth < 768;
-  const currentScript = isMobile ? adConfig.mobileScript : adConfig.desktopScript;
+  const currentScript = isMobile ? MOBILE_SCRIPT : DESKTOP_SCRIPT;
   const width = isMobile ? 300 : 728;
   const height = isMobile ? 250 : 90;
 
-  if (!currentScript) return null;
-
   // We use an iframe to isolate the Adsterra script execution
-  // This prevents document.write from breaking React
+  // This prevents document.write from breaking React and ensures security
   const srcDoc = `
     <html>
         <head>

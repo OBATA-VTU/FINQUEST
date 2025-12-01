@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { TestResult } from '../types';
+import { AdBanner } from '../components/AdBanner';
 
 export const UserDashboardPage: React.FC = () => {
   const auth = useContext(AuthContext);
@@ -170,6 +171,10 @@ export const UserDashboardPage: React.FC = () => {
                             <p className="text-slate-500 dark:text-slate-400 text-sm">Department staff directory.</p>
                         </div>
                     </div>
+                </div>
+
+                <div className="my-4">
+                    <AdBanner />
                 </div>
 
                 {/* 3. RECENT ACTIVITY */}
