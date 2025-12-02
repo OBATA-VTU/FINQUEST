@@ -3,7 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpath id='topTextPath' d='M 25, 100 a 75,75 0 1,1 150,0' /%3E%3Cpath id='bottomTextPath' d='M 22, 100 a 78,78 0 0,0 156,0' /%3E%3C/defs%3E%3Ccircle cx='100' cy='100' r='98' fill='white' stroke='%23311b92' stroke-width='4' /%3E%3Ccircle cx='100' cy='100' r='82' fill='none' stroke='%23311b92' stroke-width='2' /%3E%3Ctext font-size='14' font-weight='900' fill='%23311b92' letter-spacing='1' text-anchor='middle'%3E%3CtextPath href='%23topTextPath' startOffset='50%25'%3EFINANCE STUDENTS' ASSOCIATION%3C/textPath%3E%3C/text%3E%3Ccircle cx='100' cy='100' r='65' fill='%23311b92' /%3E%3Cpath d='M 100,35 L 100,165' stroke='white' stroke-width='2' /%3E%3Cpath d='M 35,100 L 165,100' stroke='white' stroke-width='2' /%3E%3Cpath d='M 35,100 A 65,65 0 0,1 100,35 L 100,100 Z' fill='%23311b92' /%3E%3Ctext x='65' y='85' font-size='30' fill='%23f43f5e' font-weight='bold' text-anchor='middle'%3E%23%3C/text%3E%3Cpath d='M 100,35 A 65,65 0 0,1 165,100 L 100,100 Z' fill='white' /%3E%3Ctext x='135' y='85' font-size='30' fill='%23f43f5e' font-weight='bold' text-anchor='middle'%3E£%3C/text%3E%3Cpath d='M 35,100 L 100,100 L 100,165 A 65,65 0 0,1 35,100 Z' fill='white' /%3E%3Ctext x='65' y='145' font-size='30' fill='%23f43f5e' font-weight='bold' text-anchor='middle'%3E$%3C/text%3E%3Cpath d='M 100,100 L 165,100 A 65,65 0 0,1 100,165 Z' fill='%23311b92' /%3E%3Ctext x='135' y='145' font-size='30' fill='%23f43f5e' font-weight='bold' text-anchor='middle'%3E¥%3C/text%3E%3C/svg%3E" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    
+    <!-- PWA Manifest & Theme -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#312e81">
+    
+    <!-- iOS Support -->
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2997/2997321.png">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="FINSA">
     
     <!-- Primary SEO - Specific to User's Department -->
     <title>FINSA-OBA | Department of Finance - Adekunle Ajasin University (AAUA)</title>
@@ -156,5 +166,20 @@
   <body class="bg-slate-50 dark:bg-slate-900 antialiased transition-colors">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(registration => {
+              console.log('SW registered successfully:', registration.scope);
+            })
+            .catch(registrationError => {
+              console.log('SW registration failed:', registrationError);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
