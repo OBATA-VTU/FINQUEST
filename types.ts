@@ -11,6 +11,7 @@ export interface PastQuestion {
   courseCode: string;
   courseTitle: string;
   year: number;
+  lecturer?: string; // Added for smart finder
   fileUrl?: string; 
   storagePath?: string; // Path in Dropbox/Storage for deletion
   pages?: string[]; // Array of image URLs if uploaded as multiple images
@@ -64,6 +65,7 @@ export interface User {
   role: Role;
   level?: Level;
   avatarUrl?: string;
+  contributionPoints?: number; // Added for gamification
   createdAt?: string;
 }
 

@@ -15,6 +15,19 @@ export const ProfilePage: React.FC = () => {
 
   // Mocking saved questions
   const savedQuestions = MOCK_QUESTIONS.slice(0, 2);
+  const points = auth.user.contributionPoints || 0;
+
+  // Gamification Badges
+  const getBadges = (pts: number) => {
+      const badges = [];
+      if (pts > 0) badges.push({ name: 'Contributor', icon: '🌱', color: 'bg-green-100 text-green-700' });
+      if (pts >= 20) badges.push({ name: 'Active Member', icon: '🚀', color: 'bg-blue-100 text-blue-700' });
+      if (pts >= 50) badges.push({ name: 'Scholar', icon: '🎓', color: 'bg-purple-100 text-purple-700' });
+      if (pts >= 100) badges.push({ name: 'Legend', icon: '👑', color: 'bg-amber-100 text-amber-700' });
+      return badges;
+  };
+
+  const badges = getBadges(points);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 md:py-12 transition-colors duration-300">
@@ -40,7 +53,14 @@ export const ProfilePage: React.FC = () => {
                             <div className="mb-1">
                                 <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">{auth.user.name}</h1>
                                 <p className="text-sm md:text-base text-slate-500 dark:text-slate-400">{auth.user.email}</p>
-                                <p className="text-sm text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-900/30 inline-block px-2 rounded-md mt-1">@{auth.user.username}</p>
+                                <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-2">
+                                    <span className="text-sm text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">@{auth.user.username}</span>
+                                    {badges.map((b, i) => (
+                                        <span key={i} className={`text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${b.color}`}>
+                                            {b.icon} {b.name}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                         <button 
@@ -52,7 +72,7 @@ export const ProfilePage: React.FC = () => {
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 md:gap-6 border-t border-slate-100 dark:border-slate-700 pt-6 text-center md:text-left">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-6 border-t border-slate-100 dark:border-slate-700 pt-6 text-center md:text-left">
                         <div className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
                             <span className="block text-[10px] md:text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider mb-1">Role</span>
                             <span className="text-sm md:text-lg font-bold capitalize text-indigo-700 dark:text-indigo-300">{auth.user.role}</span>
@@ -64,6 +84,12 @@ export const ProfilePage: React.FC = () => {
                         <div className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
                              <span className="block text-[10px] md:text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider mb-1">Matric No</span>
                             <span className="text-sm md:text-lg font-bold text-slate-800 dark:text-white font-mono">{auth.user.matricNumber || '---'}</span>
+                        </div>
+                        <div className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg border border-amber-200 dark:border-amber-800">
+                             <span className="block text-[10px] md:text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider mb-1">Credits</span>
+                            <span className="text-sm md:text-lg font-bold text-amber-600 dark:text-amber-400 flex items-center justify-center md:justify-start gap-1">
+                                {points} <span className="text-xs font-normal text-slate-400">pts</span>
+                            </span>
                         </div>
                     </div>
                 </div>

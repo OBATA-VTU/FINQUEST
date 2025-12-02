@@ -38,9 +38,11 @@ export const PastQuestionsPage: React.FC = () => {
                     courseCode: data.courseCode,
                     courseTitle: data.courseTitle,
                     year: data.year,
+                    lecturer: data.lecturer,
                     fileUrl: data.fileUrl,
                     storagePath: data.storagePath,
-                    textContent: data.textContent 
+                    textContent: data.textContent,
+                    pages: data.pages 
                 } as PastQuestion);
             });
             setQuestions(firebaseQuestions);
@@ -88,7 +90,8 @@ export const PastQuestionsPage: React.FC = () => {
         const lowerTerm = searchTerm.toLowerCase().trim();
         filtered = filtered.filter(q => 
             (q.courseCode && q.courseCode.toLowerCase().includes(lowerTerm)) ||
-            (q.courseTitle && q.courseTitle.toLowerCase().includes(lowerTerm))
+            (q.courseTitle && q.courseTitle.toLowerCase().includes(lowerTerm)) ||
+            (q.lecturer && q.lecturer.toLowerCase().includes(lowerTerm))
         );
     }
 
@@ -140,7 +143,7 @@ export const PastQuestionsPage: React.FC = () => {
                      <div className="relative flex-1 sm:w-80">
                         <input
                             type="text"
-                            placeholder="Search by Course Code or Title"
+                            placeholder="Search by Code, Title or Lecturer"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm placeholder:text-slate-400 dark:placeholder:text-slate-500"
@@ -182,7 +185,14 @@ export const PastQuestionsPage: React.FC = () => {
         ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fade-in">
                 {filteredQuestions.map(q => (
-                    <QuestionCard key={q.id} question={q} />
+                    <div key={q.id} className="relative group">
+                        <QuestionCard question={q} />
+                        {q.lecturer && (
+                            <div className="absolute top-12 left-4 z-10 bg-white/90 dark:bg-slate-900/90 backdrop-blur text-[10px] px-2 py-0.5 rounded shadow text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                Lecturer: {q.lecturer}
+                            </div>
+                        )}
+                    </div>
                 ))}
             </div>
         )}

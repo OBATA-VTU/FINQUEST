@@ -24,6 +24,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
     // Common Fields
     const [courseCode, setCourseCode] = useState('');
     const [courseTitle, setCourseTitle] = useState('');
+    const [lecturer, setLecturer] = useState('');
     const [level, setLevel] = useState<Level>(100);
     const [year, setYear] = useState(new Date().getFullYear());
     
@@ -49,6 +50,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
             setImageFiles([]);
             setCourseCode('');
             setCourseTitle('');
+            setLecturer('');
             setIsUploading(false);
         }
     }, [isOpen]);
@@ -76,6 +78,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
             const questionData = {
                 courseCode: courseCode.toUpperCase(),
                 courseTitle,
+                lecturer,
                 level,
                 year,
                 fileUrl: url,
@@ -114,7 +117,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
             const imageUrls: string[] = [];
             const total = imageFiles.length;
 
-            // Upload images one by one or Promise.all. Promise.all is faster but let's do sequential to track progress easily
+            // Upload images one by one or Promise.all.
             for (let i = 0; i < total; i++) {
                 setUploadStatus(`Uploading image ${i + 1} of ${total}...`);
                 const url = await uploadToImgBB(imageFiles[i]);
@@ -127,6 +130,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
             const questionData = {
                 courseCode: courseCode.toUpperCase(),
                 courseTitle,
+                lecturer,
                 level,
                 year,
                 fileUrl: imageUrls[0], // Use first image as main preview/url for backward compatibility
@@ -180,10 +184,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
         >
             <div 
                 ref={modalRef}
-                className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in-down transition-colors"
+                className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in-down transition-colors max-h-[90vh] overflow-y-auto"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="bg-indigo-900 px-8 py-6 flex justify-between items-center text-white">
+                <div className="bg-indigo-900 px-8 py-6 flex justify-between items-center text-white sticky top-0 z-10">
                     <div>
                         <h2 className="text-xl font-bold font-serif">Contribute Material</h2>
                         <p className="text-indigo-200 text-xs">Upload past questions or notes.</p>
@@ -303,6 +307,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                             <div>
                                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Course Title</label>
                                 <input type="text" value={courseTitle} onChange={e => setCourseTitle(e.target.value)} required className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. Introduction to Business Finance" />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Lecturer (Optional)</label>
+                                <input type="text" value={lecturer} onChange={e => setLecturer(e.target.value)} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. Dr. A. A. Adebayo" />
                             </div>
 
                             <div>

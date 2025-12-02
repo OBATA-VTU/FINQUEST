@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, getDocs, query, where, doc, updateDoc, deleteDoc, addDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, updateDoc, deleteDoc, addDoc, increment } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
 import { deleteFile } from '../utils/api';
 import { PastQuestion } from '../types';
@@ -39,7 +39,15 @@ export const AdminApprovalsPage: React.FC = () => {
           const ref = doc(db, 'questions', item.id);
           if (approve) {
               await updateDoc(ref, { status: 'approved' });
-              showNotification("Question approved!", "success");
+              
+              // Award Contributor Points
+              if (item.uploadedBy) {
+                  const userRef = doc(db, 'users', item.uploadedBy);
+                  // Award 5 points safely
+                  await updateDoc(userRef, { contributionPoints: increment(5) }).catch(e => console.warn("Could not award points", e));
+              }
+
+              showNotification("Question approved & Points awarded!", "success");
           } else {
               if (item.storagePath) {
                   await deleteFile(item.storagePath);
@@ -121,7 +129,7 @@ export const AdminApprovalsPage: React.FC = () => {
                         <p className="text-xs text-slate-500 mb-4">Uploaded by: {item.uploadedByEmail || 'Unknown'}</p>
                         <div className="mt-auto pt-4 border-t border-slate-50 flex gap-2">
                             <a href={item.fileUrl} target="_blank" rel="noreferrer" className="flex-1 py-2 text-center text-xs font-bold text-slate-600 bg-slate-50 rounded hover:bg-slate-100 transition">Preview</a>
-                            <button onClick={() => handleMaterialApproval(item, true)} className="flex-1 py-2 text-center text-xs font-bold text-white bg-emerald-500 rounded hover:bg-emerald-600 transition">Approve</button>
+                            <button onClick={() => handleMaterialApproval(item, true)} className="flex-1 py-2 text-center text-xs font-bold text-white bg-emerald-500 rounded hover:bg-emerald-600 transition">Approve (+5 Pts)</button>
                             <button onClick={() => handleMaterialApproval(item, false)} className="px-3 py-2 text-center text-xs font-bold text-rose-500 bg-rose-50 rounded hover:bg-rose-100 transition">Reject</button>
                         </div>
                     </div>

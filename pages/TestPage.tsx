@@ -64,8 +64,9 @@ export const TestPage: React.FC = () => {
   // Result State
   const [score, setScore] = useState(0);
   const [leaderboard, setLeaderboard] = useState<TestResult[]>([]);
+  const [leaderboardTimeframe, setLeaderboardTimeframe] = useState<'all' | 'weekly'>('all');
 
-  // --- PERSISTENCE LOGIC ---
+  // --- ANTI-CHEAT & PERSISTENCE ---
   useEffect(() => {
       // Restore state on mount
       const savedState = localStorage.getItem('finquest_exam_state');
@@ -93,6 +94,20 @@ export const TestPage: React.FC = () => {
       if (stage === 'menu') {
           fetchLeaderboard();
       }
+  }, [stage, leaderboardTimeframe]);
+
+  // Anti-Cheat: Visibility Change
+  useEffect(() => {
+      if (stage !== 'exam') return;
+
+      const handleVisibilityChange = () => {
+          if (document.hidden) {
+              showNotification("⚠️ Warning: Leaving the exam page is flagged as suspicious activity.", "warning");
+          }
+      };
+
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+      return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [stage]);
 
   useEffect(() => {
@@ -116,10 +131,20 @@ export const TestPage: React.FC = () => {
 
   const fetchLeaderboard = async () => {
       try {
-          const q = query(collection(db, 'test_results'), orderBy('score', 'desc'), limit(10));
+          // Fetch top 50 scores globally
+          const q = query(collection(db, 'test_results'), orderBy('score', 'desc'), limit(50));
           const snap = await getDocs(q);
-          const results = snap.docs.map(d => ({ id: d.id, ...d.data() } as TestResult));
-          setLeaderboard(results);
+          let results = snap.docs.map(d => ({ id: d.id, ...d.data() } as TestResult));
+          
+          // Filter client-side for "Weekly" to avoid complex index requirements
+          if (leaderboardTimeframe === 'weekly') {
+              const oneWeekAgo = new Date();
+              oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+              results = results.filter(r => new Date(r.date) > oneWeekAgo);
+          }
+
+          // Take top 10 after filter
+          setLeaderboard(results.slice(0, 10));
       } catch (e) { console.error("Leaderboard error", e); }
   };
 
@@ -326,7 +351,25 @@ export const TestPage: React.FC = () => {
                         <h3 className="text-center font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest text-xs flex items-center gap-2">
                             <span className="text-xl">🏆</span> Hall of Fame
                         </h3>
-                        <button onClick={fetchLeaderboard} className="text-xs text-indigo-500 dark:text-indigo-400 font-bold hover:underline">Refresh Board</button>
+                        <div className="flex items-center gap-3">
+                            <div className="bg-slate-200 dark:bg-slate-800 p-1 rounded-lg flex text-xs font-bold">
+                                <button 
+                                    onClick={() => setLeaderboardTimeframe('all')}
+                                    className={`px-3 py-1 rounded-md transition-all ${leaderboardTimeframe === 'all' ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
+                                >
+                                    All Time
+                                </button>
+                                <button 
+                                    onClick={() => setLeaderboardTimeframe('weekly')}
+                                    className={`px-3 py-1 rounded-md transition-all ${leaderboardTimeframe === 'weekly' ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
+                                >
+                                    This Week
+                                </button>
+                            </div>
+                            <button onClick={fetchLeaderboard} className="text-indigo-500 dark:text-indigo-400 hover:text-indigo-600">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                            </button>
+                        </div>
                       </div>
                       
                       <div className="space-y-3">
