@@ -1,16 +1,15 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, updateDoc, doc, deleteDoc, addDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
-import { useOutletContext } from 'react-router-dom';
-import { Role } from '../types';
+import { AuthContext } from '../contexts/AuthContext';
 
 const ALLOWED_ROLES = ['student', 'executive', 'lecturer', 'admin', 'librarian', 'vice_president'];
 
 export const AdminUsersPage: React.FC = () => {
-  const { role } = useOutletContext<{ role: Role }>();
-  const isSuperAdmin = role === 'admin';
+  const auth = useContext(AuthContext);
+  const isSuperAdmin = auth?.user?.role === 'admin';
 
   const [users, setUsers] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
@@ -129,7 +128,6 @@ export const AdminUsersPage: React.FC = () => {
           setNotificationMsg('');
       } catch (e: any) {
           console.error(e);
-          // Show specific error message to help debugging (e.g., permissions)
           const msg = e.message || "Unknown error";
           showNotification(`Failed: ${msg}`, "error");
       }

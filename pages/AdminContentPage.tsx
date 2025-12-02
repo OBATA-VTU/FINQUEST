@@ -1,23 +1,20 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
 import { uploadToImgBB, uploadFile, deleteFile } from '../utils/api';
 import { LEVELS } from '../constants';
 import { GoogleGenAI } from "@google/genai";
-import { useOutletContext } from 'react-router-dom';
-import { Role } from '../types';
+import { AuthContext } from '../contexts/AuthContext';
 
 type ContentType = 'news' | 'executives' | 'lecturers' | 'community' | 'gallery' | 'materials';
 
 export const AdminContentPage: React.FC = () => {
-  const { role } = useOutletContext<{ role: Role }>();
-  // If Librarian/VP, force 'materials' only
-  const isSuperAdmin = role === 'admin';
-  const initialContent = isSuperAdmin ? 'news' : 'materials';
+  const auth = useContext(AuthContext);
+  const isSuperAdmin = auth?.user?.role === 'admin';
 
-  const [activeContent, setActiveContent] = useState<ContentType>(initialContent);
+  const [activeContent, setActiveContent] = useState<ContentType>('news');
   const [contentItems, setContentItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { showNotification } = useNotification();
@@ -36,10 +33,11 @@ export const AdminContentPage: React.FC = () => {
   const [hodData, setHodData] = useState({ name: '', title: '', message: '', imageUrl: '' });
   const [hodImageFile, setHodImageFile] = useState<File | null>(null);
 
-  useEffect(() => {
-    // If permission changes or reloads, force materials if restricted
-    if (!isSuperAdmin) setActiveContent('materials');
-  }, [isSuperAdmin]);
+  // Define available tabs based on role
+  const tabs: ContentType[] = ['news', 'lecturers', 'community', 'gallery', 'materials'];
+  if (isSuperAdmin) {
+      tabs.splice(1, 0, 'executives'); // Insert executives if admin
+  }
 
   useEffect(() => {
     fetchContent(activeContent);
@@ -198,22 +196,20 @@ export const AdminContentPage: React.FC = () => {
     <div className="animate-fade-in pb-20 max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold text-slate-900 mb-6">Content Manager</h1>
         
-        {/* SCROLLABLE PILL TABS - Only for Super Admin */}
-        {isSuperAdmin && (
-            <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
-                {['news', 'executives', 'lecturers', 'community', 'gallery', 'materials'].map(c => (
-                    <button 
-                        key={c} 
-                        onClick={() => setActiveContent(c as ContentType)} 
-                        className={`px-5 py-2.5 font-bold text-sm capitalize rounded-full whitespace-nowrap transition-colors ${activeContent === c ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-500'}`}
-                    >
-                        {c}
-                    </button>
-                ))}
-            </div>
-        )}
+        {/* TABS */}
+        <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
+            {tabs.map(c => (
+                <button 
+                    key={c} 
+                    onClick={() => setActiveContent(c)} 
+                    className={`px-5 py-2.5 font-bold text-sm capitalize rounded-full whitespace-nowrap transition-colors ${activeContent === c ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-500'}`}
+                >
+                    {c}
+                </button>
+            ))}
+        </div>
         
-        {activeContent === 'news' && isSuperAdmin && (
+        {activeContent === 'news' && (
             <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 mb-8">
                 <h3 className="font-bold text-indigo-900 mb-4 flex items-center gap-2">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
