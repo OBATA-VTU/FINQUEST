@@ -1,6 +1,8 @@
-const CACHE_NAME = 'finsa-cache-v2';
+const CACHE_NAME = 'finsa-cache-v4';
 const OFFLINE_URL = '/offline.html';
 
+// We use relative paths or root paths. 
+// Note: In some preview environments, resources might be cross-origin.
 const ASSETS_TO_CACHE = [
   OFFLINE_URL,
   '/manifest.json',
@@ -16,7 +18,6 @@ self.addEventListener('install', (event) => {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
-  // Force the waiting service worker to become the active service worker
   self.skipWaiting();
 });
 
@@ -35,7 +36,6 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
-  // Take control of all clients immediately
   self.clients.claim();
 });
 
@@ -52,8 +52,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static Assets (Images, Fonts, Scripts) -> Cache First, fall back to Network
-  // We don't cache API calls (Firebase, etc) to ensure data freshness
+  // Static Assets -> Cache First, fall back to Network
   if (
     event.request.destination === 'image' || 
     event.request.destination === 'style' || 
@@ -62,30 +61,55 @@ self.addEventListener('fetch', (event) => {
   ) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
-        // Return cached response if found
-        if (cachedResponse) {
-          return cachedResponse;
-        }
+        if (cachedResponse) return cachedResponse;
 
-        // Otherwise fetch from network and cache it
         return fetch(event.request).then((networkResponse) => {
-          // Check if we received a valid response
-          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+          // Check response validity. Note: We allow opaque responses (type === 'opaque') 
+          // for cross-origin images (like Unsplash/ImgBB) to be cached.
+          if (!networkResponse || (networkResponse.status !== 200 && networkResponse.type !== 'opaque')) {
             return networkResponse;
           }
 
-          // Clone response to put in cache
+          // Clone response to cache
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
+            // We only cache get requests
+            if (event.request.method === 'GET') {
+                try {
+                    cache.put(event.request, responseToCache);
+                } catch(e) { console.warn('Cache put failed', e); }
+            }
           });
 
           return networkResponse;
-        }).catch((err) => {
-            // If offline and image/asset missing, we could return a placeholder here
-            return new Response(); // Empty response to prevent broken UI
+        }).catch(() => {
+            // Return empty 200 response for missing images to prevent broken UI icons in offline mode
+            if (event.request.destination === 'image') {
+                 return new Response('<svg>...</svg>', { headers: { 'Content-Type': 'image/svg+xml' }});
+            }
         });
       })
     );
+  }
+});
+
+// Background Sync (Logic Placeholder for PWA Builder)
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-messages') {
+    console.log('[Service Worker] Background Sync Triggered');
+  }
+});
+
+// Periodic Sync (Logic Placeholder for PWA Builder)
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'get-latest-news') {
+    console.log('[Service Worker] Periodic Sync Triggered');
+  }
+});
+
+// Push Notifications (Logic Placeholder for PWA Builder)
+self.addEventListener('push', (event) => {
+  if (event.data) {
+    console.log('[Service Worker] Push Received', event.data.text());
   }
 });

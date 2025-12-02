@@ -10,7 +10,6 @@ interface ErrorBoundaryState {
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Explicitly defining state as a class property
   public state: ErrorBoundaryState = {
     hasError: false,
     error: null

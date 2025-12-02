@@ -1,23 +1,48 @@
 {
+  "id": "/",
   "name": "FINSA - Department of Finance AAUA",
   "short_name": "FINSA",
   "description": "The official digital portal for the Finance Department of Adekunle Ajasin University. Access past questions, connect with peers, and stay updated.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#312e81",
   "orientation": "portrait-primary",
-  "categories": ["education", "productivity", "social"],
-  "display_override": ["window-controls-overlay", "standalone"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "categories": [
+    "education",
+    "productivity",
+    "social"
+  ],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+finsa",
+      "url": "/dashboard?ref=%s"
+    }
+  ],
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2997/2997321.png",
+      "src": "https://placehold.co/192x192/312e81/ffffff.png?text=FINSA",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2997/2997321.png",
+      "src": "https://placehold.co/512x512/312e81/ffffff.png?text=FINSA",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -29,21 +54,24 @@
       "short_name": "Dashboard",
       "description": "View your academic progress",
       "url": "/dashboard",
-      "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/2997/2997321.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "https://placehold.co/192x192/312e81/ffffff.png?text=Dashboard",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Past Questions",
       "short_name": "Questions",
       "description": "Browse exam archives",
       "url": "/questions",
-      "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/2997/2997321.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Latest News",
-      "short_name": "News",
-      "description": "Check department updates",
-      "url": "/announcements",
-      "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/2997/2997321.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "https://placehold.co/192x192/312e81/ffffff.png?text=PQ",
+          "sizes": "192x192"
+        }
+      ]
     }
   ],
   "share_target": {
@@ -58,18 +86,18 @@
   },
   "screenshots": [
     {
-      "src": "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1280&q=80",
+      "src": "https://placehold.co/1280x720/312e81/ffffff.png?text=FINSA+Desktop+Portal",
       "sizes": "1280x720",
-      "type": "image/jpeg",
+      "type": "image/png",
       "form_factor": "wide",
-      "label": "Welcome to FINSA"
+      "label": "FINSA Desktop Portal"
     },
     {
-      "src": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=720&q=80",
+      "src": "https://placehold.co/720x1280/312e81/ffffff.png?text=FINSA+Mobile+App",
       "sizes": "720x1280",
-      "type": "image/jpeg",
+      "type": "image/png",
       "form_factor": "narrow",
-      "label": "Mobile Access"
+      "label": "Mobile Student Access"
     }
   ]
 }
