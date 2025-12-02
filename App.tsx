@@ -29,8 +29,9 @@ import { Layout } from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
 
 // Redesigned Loading Screen with "Leapfrog" dots
+// Using z-[9999] to ensure it covers everything including the HTML loader until removed
 const LoadingScreen = () => (
-  <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-900 transition-opacity duration-500">
+  <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-900 transition-opacity duration-700 ease-out animate-fade-in">
       
       {/* 1. Logo */}
       <div className="mb-4 relative">
@@ -78,6 +79,8 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
 const AppContent: React.FC = () => {
   const auth = useContext(AuthContext);
 
+  // If loading, show splash screen.
+  // Note: AuthContext has a 2.5s minimum delay to ensure this stays visible
   if (auth?.loading) {
       return <LoadingScreen />;
   }

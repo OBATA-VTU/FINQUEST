@@ -75,6 +75,24 @@
     }
     </script>
 
+    <!-- CRITICAL: Inline Theme Script to prevent White Flash -->
+    <script>
+      (function() {
+        try {
+          // Check local storage or system preference
+          var storedTheme = localStorage.getItem('theme');
+          var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          
+          // Apply dark mode immediately if needed
+          if (storedTheme === 'dark' || (!storedTheme && systemDark)) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -182,7 +200,7 @@
     <div id="root">
         <!-- Initial Loader to prevent blank white screen -->
         <style>
-            body { margin: 0; background-color: #0f172a; }
+            body { margin: 0; background-color: #0f172a; } /* Default to dark bg for splash */
             .app-loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; background: #0f172a; color: white; font-family: 'Inter', sans-serif; }
             .dot-container { display: flex; gap: 8px; margin-top: 10px; }
             .dot { width: 12px; height: 12px; background-color: #6366f1; border-radius: 50%; animation: leap 1s ease-in-out infinite; }

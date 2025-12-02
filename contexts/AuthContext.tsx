@@ -45,18 +45,22 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const heartbeatTimerRef = useRef<any>(null);
   const lastInteractionRef = useRef<number>(Date.now());
 
-  // 1. Auth State Observer with Safety Timeout
+  // 1. Auth State Observer with Safety Timeout AND Minimum Splash Time
   useEffect(() => {
-    // Safety: If Firebase takes too long (> 5s), force loading to false so app doesn't hang on blank screen
+    const startTime = Date.now();
+    // Force splash screen to show for at least 2.5 seconds to prevent white flash
+    // and allow themes to settle
+    const MIN_SPLASH_TIME = 2500; 
+
+    // Safety: If Firebase takes too long (> 8s), force loading to false
     const safetyTimer = setTimeout(() => {
         if (loading) {
             console.warn("Auth check timed out, forcing app load");
             setLoading(false);
         }
-    }, 5000);
+    }, 8000);
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      clearTimeout(safetyTimer); // Clear safety timer if firebase responds
       if (firebaseUser) {
         try {
             const userDocRef = doc(db, 'users', firebaseUser.uid);
@@ -107,7 +111,15 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       } else {
         setUser(null);
       }
-      setLoading(false);
+
+      // Calculate how much time is left for the minimum splash
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, MIN_SPLASH_TIME - elapsed);
+
+      setTimeout(() => {
+          setLoading(false);
+          clearTimeout(safetyTimer);
+      }, remaining);
     });
 
     return () => {
