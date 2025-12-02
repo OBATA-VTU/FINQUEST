@@ -66,6 +66,7 @@ export interface User {
   level?: Level;
   avatarUrl?: string;
   contributionPoints?: number; // Added for gamification
+  savedQuestions?: string[]; // Added for bookmarks
   createdAt?: string;
 }
 

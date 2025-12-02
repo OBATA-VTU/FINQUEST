@@ -12,9 +12,27 @@ type ContentType = 'news' | 'executives' | 'lecturers' | 'community' | 'gallery'
 
 export const AdminContentPage: React.FC = () => {
   const auth = useContext(AuthContext);
-  const isSuperAdmin = auth?.user?.role === 'admin';
+  const role = auth?.user?.role || 'student';
+  const isSuperAdmin = role === 'admin';
+  const isLibrarian = role === 'librarian';
+  const isVP = role === 'vice_president';
 
-  const [activeContent, setActiveContent] = useState<ContentType>('news');
+  // Helper to determine available tabs
+  const getTabs = (): ContentType[] => {
+      if (isLibrarian) return ['materials'];
+      if (isVP) return ['news', 'lecturers'];
+      if (isSuperAdmin) return ['news', 'executives', 'lecturers', 'community', 'gallery', 'materials'];
+      return [];
+  };
+
+  const tabs = getTabs();
+
+  // Lazy initialization to ensure we start with a valid tab
+  const [activeContent, setActiveContent] = useState<ContentType>(() => {
+      const t = getTabs();
+      return (t.length > 0 ? t[0] : 'materials') as ContentType;
+  });
+
   const [contentItems, setContentItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { showNotification } = useNotification();
@@ -33,14 +51,17 @@ export const AdminContentPage: React.FC = () => {
   const [hodData, setHodData] = useState({ name: '', title: '', message: '', imageUrl: '' });
   const [hodImageFile, setHodImageFile] = useState<File | null>(null);
 
-  // Define available tabs based on role
-  const tabs: ContentType[] = ['news', 'lecturers', 'community', 'gallery', 'materials'];
-  if (isSuperAdmin) {
-      tabs.splice(1, 0, 'executives'); // Insert executives if admin
-  }
+  useEffect(() => {
+      // Safety check: if role changes and current tab is invalid, switch to first valid
+      if (tabs.length > 0 && !tabs.includes(activeContent)) {
+          setActiveContent(tabs[0]);
+      }
+  }, [role]);
 
   useEffect(() => {
-    fetchContent(activeContent);
+    if (tabs.includes(activeContent)) {
+        fetchContent(activeContent);
+    }
   }, [activeContent]);
 
   const fetchContent = async (type: ContentType) => {

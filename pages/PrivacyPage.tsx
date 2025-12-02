@@ -51,11 +51,11 @@ export const PrivacyPage: React.FC = () => {
             <ul className="list-none mt-2 space-y-2">
               <li className="flex items-center gap-2">
                   <span className="font-bold text-slate-900">Email:</span> 
-                  <a href="mailto:obaofaaua@gmail.com" className="text-indigo-600 hover:underline">obaofaaua@gmail.com</a>
+                  <a href="mailto:finsa@gmail.com" className="text-indigo-600 hover:underline">finsa@gmail.com</a>
               </li>
               <li className="flex items-center gap-2">
                   <span className="font-bold text-slate-900">Phone / WhatsApp:</span> 
-                  <a href="tel:08142452729" className="text-indigo-600 hover:underline">08142452729</a>
+                  <a href="tel:081444222147" className="text-indigo-600 hover:underline">081444222147</a>
               </li>
             </ul>
           </section>

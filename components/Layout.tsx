@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
@@ -23,7 +22,9 @@ export const Layout: React.FC = () => {
     const showFooterPages = ['/', '/announcements', '/gallery', '/lecturers', '/executives', '/privacy', '/terms'];
     
     // Check if current path matches exact public pages or is NOT a dashboard/app route
-    const showFooter = showFooterPages.includes(pathname);
+    // Remove trailing slash for consistent matching
+    const currentPath = pathname.endsWith('/') && pathname.length > 1 ? pathname.slice(0, -1) : pathname;
+    const showFooter = showFooterPages.includes(currentPath);
 
     return (
         <div className="h-screen bg-slate-50 text-slate-800 flex font-sans overflow-hidden">

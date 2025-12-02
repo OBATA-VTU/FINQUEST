@@ -71,20 +71,22 @@ export const CommunityPage: React.FC = () => {
   }, [messages, view]);
 
   useEffect(() => {
-    // Only cleanup occasionally or if user is admin, ideally this is backend job
-    // We leave this here from previous code
-    const cleanup = async () => {
-        try {
-          const q = query(collection(db, 'community_messages'), orderBy('createdAt', 'desc'));
-          const snapshot = await getDocs(q);
-          if (snapshot.size > 100) {
-              const toDelete = snapshot.docs.slice(100);
-              toDelete.forEach(async (d) => await deleteDoc(d.ref));
-          }
-        } catch (e) { console.error("Cleanup error", e); }
-    };
-    cleanup();
-  }, []);
+    // Only cleanup if user is admin
+    if (auth?.user?.role === 'admin') {
+        const cleanup = async () => {
+            try {
+              const q = query(collection(db, 'community_messages'), orderBy('createdAt', 'desc'));
+              const snapshot = await getDocs(q);
+              if (snapshot.size > 100) {
+                  const toDelete = snapshot.docs.slice(100);
+                  toDelete.forEach(async (d) => await deleteDoc(d.ref));
+                  console.log("Cleaned up old messages");
+              }
+            } catch (e) { console.error("Cleanup error", e); }
+        };
+        cleanup();
+    }
+  }, [auth?.user?.role]);
 
   const handleSend = async (e: React.FormEvent) => {
       e.preventDefault();

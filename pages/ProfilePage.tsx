@@ -1,20 +1,46 @@
 
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
-import { MOCK_QUESTIONS } from '../constants'; // Reusing for "saved" example
 import { QuestionGrid } from '../components/QuestionGrid';
 import { EditProfileModal } from '../components/EditProfileModal';
+import { db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { PastQuestion } from '../types';
 
 export const ProfilePage: React.FC = () => {
   const auth = useContext(AuthContext);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [bookmarkedQuestions, setBookmarkedQuestions] = useState<PastQuestion[]>([]);
+  const [loadingBookmarks, setLoadingBookmarks] = useState(false);
+
+  useEffect(() => {
+    const fetchBookmarks = async () => {
+        if (auth?.user?.savedQuestions && auth.user.savedQuestions.length > 0) {
+            setLoadingBookmarks(true);
+            try {
+                // Fetch each bookmarked question by ID
+                const promises = auth.user.savedQuestions.map(id => getDoc(doc(db, 'questions', id)));
+                const docs = await Promise.all(promises);
+                const items = docs
+                    .filter(d => d.exists())
+                    .map(d => ({ id: d.id, ...d.data() } as PastQuestion));
+                setBookmarkedQuestions(items);
+            } catch(e) {
+                console.error("Error fetching bookmarks", e);
+            } finally {
+                setLoadingBookmarks(false);
+            }
+        } else {
+            setBookmarkedQuestions([]);
+        }
+    };
+    fetchBookmarks();
+  }, [auth?.user?.savedQuestions]);
 
   if (!auth?.user) {
       return <div className="p-8 text-center text-red-500">Please log in to view your profile.</div>;
   }
 
-  // Mocking saved questions
-  const savedQuestions = MOCK_QUESTIONS.slice(0, 2);
   const points = auth.user.contributionPoints || 0;
 
   // Gamification Badges
@@ -103,8 +129,10 @@ export const ProfilePage: React.FC = () => {
                     </span>
                     Saved / Bookmarked
                 </h2>
-                {savedQuestions.length > 0 ? (
-                    <QuestionGrid questions={savedQuestions} />
+                {loadingBookmarks ? (
+                    <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>
+                ) : bookmarkedQuestions.length > 0 ? (
+                    <QuestionGrid questions={bookmarkedQuestions} />
                 ) : (
                     <div className="bg-white dark:bg-slate-800 p-12 rounded-xl border border-slate-200 dark:border-slate-700 border-dashed text-center">
                         <div className="w-16 h-16 bg-slate-50 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300 dark:text-slate-500">

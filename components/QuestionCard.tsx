@@ -1,10 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { PastQuestion } from '../types';
 import { downloadPDF, generatePDF } from '../utils/pdfGenerator';
 import { PDFViewerModal } from './PDFViewerModal';
 import { getDropboxDownloadUrl, forceDownload } from '../utils/api';
 import { useNotification } from '../contexts/NotificationContext';
+import { AuthContext } from '../contexts/AuthContext';
 
 interface QuestionCardProps {
   question: PastQuestion;
@@ -14,6 +15,19 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const { showNotification } = useNotification();
+  const auth = useContext(AuthContext);
+
+  const isBookmarked = auth?.user?.savedQuestions?.includes(question.id);
+
+  const handleBookmark = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if (!auth?.user) {
+          showNotification("Please login to bookmark items.", "info");
+          return;
+      }
+      auth.toggleBookmark(question.id);
+  };
 
   const handlePreview = (e: React.MouseEvent) => {
       e.preventDefault();
@@ -98,13 +112,27 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
 
   return (
     <>
-      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-500 transition-all duration-200 flex flex-col h-full group">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-500 transition-all duration-200 flex flex-col h-full group relative">
         <div className="flex justify-between items-start mb-2">
-             <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600">
-                {question.year}
-            </span>
-            {question.textContent && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1 rounded border border-emerald-100">AI GEN</span>}
-            {question.pages && question.pages.length > 1 && <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1 rounded border border-indigo-100 dark:border-indigo-800">{question.pages.length} Pages</span>}
+             <div className="flex gap-2 flex-wrap">
+                <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600">
+                    {question.year}
+                </span>
+                {question.textContent && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1 rounded border border-emerald-100">AI GEN</span>}
+                {question.pages && question.pages.length > 1 && <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1 rounded border border-indigo-100 dark:border-indigo-800">{question.pages.length} Pages</span>}
+             </div>
+             
+             <button 
+                onClick={handleBookmark}
+                className={`transition-transform active:scale-90 ${isBookmarked ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-slate-600 hover:text-indigo-400'}`}
+                title={isBookmarked ? "Remove bookmark" : "Bookmark this"}
+             >
+                 {isBookmarked ? (
+                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+                 ) : (
+                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+                 )}
+             </button>
         </div>
         
         <div className="flex items-center gap-2 mb-2">

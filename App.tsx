@@ -20,6 +20,7 @@ import { PrivacyPage } from './pages/PrivacyPage';
 import { TermsPage } from './pages/TermsPage';
 import { TestPage } from './pages/TestPage'; 
 import { LostFoundPage } from './pages/LostFoundPage'; // New Page
+import { FAQPage } from './pages/FAQPage'; // New Page
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -91,6 +92,7 @@ const AppContent: React.FC = () => {
                 <Route path="/gallery" element={<GalleryPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
+                <Route path="/faq" element={<FAQPage />} />
                 <Route path="/lost-and-found" element={<LostFoundPage />} />
                 
                 {/* Protected Routes (Authenticated Users Only) */}

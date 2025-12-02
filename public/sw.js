@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finsa-cache-v4';
+const CACHE_NAME = 'finsa-cache-v5';
 const OFFLINE_URL = '/offline.html';
 
 // We use relative paths or root paths. 

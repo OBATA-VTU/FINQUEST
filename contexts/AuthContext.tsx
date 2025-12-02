@@ -11,7 +11,7 @@ import {
   signInWithPopup,
   updateProfile
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { useNotification } from './NotificationContext';
 
 interface AuthContextType {
@@ -22,6 +22,7 @@ interface AuthContextType {
   signup: (data: { name: string; email: string; pass: string; level: Level; username: string; matricNumber: string; avatarUrl?: string }) => Promise<void>;
   logout: () => Promise<void>;
   checkUsernameAvailability: (username: string) => Promise<boolean>;
+  toggleBookmark: (questionId: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -52,7 +53,9 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     matricNumber: userData.matricNumber || '',
                     role: userData.role || 'student',
                     level: userData.level || 100,
-                    avatarUrl: userData.avatarUrl || firebaseUser.photoURL
+                    avatarUrl: userData.avatarUrl || firebaseUser.photoURL,
+                    contributionPoints: userData.contributionPoints || 0,
+                    savedQuestions: userData.savedQuestions || []
                 });
             } else {
                 // If auth exists but no DB doc, treat as partial user
@@ -63,7 +66,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     username: '', // Explicitly empty to force setup
                     role: 'student' as const,
                     level: 100 as Level,
-                    avatarUrl: firebaseUser.photoURL || undefined
+                    avatarUrl: firebaseUser.photoURL || undefined,
+                    savedQuestions: []
                 };
                 setUser(newUser);
             }
@@ -76,7 +80,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     name: firebaseUser.displayName || 'User',
                     username: 'error',
                     role: 'student',
-                    level: 100
+                    level: 100,
+                    savedQuestions: []
                 });
         }
       } else {
@@ -118,6 +123,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                 level: 100,
                 createdAt: new Date().toISOString(),
                 photoURL: firebaseUser.photoURL,
+                savedQuestions: []
                 // NO username yet
               });
 
@@ -193,7 +199,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             level: data.level,
             username: cleanUsername,
             matricNumber: data.matricNumber || '',
-            avatarUrl: data.avatarUrl
+            avatarUrl: data.avatarUrl,
+            savedQuestions: []
           };
 
           try {
@@ -226,6 +233,34 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     }
   };
 
+  const toggleBookmark = async (questionId: string) => {
+      if (!user) return;
+      const currentSaved = user.savedQuestions || [];
+      let newSaved: string[];
+
+      const isBookmarking = !currentSaved.includes(questionId);
+
+      if (isBookmarking) {
+          newSaved = [...currentSaved, questionId];
+          showNotification("Bookmark saved", "success");
+      } else {
+          newSaved = currentSaved.filter(id => id !== questionId);
+          showNotification("Bookmark removed", "info");
+      }
+
+      // Optimistic update
+      setUser({ ...user, savedQuestions: newSaved });
+
+      try {
+          const userRef = doc(db, 'users', user.id);
+          await updateDoc(userRef, { savedQuestions: newSaved });
+      } catch (e) {
+          console.error("Error updating bookmarks", e);
+          showNotification("Failed to sync bookmark", "error");
+          setUser(user); // Revert on failure
+      }
+  };
+
   const value = {
     user,
     loading,
@@ -233,7 +268,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     loginWithGoogle,
     signup,
     logout,
-    checkUsernameAvailability
+    checkUsernameAvailability,
+    toggleBookmark
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
