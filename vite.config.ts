@@ -12,9 +12,8 @@ export default defineConfig(({ mode }) => {
     define: {
       // Map the Vercel/System environment variable to process.env.API_KEY 
       // This is required for @google/genai to work in the browser build.
-      'process.env.API_KEY': JSON.stringify(env.VITE_GOOGLE_GENAI_API_KEY),
-      // Polyfill other process.env calls to avoid crashes
-      'process.env': {} 
+      // Use fallback to empty string to prevent JSON.stringify(undefined)
+      'process.env.API_KEY': JSON.stringify(env.VITE_GOOGLE_GENAI_API_KEY || ""),
     },
     build: {
       outDir: 'dist',

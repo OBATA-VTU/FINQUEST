@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { User, Level } from '../types';
 import { auth, db } from '../firebase';
@@ -46,9 +45,18 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const heartbeatTimerRef = useRef<any>(null);
   const lastInteractionRef = useRef<number>(Date.now());
 
-  // 1. Auth State Observer
+  // 1. Auth State Observer with Safety Timeout
   useEffect(() => {
+    // Safety: If Firebase takes too long (> 5s), force loading to false so app doesn't hang on blank screen
+    const safetyTimer = setTimeout(() => {
+        if (loading) {
+            console.warn("Auth check timed out, forcing app load");
+            setLoading(false);
+        }
+    }, 5000);
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      clearTimeout(safetyTimer); // Clear safety timer if firebase responds
       if (firebaseUser) {
         try {
             const userDocRef = doc(db, 'users', firebaseUser.uid);
@@ -102,7 +110,10 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+        unsubscribe();
+        clearTimeout(safetyTimer);
+    };
   }, [showNotification]);
 
   // 2. Auto Logout & Activity Tracking Logic

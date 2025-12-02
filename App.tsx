@@ -28,20 +28,24 @@ import { Logo } from './components/Logo';
 import { Layout } from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
 
-// Professional Splash Screen
+// Redesigned Loading Screen with "Leapfrog" dots
 const LoadingScreen = () => (
-  <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white dark:bg-slate-900 transition-opacity duration-500">
-      <div className="relative mb-8">
-          <Logo className="h-32 w-32 animate-pulse" />
+  <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-900 transition-opacity duration-500">
+      
+      {/* 1. Logo */}
+      <div className="mb-4 relative">
+          <Logo className="h-24 w-24" />
           <div className="absolute -inset-4 bg-indigo-500/20 rounded-full blur-xl animate-pulse"></div>
       </div>
-      <h1 className="text-3xl font-serif font-bold text-indigo-900 dark:text-indigo-100 tracking-wider mb-2">FINSA</h1>
-      <p className="text-xs text-indigo-400 uppercase tracking-[0.3em] font-medium mb-8">Official Department Portal</p>
+
+      {/* 2. Title */}
+      <h1 className="text-3xl font-serif font-bold text-white tracking-widest mb-6">FINSA</h1>
       
-      <div className="flex gap-2">
-        <div className="w-2.5 h-2.5 bg-indigo-600 rounded-full animate-bounce"></div>
-        <div className="w-2.5 h-2.5 bg-indigo-600 rounded-full animate-bounce animation-delay-2000" style={{ animationDelay: '0.15s' }}></div>
-        <div className="w-2.5 h-2.5 bg-indigo-600 rounded-full animate-bounce animation-delay-4000" style={{ animationDelay: '0.3s' }}></div>
+      {/* 3. Three Dots Animation (Leaping) */}
+      <div className="flex gap-3">
+        <div className="w-3 h-3 bg-indigo-500 rounded-full animate-leap" style={{ animationDelay: '0s' }}></div>
+        <div className="w-3 h-3 bg-indigo-400 rounded-full animate-leap" style={{ animationDelay: '0.15s' }}></div>
+        <div className="w-3 h-3 bg-indigo-300 rounded-full animate-leap" style={{ animationDelay: '0.3s' }}></div>
       </div>
   </div>
 );
@@ -51,7 +55,7 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
     const auth = useContext(AuthContext);
     
     if (!auth?.user) {
-        if (auth?.loading) return null; 
+        if (auth?.loading) return <LoadingScreen />; 
         return <Navigate to="/login" replace />;
     }
 

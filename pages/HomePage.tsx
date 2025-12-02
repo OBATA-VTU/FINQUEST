@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Announcement, GalleryItem } from '../types';
@@ -62,18 +61,12 @@ export const HomePage: React.FC = () => {
       {/* 1. HERO SECTION */}
       <div className="relative h-[90vh] min-h-[500px] flex items-center justify-center bg-slate-900 overflow-hidden">
         <div className="absolute inset-0 z-0">
-             {/* Optimized Image: No animation on mobile to prevent freezing */}
+             {/* Animation Restored: animate-kenburns adds a subtle life-like zoom */}
              <img 
                 src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" 
                 alt="AAUA Campus" 
                 loading="eager"
-                className="w-full h-full object-cover opacity-40 md:scale-105 hidden md:block md:animate-[blob_20s_infinite_alternate]"
-             />
-             {/* Static image for mobile for better performance */}
-             <img 
-                src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60" 
-                alt="AAUA Campus Mobile" 
-                className="w-full h-full object-cover opacity-40 md:hidden"
+                className="w-full h-full object-cover opacity-40 animate-kenburns origin-center"
              />
              <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-transparent"></div>
         </div>
@@ -83,18 +76,18 @@ export const HomePage: React.FC = () => {
                 <span className="inline-block py-1 px-3 border border-indigo-400/50 rounded-full bg-indigo-900/30 backdrop-blur-md text-indigo-200 text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase mb-4 md:mb-6">
                     Adekunle Ajasin University
                 </span>
-                <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-serif font-bold leading-tight mb-4 md:mb-6">
+                <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-serif font-bold leading-tight mb-4 md:mb-6 drop-shadow-lg">
                     Department of <br/>
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-white to-indigo-200">Finance</span>
                 </h1>
-                <p className="text-base sm:text-lg md:text-2xl text-slate-200 max-w-3xl mx-auto font-light leading-relaxed mb-8 md:mb-10 px-4">
+                <p className="text-base sm:text-lg md:text-2xl text-slate-200 max-w-3xl mx-auto font-light leading-relaxed mb-8 md:mb-10 px-4 drop-shadow-md">
                     Empowering the next generation of financial leaders through academic excellence, ethical grounding, and innovative research.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center px-6">
-                    <button onClick={() => navigate('/login')} className="w-full sm:w-auto px-8 py-4 bg-white text-indigo-900 font-bold rounded shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:bg-indigo-50 transition-all uppercase tracking-widest text-xs md:text-sm">
+                    <button onClick={() => navigate('/login')} className="w-full sm:w-auto px-8 py-4 bg-white text-indigo-900 font-bold rounded shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:bg-indigo-50 transition-all uppercase tracking-widest text-xs md:text-sm hover:scale-105 transform duration-300">
                         Student Portal
                     </button>
-                    <button onClick={() => navigate('/announcements')} className="w-full sm:w-auto px-8 py-4 border border-white text-white font-bold rounded hover:bg-white/10 transition-all uppercase tracking-widest text-xs md:text-sm">
+                    <button onClick={() => navigate('/announcements')} className="w-full sm:w-auto px-8 py-4 border border-white text-white font-bold rounded hover:bg-white/10 transition-all uppercase tracking-widest text-xs md:text-sm hover:scale-105 transform duration-300">
                         Latest News
                     </button>
                 </div>
