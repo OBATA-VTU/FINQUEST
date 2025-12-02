@@ -6,11 +6,18 @@ import { useNotification } from '../contexts/NotificationContext';
 import { uploadToImgBB, uploadFile, deleteFile } from '../utils/api';
 import { LEVELS } from '../constants';
 import { GoogleGenAI } from "@google/genai";
+import { useOutletContext } from 'react-router-dom';
+import { Role } from '../types';
 
 type ContentType = 'news' | 'executives' | 'lecturers' | 'community' | 'gallery' | 'materials';
 
 export const AdminContentPage: React.FC = () => {
-  const [activeContent, setActiveContent] = useState<ContentType>('news');
+  const { role } = useOutletContext<{ role: Role }>();
+  // If Librarian/VP, force 'materials' only
+  const isSuperAdmin = role === 'admin';
+  const initialContent = isSuperAdmin ? 'news' : 'materials';
+
+  const [activeContent, setActiveContent] = useState<ContentType>(initialContent);
   const [contentItems, setContentItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { showNotification } = useNotification();
@@ -28,6 +35,11 @@ export const AdminContentPage: React.FC = () => {
   // HOD
   const [hodData, setHodData] = useState({ name: '', title: '', message: '', imageUrl: '' });
   const [hodImageFile, setHodImageFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    // If permission changes or reloads, force materials if restricted
+    if (!isSuperAdmin) setActiveContent('materials');
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     fetchContent(activeContent);
@@ -110,20 +122,10 @@ export const AdminContentPage: React.FC = () => {
           // Handle WhatsApp Logic for Executives
           if (activeContent === 'executives' && payload.whatsapp) {
               let wa = payload.whatsapp.trim();
-              // Check if it's already a link
               if (!wa.startsWith('http')) {
-                  // It's a number, clean it
-                  let cleanNumber = wa.replace(/[^\d+]/g, ''); // Remove spaces, dashes, parens
-                  
-                  // Handle Nigerian format (080...) -> 23480...
-                  if (cleanNumber.startsWith('0')) {
-                      cleanNumber = '234' + cleanNumber.substring(1);
-                  }
-                  // Handle international format (+234...) -> 234...
-                  if (cleanNumber.startsWith('+')) {
-                      cleanNumber = cleanNumber.substring(1);
-                  }
-                  
+                  let cleanNumber = wa.replace(/[^\d+]/g, '');
+                  if (cleanNumber.startsWith('0')) cleanNumber = '234' + cleanNumber.substring(1);
+                  if (cleanNumber.startsWith('+')) cleanNumber = cleanNumber.substring(1);
                   payload.whatsapp = `https://wa.me/${cleanNumber}`;
               }
           }
@@ -196,20 +198,22 @@ export const AdminContentPage: React.FC = () => {
     <div className="animate-fade-in pb-20 max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold text-slate-900 mb-6">Content Manager</h1>
         
-        {/* SCROLLABLE PILL TABS */}
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
-            {['news', 'executives', 'lecturers', 'community', 'gallery', 'materials'].map(c => (
-                <button 
-                    key={c} 
-                    onClick={() => setActiveContent(c as ContentType)} 
-                    className={`px-5 py-2.5 font-bold text-sm capitalize rounded-full whitespace-nowrap transition-colors ${activeContent === c ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-500'}`}
-                >
-                    {c}
-                </button>
-            ))}
-        </div>
+        {/* SCROLLABLE PILL TABS - Only for Super Admin */}
+        {isSuperAdmin && (
+            <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
+                {['news', 'executives', 'lecturers', 'community', 'gallery', 'materials'].map(c => (
+                    <button 
+                        key={c} 
+                        onClick={() => setActiveContent(c as ContentType)} 
+                        className={`px-5 py-2.5 font-bold text-sm capitalize rounded-full whitespace-nowrap transition-colors ${activeContent === c ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-500'}`}
+                    >
+                        {c}
+                    </button>
+                ))}
+            </div>
+        )}
         
-        {activeContent === 'news' && (
+        {activeContent === 'news' && isSuperAdmin && (
             <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 mb-8">
                 <h3 className="font-bold text-indigo-900 mb-4 flex items-center gap-2">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
@@ -231,7 +235,7 @@ export const AdminContentPage: React.FC = () => {
         )}
 
         <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-bold capitalize text-slate-700">{activeContent} Items</h2>
+            <h2 className="text-lg font-bold capitalize text-slate-700">{activeContent === 'materials' ? 'Study Materials' : activeContent}</h2>
             <button onClick={() => openModal()} className="bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-indigo-700 shadow-md flex items-center gap-2 text-sm">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                 Add New

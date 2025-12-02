@@ -3,7 +3,7 @@ export type Level = 100 | 200 | 300 | 400;
 
 export type Page = 'home' | 'questions' | 'executives' | 'lecturers' | 'announcements' | 'login' | 'admin' | 'profile' | 'community';
 
-export type Role = 'student' | 'executive' | 'lecturer' | 'admin';
+export type Role = 'student' | 'executive' | 'lecturer' | 'admin' | 'librarian' | 'vice_president';
 
 export interface PastQuestion {
   id: string;
