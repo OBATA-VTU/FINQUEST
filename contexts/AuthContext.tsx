@@ -45,21 +45,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const heartbeatTimerRef = useRef<any>(null);
   const lastInteractionRef = useRef<number>(Date.now());
 
-  // 1. Auth State Observer with Safety Timeout AND Minimum Splash Time
+  // 1. Auth State Observer - Direct loading management without artificial delays
   useEffect(() => {
-    const startTime = Date.now();
-    // Force splash screen to show for at least 2.5 seconds to prevent white flash
-    // and allow themes to settle
-    const MIN_SPLASH_TIME = 2500; 
-
-    // Safety: If Firebase takes too long (> 8s), force loading to false
-    const safetyTimer = setTimeout(() => {
-        if (loading) {
-            console.warn("Auth check timed out, forcing app load");
-            setLoading(false);
-        }
-    }, 8000);
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
@@ -111,20 +98,13 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       } else {
         setUser(null);
       }
-
-      // Calculate how much time is left for the minimum splash
-      const elapsed = Date.now() - startTime;
-      const remaining = Math.max(0, MIN_SPLASH_TIME - elapsed);
-
-      setTimeout(() => {
-          setLoading(false);
-          clearTimeout(safetyTimer);
-      }, remaining);
+      
+      // Stop loading immediately after check
+      setLoading(false);
     });
 
     return () => {
         unsubscribe();
-        clearTimeout(safetyTimer);
     };
   }, [showNotification]);
 
@@ -267,10 +247,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
           
           // Double check username availability
           const isAvailable = await checkUsernameAvailability(cleanUsername);
-          // Note: If check failed previously due to network, isAvailable is TRUE.
-          // If the username IS actually taken, write will fail at database level (if rules enforce unique), or just overwrite/duplicate depending on logic.
-          // But for this app, we prioritize UX over strict uniqueness during network outages.
-
+          
           const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.pass);
           const firebaseUser = userCredential.user;
 
@@ -303,7 +280,6 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
               await setDoc(doc(db, 'users', firebaseUser.uid), cleanData);
           } catch (dbError: any) {
               console.error("Database creation failed:", dbError);
-              // Show friendly message instead of "FirebaseError: ..."
               showNotification("Account created, but profile setup incomplete. Please update profile later.", "info");
           }
 
@@ -319,7 +295,6 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     try {
         await signOut(auth);
         setUser(null);
-        // Clean up any session storage if needed
     } catch (e) {
         console.error("Logout failed", e);
     }

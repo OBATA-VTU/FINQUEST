@@ -56,6 +56,7 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
     const auth = useContext(AuthContext);
     
     if (!auth?.user) {
+        // Show loading screen ONLY for protected routes while waiting for Auth
         if (auth?.loading) return <LoadingScreen />; 
         return <Navigate to="/login" replace />;
     }
@@ -77,13 +78,8 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
 };
 
 const AppContent: React.FC = () => {
-  const auth = useContext(AuthContext);
-
-  // If loading, show splash screen.
-  // Note: AuthContext has a 2.5s minimum delay to ensure this stays visible
-  if (auth?.loading) {
-      return <LoadingScreen />;
-  }
+  // We removed the global loading check here to allow immediate rendering of the app shell (Layout/Home)
+  // Protected routes will handle their own loading state via RequireAuth
 
   return (
     <>
