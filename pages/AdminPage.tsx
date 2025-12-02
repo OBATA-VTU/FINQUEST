@@ -10,7 +10,7 @@ export const AdminPage: React.FC = () => {
   const navigate = useNavigate();
   const auth = useContext(AuthContext);
   const { showNotification } = useNotification();
-  const [stats, setStats] = useState({ users: 0, pendingMaterials: 0, materials: 0, pendingLostFound: 0 });
+  const [stats, setStats] = useState({ users: 0, activeUsers: 0, pendingMaterials: 0, materials: 0, pendingLostFound: 0 });
   const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
   const [broadcastMsg, setBroadcastMsg] = useState('');
 
@@ -22,13 +22,25 @@ export const AdminPage: React.FC = () => {
   useEffect(() => {
     const fetchStats = async () => {
         try {
+            // Fetch Users
             const uSnap = await getDocs(collection(db, 'users'));
+            const totalUsers = uSnap.size;
+            
+            // Calculate Active Users (Active in last 10 minutes)
+            const tenMinutesAgo = new Date().getTime() - (10 * 60 * 1000);
+            const activeCount = uSnap.docs.filter(doc => {
+                const data = doc.data();
+                if (!data.lastActive) return false;
+                return new Date(data.lastActive).getTime() > tenMinutesAgo;
+            }).length;
+
             const qSnap = await getDocs(collection(db, 'questions'));
             const pMatSnap = await getDocs(query(collection(db, 'questions'), where('status', '==', 'pending')));
             const pLostSnap = await getDocs(query(collection(db, 'lost_items'), where('status', '==', 'pending')));
 
             setStats({ 
-                users: uSnap.size, 
+                users: totalUsers, 
+                activeUsers: activeCount,
                 materials: qSnap.size, 
                 pendingMaterials: pMatSnap.size,
                 pendingLostFound: pLostSnap.size
@@ -64,7 +76,7 @@ export const AdminPage: React.FC = () => {
             <h3 className="text-slate-500 font-bold uppercase text-[10px] tracking-widest mb-2">{title}</h3>
             <p className={`text-4xl font-bold ${color.replace('text', 'text')}`}>{value}</p>
             <div className="mt-4 text-xs font-medium text-slate-400 flex items-center gap-1 group-hover:text-indigo-600 transition-colors">
-                Manage &rarr;
+                View Details &rarr;
             </div>
         </div>
       );
@@ -89,16 +101,25 @@ export const AdminPage: React.FC = () => {
                 value={stats.users} 
                 color="text-indigo-600" 
                 link="/admin/users"
-                visible={!isLibrarian} // Librarians don't need user stats
+                visible={!isLibrarian} 
                 icon={<svg className="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" /></svg>}
+            />
+
+            <StatCard 
+                title="Active Now" 
+                value={stats.activeUsers} 
+                color="text-emerald-500" 
+                link="/admin/users"
+                visible={!isLibrarian}
+                icon={<svg className="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>}
             />
             
             <StatCard 
                 title="Study Materials" 
                 value={stats.materials} 
-                color="text-emerald-600" 
+                color="text-blue-600" 
                 link="/admin/content"
-                visible={!isVP} // VP doesn't manage materials
+                visible={!isVP} 
                 icon={<svg className="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" /></svg>}
             />
 
@@ -144,7 +165,7 @@ export const AdminPage: React.FC = () => {
 
                 {isSuperAdmin && (
                     <button onClick={() => navigate('/admin/settings')} className="p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-amber-50 hover:border-amber-200 text-slate-600 hover:text-amber-700 transition flex flex-col items-center gap-2 text-center">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         <span className="text-xs font-bold">Settings</span>
                     </button>
                 )}

@@ -68,6 +68,7 @@ export interface User {
   contributionPoints?: number; // Added for gamification
   savedQuestions?: string[]; // Added for bookmarks
   createdAt?: string;
+  lastActive?: string; // Added for active user tracking
 }
 
 export interface CommunityGroup {

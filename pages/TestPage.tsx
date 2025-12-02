@@ -343,8 +343,6 @@ export const TestPage: React.FC = () => {
                       </button>
                   </div>
 
-                  <AdBanner />
-
                   {/* Leaderboard */}
                   <div className="mt-16 max-w-2xl mx-auto w-full">
                       <div className="flex justify-between items-end mb-6">

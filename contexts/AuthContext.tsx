@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { User, Level } from '../types';
 import { auth, db } from '../firebase';
 import { 
@@ -31,11 +31,22 @@ const sanitizeData = (data: any) => {
   return JSON.parse(JSON.stringify(data));
 };
 
+// 30 Minutes Inactivity Limit
+const INACTIVITY_LIMIT = 30 * 60 * 1000; 
+// Update "Last Active" in DB every 5 minutes
+const HEARTBEAT_INTERVAL = 5 * 60 * 1000;
+
 export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { showNotification } = useNotification();
+  
+  // Refs for timers - using any to avoid NodeJS namespace issues in browser environment
+  const idleTimerRef = useRef<any>(null);
+  const heartbeatTimerRef = useRef<any>(null);
+  const lastInteractionRef = useRef<number>(Date.now());
 
+  // 1. Auth State Observer
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -55,7 +66,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     level: userData.level || 100,
                     avatarUrl: userData.avatarUrl || firebaseUser.photoURL,
                     contributionPoints: userData.contributionPoints || 0,
-                    savedQuestions: userData.savedQuestions || []
+                    savedQuestions: userData.savedQuestions || [],
+                    lastActive: userData.lastActive
                 });
             } else {
                 // If auth exists but no DB doc, treat as partial user
@@ -93,6 +105,60 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     return () => unsubscribe();
   }, [showNotification]);
 
+  // 2. Auto Logout & Activity Tracking Logic
+  useEffect(() => {
+      if (!user) return;
+
+      const updateActivity = () => {
+          lastInteractionRef.current = Date.now();
+      };
+
+      const handleHeartbeat = async () => {
+          if (!auth.currentUser) return;
+          try {
+              // Update lastActive timestamp in Firestore
+              await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+                  lastActive: new Date().toISOString()
+              });
+          } catch (e) {
+              // Silent fail for heartbeat
+              console.warn("Heartbeat failed", e); 
+          }
+      };
+
+      const checkInactivity = () => {
+          const now = Date.now();
+          if (now - lastInteractionRef.current > INACTIVITY_LIMIT) {
+              console.log("User inactive. Logging out.");
+              showNotification("Session expired due to inactivity. Please login again.", "warning");
+              logout(); 
+          }
+      };
+
+      // Events to track activity
+      window.addEventListener('mousemove', updateActivity);
+      window.addEventListener('keydown', updateActivity);
+      window.addEventListener('click', updateActivity);
+      window.addEventListener('scroll', updateActivity);
+
+      // Initial Heartbeat
+      handleHeartbeat();
+
+      // Timers
+      idleTimerRef.current = setInterval(checkInactivity, 60 * 1000); // Check every minute
+      heartbeatTimerRef.current = setInterval(handleHeartbeat, HEARTBEAT_INTERVAL); // Update DB every 5 mins
+
+      return () => {
+          window.removeEventListener('mousemove', updateActivity);
+          window.removeEventListener('keydown', updateActivity);
+          window.removeEventListener('click', updateActivity);
+          window.removeEventListener('scroll', updateActivity);
+          
+          if (idleTimerRef.current) clearInterval(idleTimerRef.current);
+          if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
+      };
+  }, [user?.id]); // Re-run only when user changes (login/logout)
+
   const login = async (email: string, pass: string) => {
     try {
         await signInWithEmailAndPassword(auth, email, pass);
@@ -123,7 +189,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                 level: 100,
                 createdAt: new Date().toISOString(),
                 photoURL: firebaseUser.photoURL,
-                savedQuestions: []
+                savedQuestions: [],
+                lastActive: new Date().toISOString()
                 // NO username yet
               });
 
@@ -200,7 +267,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             username: cleanUsername,
             matricNumber: data.matricNumber || '',
             avatarUrl: data.avatarUrl,
-            savedQuestions: []
+            savedQuestions: [],
+            lastActive: new Date().toISOString()
           };
 
           try {
@@ -228,6 +296,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     try {
         await signOut(auth);
         setUser(null);
+        // Clean up any session storage if needed
     } catch (e) {
         console.error("Logout failed", e);
     }
