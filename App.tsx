@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
 import { UserDashboardPage } from './pages/UserDashboardPage';
@@ -31,9 +31,12 @@ import ScrollToTop from './components/ScrollToTop';
 const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNode, adminOnly?: boolean }) => {
     const auth = useContext(AuthContext);
     
+    if (auth?.loading) {
+        // Minimal fallback while checking auth state, no full splash
+        return null; 
+    }
+
     if (!auth?.user) {
-        // If loading, render nothing or a minimal spinner to avoid redirect flickering
-        if (auth?.loading) return null; 
         return <Navigate to="/login" replace />;
     }
 
