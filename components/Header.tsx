@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Logo } from './Logo';
 import { Link } from 'react-router-dom';
@@ -20,7 +21,7 @@ interface FirestoreNotification {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
-  const { notifications: toastNotifications, removeNotification } = useNotification();
+  const { notifications: toastNotifications } = useNotification();
   const auth = useContext(AuthContext);
   const { theme, toggleTheme } = useTheme();
   
@@ -44,15 +45,26 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
       if (!auth?.user) return;
 
       // Listen for notifications targeted to this user OR 'all'
+      // We fetch more than we need and filter by time client-side to ensure the 24hr rule is accurate
       const q = query(
           collection(db, 'notifications'), 
           where('userId', 'in', [auth.user.id, 'all']),
           orderBy('createdAt', 'desc'),
-          limit(20)
+          limit(50) 
       );
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
-          const notes = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as FirestoreNotification));
+          const now = Date.now();
+          const oneDayMs = 24 * 60 * 60 * 1000;
+
+          const notes = snapshot.docs
+            .map(d => ({ id: d.id, ...d.data() } as FirestoreNotification))
+            .filter(note => {
+                // Filter: Keep only if created within the last 24 hours
+                const createdTime = new Date(note.createdAt).getTime();
+                return (now - createdTime) < oneDayMs;
+            });
+            
           setDbNotifications(notes);
       });
 
@@ -61,17 +73,25 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
 
   const clearDbNotification = async (id: string) => {
       try {
+          // This deletes the notification permanently (Marks as read/cleared)
           await deleteDoc(doc(db, 'notifications', id));
       } catch (e) { console.error("Error clearing note", e); }
   };
 
-  // Merge Toast notifications (transient) and DB notifications (persistent) for display
-  // We'll prioritize DB notifications for the dropdown list structure
-  const displayNotifications = [...dbNotifications];
+  const handleClearAll = async () => {
+      // Loop through and delete all currently visible notifications for this user
+      // Note: In a production app with many notifs, use a Batch write. 
+      // For user specific notifications this is acceptable.
+      const deletionPromises = dbNotifications.map(note => 
+          deleteDoc(doc(db, 'notifications', note.id))
+      );
+      await Promise.all(deletionPromises);
+  };
 
   const handleToggle = (e: React.MouseEvent) => {
-      e.stopPropagation(); // Stop event from bubbling to document listener immediately
-      setShowNotifications(!showNotifications);
+      e.preventDefault();
+      e.stopPropagation(); // Critical: Stop event bubbling to prevent immediate closure via document listener
+      setShowNotifications((prev) => !prev);
   };
 
   return (
@@ -116,8 +136,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
                 
                 {/* Notification Bell - ONLY FOR LOGGED IN USERS */}
                 {auth?.user && (
-                    <div className="relative" ref={dropdownRef}>
+                    <div className="relative z-50" ref={dropdownRef}>
                         <button 
+                            type="button"
                             onClick={handleToggle}
                             className={`p-2 rounded-full border relative transition-colors ${showNotifications ? 'bg-indigo-50 dark:bg-indigo-900 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300' : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'}`}
                         >
@@ -131,45 +152,57 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
 
                         {/* Notification Dropdown */}
                         {showNotifications && (
-                            <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden animate-fade-in-down origin-top-right z-50">
+                            <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden animate-fade-in-down origin-top-right ring-1 ring-black ring-opacity-5">
                                 <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 flex justify-between items-center">
-                                    <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Notifications</h3>
-                                    <span className="text-xs text-slate-500 dark:text-slate-400">{dbNotifications.length} new</span>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Notifications</h3>
+                                        {dbNotifications.length > 0 && <span className="bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded-full">{dbNotifications.length}</span>}
+                                    </div>
+                                    {dbNotifications.length > 0 && (
+                                        <button 
+                                            onClick={handleClearAll}
+                                            className="text-xs font-bold text-slate-500 hover:text-rose-500 dark:text-slate-400 dark:hover:text-rose-400 transition-colors"
+                                        >
+                                            Clear All
+                                        </button>
+                                    )}
                                 </div>
-                                <div className="max-h-80 overflow-y-auto">
+                                <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-100 dark:scrollbar-thumb-slate-700">
                                     {dbNotifications.length === 0 && toastNotifications.length === 0 ? (
-                                        <div className="p-8 text-center text-slate-400 text-sm">
+                                        <div className="p-8 text-center text-slate-400 text-sm flex flex-col items-center">
+                                            <svg className="w-10 h-10 text-slate-200 dark:text-slate-700 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
                                             <p>No new notifications</p>
                                         </div>
                                     ) : (
                                         <ul className="divide-y divide-slate-50 dark:divide-slate-800">
                                             {/* DB Notifications */}
                                             {dbNotifications.map((note) => (
-                                                <li key={note.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-start gap-3 relative group">
+                                                <li key={note.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-start gap-3 relative group animate-fade-in">
                                                     <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
                                                         note.type === 'success' ? 'bg-emerald-500' : 
-                                                        note.type === 'error' ? 'bg-rose-500' : 'bg-indigo-500'
+                                                        note.type === 'error' ? 'bg-rose-500' : 
+                                                        note.type === 'warning' ? 'bg-amber-500' : 'bg-indigo-500'
                                                     }`}></div>
-                                                    <div className="flex-1">
-                                                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-snug">{note.message}</p>
+                                                    <div className="flex-1 pr-4">
+                                                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-snug font-medium">{note.message}</p>
                                                         <p className="text-[10px] text-slate-400 mt-1">{new Date(note.createdAt).toLocaleDateString()} {new Date(note.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                                                     </div>
                                                     <button 
-                                                        onClick={() => clearDbNotification(note.id)}
-                                                        className="text-slate-300 hover:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2"
-                                                        title="Dismiss"
+                                                        onClick={(e) => { e.stopPropagation(); clearDbNotification(note.id); }}
+                                                        className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all absolute top-2 right-2 p-1"
+                                                        title="Mark as read"
                                                     >
-                                                        ✕
+                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                                                     </button>
                                                 </li>
                                             ))}
                                             {/* Toast Notifications (Temporary) */}
                                             {toastNotifications.map((note) => (
-                                                <li key={note.id} className="p-4 bg-yellow-50 dark:bg-yellow-900/10 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 transition-colors flex items-start gap-3">
-                                                    <div className="mt-1 w-2 h-2 rounded-full shrink-0 bg-yellow-500"></div>
+                                                <li key={note.id} className="p-4 bg-amber-50 dark:bg-amber-900/10 hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors flex items-start gap-3">
+                                                    <div className="mt-1 w-2 h-2 rounded-full shrink-0 bg-amber-500 animate-pulse"></div>
                                                     <div className="flex-1">
-                                                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-snug">{note.message}</p>
-                                                        <p className="text-[10px] text-slate-400 mt-1 capitalize">New Alert</p>
+                                                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-snug font-medium">{note.message}</p>
+                                                        <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wide font-bold">New Alert</p>
                                                     </div>
                                                 </li>
                                             ))}

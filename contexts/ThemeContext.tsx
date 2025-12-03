@@ -12,9 +12,10 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    // Force default to light mode as requested
+    // STRICT DEFAULT: Light mode unless 'dark' is explicitly saved in localStorage.
+    // We ignore window.matchMedia system preferences to ensure the site loads light by default.
     const stored = localStorage.getItem('theme');
-    return (stored === 'dark') ? 'dark' : 'light';
+    return stored === 'dark' ? 'dark' : 'light';
   });
 
   useEffect(() => {
