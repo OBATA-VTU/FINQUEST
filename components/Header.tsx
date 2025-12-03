@@ -115,7 +115,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
             </Link>
           </div>
 
-          {/* Right Side: Date, Theme Toggle & Notifications */}
+          {/* Right Side: Date, Theme, Notifications, Avatar */}
           <div className="flex items-center gap-3 ml-auto">
                 <div className="hidden sm:block px-3 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">
                     {new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
@@ -185,7 +185,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
                                                     }`}></div>
                                                     <div className="flex-1 pr-4">
                                                         <p className="text-sm text-slate-700 dark:text-slate-300 leading-snug font-medium">{note.message}</p>
-                                                        <p className="text-[10px] text-slate-400 mt-1">{new Date(note.createdAt).toLocaleDateString()} {new Date(note.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                                        <p className="text-xs text-slate-400 mt-1">{new Date(note.createdAt).toLocaleDateString()} {new Date(note.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                                                     </div>
                                                     <button 
                                                         onClick={(e) => { e.stopPropagation(); clearDbNotification(note.id); }}
@@ -202,7 +202,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
                                                     <div className="mt-1 w-2 h-2 rounded-full shrink-0 bg-amber-500 animate-pulse"></div>
                                                     <div className="flex-1">
                                                         <p className="text-sm text-slate-700 dark:text-slate-300 leading-snug font-medium">{note.message}</p>
-                                                        <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wide font-bold">New Alert</p>
+                                                        <p className="text-xs text-slate-400 mt-1 uppercase tracking-wide font-bold">New Alert</p>
                                                     </div>
                                                 </li>
                                             ))}
@@ -212,6 +212,21 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
                             </div>
                         )}
                     </div>
+                )}
+
+                {/* USER PROFILE AVATAR (Visible on Desktop & Mobile) */}
+                {auth?.user && (
+                    <Link to="/profile" className="relative group ml-1" title="Go to Profile">
+                        <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-700 overflow-hidden shadow-sm flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold text-sm hover:border-indigo-500 dark:hover:border-indigo-400 transition-all ring-2 ring-transparent hover:ring-indigo-100 dark:hover:ring-indigo-900">
+                            {auth.user.avatarUrl ? (
+                                <img src={auth.user.avatarUrl} alt={auth.user.name} className="w-full h-full object-cover" />
+                            ) : (
+                                auth.user.name.charAt(0).toUpperCase()
+                            )}
+                        </div>
+                        {/* Online Status Dot */}
+                        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full"></div>
+                    </Link>
                 )}
           </div>
 
