@@ -6,6 +6,7 @@ import { EditProfileModal } from '../components/EditProfileModal';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { PastQuestion } from '../types';
+import { VerificationBadge } from '../components/VerificationBadge';
 
 export const ProfilePage: React.FC = () => {
   const auth = useContext(AuthContext);
@@ -91,7 +92,13 @@ export const ProfilePage: React.FC = () => {
                       {/* Info */}
                       <div className="flex-1 pb-2">
                           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">{auth.user.name}</h1>
-                          <p className="text-slate-500 dark:text-slate-400 font-medium mb-3">@{auth.user.username}</p>
+                          
+                          {/* Username + Badge Area */}
+                          <div className="flex items-center justify-center md:justify-start gap-1.5 mb-3 text-slate-500 dark:text-slate-400 font-medium bg-slate-100 dark:bg-slate-700/50 w-fit mx-auto md:mx-0 px-3 py-1 rounded-lg">
+                              <span>@{auth.user.username}</span>
+                              <VerificationBadge role={auth.user.role} isVerified={auth.user.isVerified} className="w-4 h-4" />
+                          </div>
+
                           <div className="flex flex-wrap justify-center md:justify-start gap-2">
                               <span className="px-3 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-full uppercase tracking-wide border border-slate-200 dark:border-slate-600">
                                   {auth.user.level} Level

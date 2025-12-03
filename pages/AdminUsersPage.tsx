@@ -194,12 +194,12 @@ export const AdminUsersPage: React.FC = () => {
                                 {u.avatarUrl ? <img src={u.avatarUrl} className="w-full h-full object-cover" /> : u.name?.[0]}
                             </div>
                             <div>
-                                <p className="font-bold text-slate-900 flex items-center gap-1">
-                                    {u.name} 
-                                    <VerificationBadge role={u.role} isVerified={u.isVerified} />
-                                    <span className="text-xs text-slate-400 font-normal">(@{u.username || '---'})</span>
-                                </p>
-                                <p className="text-xs text-slate-500">{u.email} • <span className="font-mono bg-slate-100 px-1 rounded">{u.matricNumber || 'No Matric'}</span></p>
+                                <p className="font-bold text-slate-900">{u.name}</p>
+                                <div className="flex items-center gap-1 text-xs text-slate-500">
+                                    <span>@{u.username || '---'}</span>
+                                    <VerificationBadge role={u.role} isVerified={u.isVerified} className="w-3 h-3" />
+                                </div>
+                                <p className="text-xs text-slate-400 mt-0.5">{u.email} • <span className="font-mono bg-slate-100 px-1 rounded">{u.matricNumber || 'No Matric'}</span></p>
                             </div>
                         </div>
                         

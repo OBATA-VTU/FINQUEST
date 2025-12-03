@@ -245,7 +245,7 @@ export const CommunityPage: React.FC = () => {
                       <div className="flex flex-col gap-3 pt-2">
                           <a href="mailto:finsa@gmail.com" className="group flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 rounded-lg hover:border-indigo-600 transition-all">
                               <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-full text-indigo-500 dark:text-indigo-400">
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 00-2-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                               </div>
                               <span className="text-sm font-medium text-slate-700 dark:text-slate-300">finsa@gmail.com</span>
                           </a>

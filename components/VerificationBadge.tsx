@@ -18,8 +18,8 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({ role, isVe
     );
   }
 
-  // Executives / VP / Librarian = Pink
-  if (['executive', 'vice_president', 'librarian'].includes(role)) {
+  // Executives / VP / Librarian / Supplement = Pink
+  if (['executive', 'vice_president', 'librarian', 'supplement'].includes(role)) {
     return (
       <svg className={`${className} text-pink-500 fill-current ml-1`} viewBox="0 0 24 24">
         <title>Executive</title>
