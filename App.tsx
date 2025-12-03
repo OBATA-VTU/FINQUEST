@@ -24,40 +24,16 @@ import { FAQPage } from './pages/FAQPage'; // New Page
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { Logo } from './components/Logo';
 import { Layout } from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
-
-// Redesigned Loading Screen with "Leapfrog" dots
-// Using z-[9999] to ensure it covers everything including the HTML loader until removed
-const LoadingScreen = () => (
-  <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-900 transition-opacity duration-700 ease-out animate-fade-in">
-      
-      {/* 1. Logo */}
-      <div className="mb-4 relative">
-          <Logo className="h-24 w-24" />
-          <div className="absolute -inset-4 bg-indigo-500/20 rounded-full blur-xl animate-pulse"></div>
-      </div>
-
-      {/* 2. Title */}
-      <h1 className="text-3xl font-serif font-bold text-white tracking-widest mb-6">FINSA</h1>
-      
-      {/* 3. Three Dots Animation (Leaping) */}
-      <div className="flex gap-3">
-        <div className="w-3 h-3 bg-indigo-500 rounded-full animate-leap" style={{ animationDelay: '0s' }}></div>
-        <div className="w-3 h-3 bg-indigo-400 rounded-full animate-leap" style={{ animationDelay: '0.15s' }}></div>
-        <div className="w-3 h-3 bg-indigo-300 rounded-full animate-leap" style={{ animationDelay: '0.3s' }}></div>
-      </div>
-  </div>
-);
 
 // Protected Route Wrapper
 const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNode, adminOnly?: boolean }) => {
     const auth = useContext(AuthContext);
     
     if (!auth?.user) {
-        // Show loading screen ONLY for protected routes while waiting for Auth
-        if (auth?.loading) return <LoadingScreen />; 
+        // If loading, render nothing or a minimal spinner to avoid redirect flickering
+        if (auth?.loading) return null; 
         return <Navigate to="/login" replace />;
     }
 
@@ -78,9 +54,6 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
 };
 
 const AppContent: React.FC = () => {
-  // We removed the global loading check here to allow immediate rendering of the app shell (Layout/Home)
-  // Protected routes will handle their own loading state via RequireAuth
-
   return (
     <>
         <ScrollToTop />
