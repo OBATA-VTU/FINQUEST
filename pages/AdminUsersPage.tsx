@@ -4,12 +4,18 @@ import { db } from '../firebase';
 import { collection, getDocs, updateDoc, doc, deleteDoc, addDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
 import { AuthContext } from '../contexts/AuthContext';
+import { VerificationBadge } from '../components/VerificationBadge';
 
-const ALLOWED_ROLES = ['student', 'executive', 'lecturer', 'admin', 'librarian', 'vice_president'];
+const ALLOWED_ROLES = ['student', 'executive', 'lecturer', 'admin', 'librarian', 'vice_president', 'supplement'];
 
 export const AdminUsersPage: React.FC = () => {
   const auth = useContext(AuthContext);
-  const isSuperAdmin = auth?.user?.role === 'admin';
+  const role = auth?.user?.role || 'student';
+  const isSuperAdmin = role === 'admin';
+  const isSupplement = role === 'supplement';
+  
+  // VP and Librarian are Read-Only here
+  const hasWriteAccess = isSuperAdmin || isSupplement;
 
   const [users, setUsers] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
@@ -53,7 +59,12 @@ export const AdminUsersPage: React.FC = () => {
   };
 
   const handleRoleChange = (user: any, newRole: string) => {
-      if (!isSuperAdmin) return;
+      // Supplement cannot change roles (can only manage normal users, not promote)
+      if (!isSuperAdmin) {
+          showNotification("Only Main Admin can change roles.", "error");
+          return;
+      }
+      
       if (newRole === 'executive' || newRole === 'lecturer') {
           setPromoUser(user);
           setPromoRole(newRole);
@@ -97,18 +108,43 @@ export const AdminUsersPage: React.FC = () => {
       } catch (e) { showNotification("Update failed", "error"); }
   };
 
-  const handleBan = async (uid: string) => {
-      if (!isSuperAdmin) return;
+  const handleVerifyToggle = async (user: any) => {
+      if (!hasWriteAccess) return;
+      
+      // Supplement check: Can only verify students
+      if (isSupplement && user.role !== 'student') {
+          showNotification("You can only verify students.", "error");
+          return;
+      }
+
+      const newValue = !user.isVerified;
+      try {
+          await updateDoc(doc(db, 'users', user.id), { isVerified: newValue });
+          setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isVerified: newValue } : u));
+          showNotification(newValue ? "User verified (Blue Badge awarded)" : "User unverified", "success");
+      } catch (e) { showNotification("Verification update failed", "error"); }
+  };
+
+  const handleBan = async (user: any) => {
+      if (!hasWriteAccess) return;
+      if (isSupplement && user.role !== 'student') {
+          showNotification("You can only suspend students.", "error");
+          return;
+      }
       if (!window.confirm("Suspend this user account?")) return;
       showNotification("User suspension requires backend function (not implemented)", "info");
   };
 
-  const handleDelete = async (uid: string) => {
-      if (!isSuperAdmin) return;
+  const handleDelete = async (user: any) => {
+      if (!hasWriteAccess) return;
+      if (isSupplement && user.role !== 'student') {
+          showNotification("You can only delete students.", "error");
+          return;
+      }
       if (!window.confirm("Permanently delete this user database record?")) return;
       try {
-          await deleteDoc(doc(db, 'users', uid));
-          setUsers(prev => prev.filter(u => u.id !== uid));
+          await deleteDoc(doc(db, 'users', user.id));
+          setUsers(prev => prev.filter(u => u.id !== user.id));
           showNotification("User record deleted", "success");
       } catch (e) { showNotification("Delete failed", "error"); }
   };
@@ -136,7 +172,7 @@ export const AdminUsersPage: React.FC = () => {
   return (
     <div className="animate-fade-in max-w-5xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <h1 className="text-2xl font-bold text-slate-900">User Management {isSuperAdmin ? '' : '(Read Only)'}</h1>
+            <h1 className="text-2xl font-bold text-slate-900">User Management {hasWriteAccess ? '' : '(Read Only)'}</h1>
             <div className="relative w-full md:w-64">
                 <input 
                     type="text" 
@@ -158,30 +194,51 @@ export const AdminUsersPage: React.FC = () => {
                                 {u.avatarUrl ? <img src={u.avatarUrl} className="w-full h-full object-cover" /> : u.name?.[0]}
                             </div>
                             <div>
-                                <p className="font-bold text-slate-900">{u.name} <span className="text-xs text-slate-400 font-normal">(@{u.username || '---'})</span></p>
+                                <p className="font-bold text-slate-900 flex items-center gap-1">
+                                    {u.name} 
+                                    <VerificationBadge role={u.role} isVerified={u.isVerified} />
+                                    <span className="text-xs text-slate-400 font-normal">(@{u.username || '---'})</span>
+                                </p>
                                 <p className="text-xs text-slate-500">{u.email} • <span className="font-mono bg-slate-100 px-1 rounded">{u.matricNumber || 'No Matric'}</span></p>
                             </div>
                         </div>
                         
                         <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                            {isSuperAdmin ? (
+                            {hasWriteAccess ? (
                                 <>
-                                    <select 
-                                        value={u.role} 
-                                        onChange={(e) => handleRoleChange(u, e.target.value)} 
-                                        className="p-2 text-sm border rounded-lg bg-slate-50 font-medium"
+                                    <button 
+                                        onClick={() => handleVerifyToggle(u)}
+                                        className={`p-2 rounded transition-colors ${u.isVerified ? 'text-blue-500 hover:bg-blue-50' : 'text-slate-300 hover:bg-slate-100 hover:text-blue-400'}`}
+                                        title={u.isVerified ? "Revoke Verification" : "Verify User (Blue Badge)"}
+                                        disabled={isSupplement && u.role !== 'student'}
                                     >
-                                        {ALLOWED_ROLES.map(r => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
-                                    </select>
+                                        <svg className="w-5 h-5" fill={u.isVerified ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </button>
+
+                                    {/* Only Super Admin can see role dropdown */}
+                                    {isSuperAdmin ? (
+                                        <select 
+                                            value={u.role} 
+                                            onChange={(e) => handleRoleChange(u, e.target.value)} 
+                                            className="p-2 text-sm border rounded-lg bg-slate-50 font-medium"
+                                        >
+                                            {ALLOWED_ROLES.map(r => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
+                                        </select>
+                                    ) : (
+                                        // Supplement or other: Just show badge
+                                        <span className="px-3 py-1 bg-slate-100 rounded-full text-xs font-bold uppercase text-slate-500">{u.role}</span>
+                                    )}
                                     
                                     <button onClick={() => setNotifyUser(u)} className="p-2 text-indigo-500 hover:bg-indigo-50 rounded" title="Send Notification">
                                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
                                     </button>
 
-                                    <button onClick={() => handleBan(u.id)} className="p-2 text-amber-500 hover:bg-amber-50 rounded" title="Suspend">
+                                    <button onClick={() => handleBan(u)} className="p-2 text-amber-500 hover:bg-amber-50 rounded" title="Suspend" disabled={isSupplement && u.role !== 'student'}>
                                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                     </button>
-                                    <button onClick={() => handleDelete(u.id)} className="p-2 text-rose-500 hover:bg-rose-50 rounded" title="Delete">
+                                    <button onClick={() => handleDelete(u)} className="p-2 text-rose-500 hover:bg-rose-50 rounded" title="Delete" disabled={isSupplement && u.role !== 'student'}>
                                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                     </button>
                                 </>
@@ -194,8 +251,8 @@ export const AdminUsersPage: React.FC = () => {
             </div>
         )}
 
-        {/* Promotion Modal */}
-        {promoUser && (
+        {/* Promotion Modal - Only for Super Admin */}
+        {promoUser && isSuperAdmin && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                 <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl">
                     <h3 className="font-bold text-lg mb-4">Promote to {promoRole}</h3>

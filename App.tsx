@@ -37,7 +37,8 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
         return <Navigate to="/login" replace />;
     }
 
-    if (adminOnly && !['admin', 'librarian', 'vice_president'].includes(auth.user.role)) {
+    // Updated to include 'supplement'
+    if (adminOnly && !['admin', 'librarian', 'vice_president', 'supplement'].includes(auth.user.role)) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[80vh] text-center px-4 bg-slate-50 dark:bg-slate-900">
                 <div className="bg-red-100 dark:bg-red-900/30 p-6 rounded-full mb-6">

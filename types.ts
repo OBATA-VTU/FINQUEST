@@ -3,7 +3,7 @@ export type Level = 100 | 200 | 300 | 400;
 
 export type Page = 'home' | 'questions' | 'executives' | 'lecturers' | 'announcements' | 'login' | 'admin' | 'profile' | 'community';
 
-export type Role = 'student' | 'executive' | 'lecturer' | 'admin' | 'librarian' | 'vice_president';
+export type Role = 'student' | 'executive' | 'lecturer' | 'admin' | 'librarian' | 'vice_president' | 'supplement';
 
 export interface PastQuestion {
   id: string;
@@ -45,7 +45,7 @@ export interface Lecturer {
   title: string;
   imageUrl: string;
   specialization: string;
-}
+  }
 
 export interface Announcement {
   id:string;
@@ -65,10 +65,11 @@ export interface User {
   role: Role;
   level?: Level;
   avatarUrl?: string;
-  contributionPoints?: number; // Added for gamification
-  savedQuestions?: string[]; // Added for bookmarks
+  contributionPoints?: number; 
+  savedQuestions?: string[]; 
   createdAt?: string;
-  lastActive?: string; // Added for active user tracking
+  lastActive?: string; 
+  isVerified?: boolean; // Added for blue tick
 }
 
 export interface CommunityGroup {

@@ -22,33 +22,51 @@ export const AdminPage: React.FC = () => {
   useEffect(() => {
     const fetchStats = async () => {
         try {
-            // Fetch Users
-            const uSnap = await getDocs(collection(db, 'users'));
-            const totalUsers = uSnap.size;
+            // Fetch Users (Only needed for Admin and VP)
+            let totalUsers = 0;
+            let activeCount = 0;
             
-            // Calculate Active Users (Active in last 10 minutes)
-            const tenMinutesAgo = new Date().getTime() - (10 * 60 * 1000);
-            const activeCount = uSnap.docs.filter(doc => {
-                const data = doc.data();
-                if (!data.lastActive) return false;
-                return new Date(data.lastActive).getTime() > tenMinutesAgo;
-            }).length;
+            if (!isLibrarian) {
+                const uSnap = await getDocs(collection(db, 'users'));
+                totalUsers = uSnap.size;
+                
+                // Calculate Active Users (Active in last 10 minutes)
+                const tenMinutesAgo = new Date().getTime() - (10 * 60 * 1000);
+                activeCount = uSnap.docs.filter(doc => {
+                    const data = doc.data();
+                    if (!data.lastActive) return false;
+                    return new Date(data.lastActive).getTime() > tenMinutesAgo;
+                }).length;
+            }
 
-            const qSnap = await getDocs(collection(db, 'questions'));
-            const pMatSnap = await getDocs(query(collection(db, 'questions'), where('status', '==', 'pending')));
-            const pLostSnap = await getDocs(query(collection(db, 'lost_items'), where('status', '==', 'pending')));
+            // Material Stats (Needed for Admin and Librarian)
+            let matCount = 0;
+            let pendingMatCount = 0;
+            if (!isVP) {
+                const qSnap = await getDocs(collection(db, 'questions'));
+                matCount = qSnap.size;
+                const pMatSnap = await getDocs(query(collection(db, 'questions'), where('status', '==', 'pending')));
+                pendingMatCount = pMatSnap.size;
+            }
+
+            // Lost & Found (Needed for Admin and VP)
+            let pendingLostCount = 0;
+            if (!isLibrarian) {
+                const pLostSnap = await getDocs(query(collection(db, 'lost_items'), where('status', '==', 'pending')));
+                pendingLostCount = pLostSnap.size;
+            }
 
             setStats({ 
                 users: totalUsers, 
                 activeUsers: activeCount,
-                materials: qSnap.size, 
-                pendingMaterials: pMatSnap.size,
-                pendingLostFound: pLostSnap.size
+                materials: matCount, 
+                pendingMaterials: pendingMatCount,
+                pendingLostFound: pendingLostCount
             });
         } catch (e) { console.error(e); }
     };
     fetchStats();
-  }, []);
+  }, [isLibrarian, isVP]);
 
   const handleBroadcast = async () => {
       if (!broadcastMsg.trim()) return;
@@ -90,12 +108,13 @@ export const AdminPage: React.FC = () => {
             </h1>
             <p className="text-slate-500 text-sm mt-1">
                 {isLibrarian ? 'Manage academic resources and study materials.' : 
-                 isVP ? 'Oversee student welfare and announcements.' : 
+                 isVP ? 'Oversee student welfare, lost items, and news.' : 
                  'Platform overview and quick actions.'}
             </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* USERS - Admin & VP Only */}
             <StatCard 
                 title="Total Users" 
                 value={stats.users} 
@@ -114,6 +133,7 @@ export const AdminPage: React.FC = () => {
                 icon={<svg className="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>}
             />
             
+            {/* MATERIALS - Admin & Librarian Only */}
             <StatCard 
                 title="Study Materials" 
                 value={stats.materials} 
@@ -123,6 +143,7 @@ export const AdminPage: React.FC = () => {
                 icon={<svg className="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" /></svg>}
             />
 
+            {/* PENDING UPLOADS - Admin & Librarian Only */}
             <div onClick={() => navigate('/admin/approvals')} className={`bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group cursor-pointer transition-all hover:shadow-md hover:-translate-y-1 ${isVP ? 'hidden' : ''}`}>
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 text-rose-500">
                     <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" /></svg>
@@ -132,6 +153,7 @@ export const AdminPage: React.FC = () => {
                 {stats.pendingMaterials > 0 && <div className="absolute top-6 right-6 w-3 h-3 bg-rose-500 rounded-full animate-ping"></div>}
             </div>
 
+            {/* PENDING LOST ITEMS - Admin & VP Only */}
             <div onClick={() => navigate('/admin/approvals')} className={`bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group cursor-pointer transition-all hover:shadow-md hover:-translate-y-1 ${isLibrarian ? 'hidden' : ''}`}>
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 text-amber-500">
                     <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>

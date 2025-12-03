@@ -14,11 +14,11 @@ export const AdminApprovalsPage: React.FC = () => {
   const isVP = role === 'vice_president';
   const isSuperAdmin = role === 'admin';
 
-  // Determine initial tab
+  // Determine initial tab based on role priority
   const getInitialTab = () => {
       if (isLibrarian) return 'materials';
       if (isVP) return 'lostfound';
-      return 'materials';
+      return 'materials'; // Default for Admin
   };
 
   const [activeTab, setActiveTab] = useState<'materials' | 'lostfound'>(getInitialTab());

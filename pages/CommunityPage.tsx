@@ -4,6 +4,8 @@ import { AuthContext } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, getDocs, deleteDoc, doc, getDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
+import { VerificationBadge } from '../components/VerificationBadge';
+import { Role } from '../types';
 import { Link } from 'react-router-dom';
 
 interface Message {
@@ -11,6 +13,8 @@ interface Message {
     text: string;
     senderId: string;
     senderName: string;
+    senderRole?: Role; // Added role
+    isVerified?: boolean; // Added isVerified
     createdAt: string;
     avatarUrl?: string;
 }
@@ -101,6 +105,8 @@ export const CommunityPage: React.FC = () => {
               text: newMessage.trim(),
               senderId: auth.user.id,
               senderName: displayName,
+              senderRole: auth.user.role,
+              isVerified: auth.user.isVerified || false,
               avatarUrl: auth.user.avatarUrl || '',
               createdAt: new Date().toISOString()
           });
@@ -305,9 +311,14 @@ export const CommunityPage: React.FC = () => {
                               <div className={`px-4 py-2 rounded-2xl text-sm ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-tl-none shadow-sm'}`}>
                                   {msg.text}
                               </div>
-                              <span className="text-[10px] text-slate-400 mt-1 px-1">
-                                  {!isMe && <span className="font-bold mr-1">{msg.senderName}</span>}
-                                  {new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              <span className="text-[10px] text-slate-400 mt-1 px-1 flex items-center gap-1">
+                                  {!isMe && (
+                                      <>
+                                        <span className="font-bold">{msg.senderName}</span>
+                                        <VerificationBadge role={msg.senderRole || 'student'} isVerified={msg.isVerified} className="w-3 h-3" />
+                                      </>
+                                  )}
+                                  <span className="ml-1">{new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                               </span>
                           </div>
                       </div>

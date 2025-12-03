@@ -6,11 +6,12 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { useNotification } from '../contexts/NotificationContext';
 import { Link } from 'react-router-dom';
 import { db } from '../firebase';
-import { collection, addDoc, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, limit, getDocs, doc, updateDoc, increment } from 'firebase/firestore';
 import { LEVELS } from '../constants';
 import { Level, TestResult } from '../types';
 import { generateTestReviewPDF } from '../utils/pdfGenerator';
 import { AdBanner } from '../components/AdBanner';
+import { VerificationBadge } from '../components/VerificationBadge';
 
 interface Question {
   id: number;
@@ -288,6 +289,7 @@ export const TestPage: React.FC = () => {
 
       if (auth?.user) {
           try {
+              // 1. Save Test Result
               await addDoc(collection(db, 'test_results'), {
                   userId: auth.user.id,
                   username: auth.user.username,
@@ -297,9 +299,22 @@ export const TestPage: React.FC = () => {
                   level: selectedLevel,
                   date: new Date().toISOString()
               });
+
+              // 2. Award Points (+5 for completing, +5 bonus for >80%)
+              const pointsEarned = finalPercentage > 80 ? 10 : 5;
+              const userRef = doc(db, 'users', auth.user.id);
+              await updateDoc(userRef, {
+                  contributionPoints: increment(pointsEarned)
+              });
+              
+              showNotification(`Test submitted! You earned +${pointsEarned} points.`, "success");
+
               // Fetch immediate to ensure data is there if they navigate back quickly
               fetchLeaderboard();
-          } catch (e) { console.error("Error saving result", e); }
+          } catch (e) { 
+              console.error("Error saving result", e); 
+              showNotification("Error saving results. Check connection.", "error");
+          }
       }
   };
 
@@ -373,6 +388,8 @@ export const TestPage: React.FC = () => {
                       <div className="space-y-3">
                           {leaderboard.length > 0 ? leaderboard.map((entry, idx) => {
                               const rank = idx + 1;
+                              // Assume user role for leaderboard visual if available, else student
+                              // Fetching role is expensive, we rely on basic display for now
                               
                               // Default Styles (4th+)
                               let containerStyle = "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700";
@@ -433,7 +450,7 @@ export const TestPage: React.FC = () => {
                                                   )}
                                               </div>
                                               <div>
-                                                  <span className={`block font-bold text-sm md:text-base ${rank === 1 ? 'text-amber-900 dark:text-amber-100' : 'text-slate-800 dark:text-slate-100'}`}>
+                                                  <span className={`flex items-center gap-1 font-bold text-sm md:text-base ${rank === 1 ? 'text-amber-900 dark:text-amber-100' : 'text-slate-800 dark:text-slate-100'}`}>
                                                       {entry.username || 'Unknown User'}
                                                   </span>
                                                   <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{new Date(entry.date).toLocaleDateString()}</span>
@@ -454,6 +471,9 @@ export const TestPage: React.FC = () => {
       );
   }
 
+  // Rest of the component (setup/loading/exam/result/review screens) remain largely the same logic
+  // Just ensure finishTest is used in the Exam UI (which it is)
+  
   if (stage === 'setup') {
       return (
           <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4 transition-colors">

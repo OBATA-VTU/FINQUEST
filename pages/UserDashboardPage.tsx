@@ -3,8 +3,22 @@ import React, { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
 import { TestResult } from '../types';
+import { VerificationBadge } from '../components/VerificationBadge';
+
+const QUOTES = [
+    "The stock market is filled with individuals who know the price of everything, but the value of nothing. - Philip Fisher",
+    "Rule No. 1: Never lose money. Rule No. 2: Never forget Rule No. 1. - Warren Buffett",
+    "In investing, what is comfortable is rarely profitable. - Robert Arnott",
+    "Compound interest is the eighth wonder of the world. - Albert Einstein",
+    "Risk comes from not knowing what you are doing. - Warren Buffett",
+    "The individual investor should act consistently as an investor and not as a speculator. - Ben Graham",
+    "Price is what you pay. Value is what you get. - Warren Buffett",
+    "Know what you own, and know why you own it. - Peter Lynch",
+    "The four most dangerous words in investing are: 'This time it's different.' - Sir John Templeton",
+    "Financial freedom is available to those who learn about it and work for it. - Robert Kiyosaki"
+];
 
 export const UserDashboardPage: React.FC = () => {
   const auth = useContext(AuthContext);
@@ -16,23 +30,30 @@ export const UserDashboardPage: React.FC = () => {
   const [loadingTests, setLoadingTests] = useState(true);
   const [testCount, setTestCount] = useState(0);
   const [avgScore, setAvgScore] = useState(0);
+  const [quote, setQuote] = useState('');
 
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour < 12) setGreeting('Good Morning');
     else if (hour < 18) setGreeting('Good Afternoon');
     else setGreeting('Good Evening');
+
+    // Select daily quote based on Day of Year
+    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+    setQuote(QUOTES[dayOfYear % QUOTES.length]);
   }, []);
 
   useEffect(() => {
       const fetchStats = async () => {
           if (!user?.id) return;
           try {
+              // Ensure we fetch from 'test_results' where 'userId' matches
               const q = query(
                   collection(db, 'test_results'), 
                   where('userId', '==', user.id),
                   orderBy('date', 'desc')
               );
+              
               const snap = await getDocs(q);
               const tests = snap.docs.map(d => ({ id: d.id, ...d.data() } as TestResult));
               
@@ -49,7 +70,11 @@ export const UserDashboardPage: React.FC = () => {
               setLoadingTests(false);
           }
       };
-      fetchStats();
+      
+      // We might need to refresh user data to get updated points
+      if (user?.id) {
+          fetchStats();
+      }
   }, [user?.id]);
 
   if (!user) return null;
@@ -69,15 +94,19 @@ export const UserDashboardPage: React.FC = () => {
                           <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
                           Online Dashboard
                       </div>
-                      <h1 className="text-3xl md:text-4xl font-serif font-bold mb-2">
-                          {greeting}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-indigo-200">{user.name.split(' ')[0]}</span>
+                      <h1 className="text-3xl md:text-4xl font-serif font-bold mb-2 flex items-center gap-2">
+                          {greeting}, 
+                          <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-indigo-200 flex items-center gap-1">
+                              {user.name.split(' ')[0]}
+                              <VerificationBadge role={user.role} isVerified={user.isVerified} className="w-6 h-6" />
+                          </span>
                       </h1>
-                      <p className="text-indigo-100 max-w-lg leading-relaxed">
-                          "Success is not final, failure is not fatal: it is the courage to continue that counts."
+                      <p className="text-indigo-100 max-w-lg leading-relaxed italic opacity-80 text-sm md:text-base">
+                          "{quote}"
                       </p>
                   </div>
                   
-                  {/* Stats Row overlay on desktop, stacked on mobile */}
+                  {/* Stats Row */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full md:w-auto mt-4 md:mt-0">
                       <div className="bg-white/10 backdrop-blur-sm border border-white/10 p-4 rounded-xl text-center">
                           <div className="text-2xl font-bold">{testCount}</div>

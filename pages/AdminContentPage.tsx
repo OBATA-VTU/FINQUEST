@@ -16,12 +16,18 @@ export const AdminContentPage: React.FC = () => {
   const isSuperAdmin = role === 'admin';
   const isLibrarian = role === 'librarian';
   const isVP = role === 'vice_president';
+  const isSupplement = role === 'supplement';
 
   // Helper to determine available tabs
   const getTabs = (): ContentType[] => {
-      if (isLibrarian) return ['materials'];
-      if (isVP) return ['news', 'lecturers'];
+      // VP & Librarian & Supplement: Access to Materials + General Content (No Executives)
+      if (isVP || isLibrarian || isSupplement) {
+          return ['materials', 'news', 'lecturers', 'community', 'gallery'];
+      }
+      
+      // Admin: All
       if (isSuperAdmin) return ['news', 'executives', 'lecturers', 'community', 'gallery', 'materials'];
+      
       return [];
   };
 
@@ -30,7 +36,8 @@ export const AdminContentPage: React.FC = () => {
   // Lazy initialization to ensure we start with a valid tab
   const [activeContent, setActiveContent] = useState<ContentType>(() => {
       const t = getTabs();
-      return (t.length > 0 ? t[0] : 'materials') as ContentType;
+      // Safely default to the first available tab, or 'news' if empty
+      return (t.length > 0 ? t[0] : 'news') as ContentType;
   });
 
   const [contentItems, setContentItems] = useState<any[]>([]);
@@ -53,8 +60,10 @@ export const AdminContentPage: React.FC = () => {
 
   useEffect(() => {
       // Safety check: if role changes and current tab is invalid, switch to first valid
-      if (tabs.length > 0 && !tabs.includes(activeContent)) {
-          setActiveContent(tabs[0]);
+      // This prevents a VP from being stuck on 'materials' if they were previously admin (or vice versa if perms change)
+      const availableTabs = getTabs();
+      if (availableTabs.length > 0 && !availableTabs.includes(activeContent)) {
+          setActiveContent(availableTabs[0]);
       }
   }, [role]);
 
