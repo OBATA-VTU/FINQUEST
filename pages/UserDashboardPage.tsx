@@ -115,20 +115,20 @@ export const UserDashboardPage: React.FC = () => {
       <div className="container mx-auto px-4 max-w-6xl -mt-6">
           {/* STATS ROW */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center">
-                  <span className="text-3xl font-black text-indigo-600 dark:text-indigo-400">{testCount}</span>
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center group hover:border-indigo-300 transition-colors">
+                  <span className="text-3xl font-black text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">{testCount}</span>
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">Tests Taken</span>
               </div>
-              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center">
-                  <span className="text-3xl font-black text-emerald-500">{avgScore}%</span>
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center group hover:border-emerald-300 transition-colors">
+                  <span className="text-3xl font-black text-emerald-500 group-hover:scale-110 transition-transform">{avgScore}%</span>
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">Avg Score</span>
               </div>
-              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center">
-                  <span className="text-3xl font-black text-amber-500">{user.contributionPoints || 0}</span>
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center group hover:border-amber-300 transition-colors">
+                  <span className="text-3xl font-black text-amber-500 group-hover:scale-110 transition-transform">{user.contributionPoints || 0}</span>
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">Points</span>
               </div>
-              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center">
-                  <span className="text-3xl font-black text-rose-500">{user.savedQuestions?.length || 0}</span>
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center group hover:border-rose-300 transition-colors">
+                  <span className="text-3xl font-black text-rose-500 group-hover:scale-110 transition-transform">{user.savedQuestions?.length || 0}</span>
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">Saved Items</span>
               </div>
           </div>
@@ -140,49 +140,65 @@ export const UserDashboardPage: React.FC = () => {
                   
                   {/* QUICK ACTIONS */}
                   <section>
-                      <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                          <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                          Quick Actions
+                      <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-2">
+                          <span className="bg-indigo-100 dark:bg-indigo-900 p-1 rounded text-indigo-600 dark:text-indigo-400">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                          </span>
+                          Academic Actions
                       </h2>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                          <button onClick={() => navigate('/test')} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-500 hover:shadow-md transition-all group flex flex-col items-center gap-3">
-                              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                      <div className="grid grid-cols-2 gap-4">
+                          <button onClick={() => navigate('/test')} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-500 hover:shadow-md transition-all group flex items-start gap-4 text-left">
+                              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform shrink-0">
                                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
                               </div>
-                              <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">Practice CBT</span>
+                              <div>
+                                <span className="font-bold text-slate-800 dark:text-white text-base block mb-1">CBT Practice</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400 block leading-snug">Take mock exams and test your knowledge.</span>
+                              </div>
                           </button>
 
-                          <button onClick={() => navigate('/questions')} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 hover:shadow-md transition-all group flex flex-col items-center gap-3">
-                              <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                          <button onClick={() => navigate('/questions')} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 hover:shadow-md transition-all group flex items-start gap-4 text-left">
+                              <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform shrink-0">
                                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                               </div>
-                              <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">Past Questions</span>
+                              <div>
+                                <span className="font-bold text-slate-800 dark:text-white text-base block mb-1">Past Questions</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400 block leading-snug">Access verified exam archives.</span>
+                              </div>
                           </button>
 
-                          <button onClick={() => navigate('/community')} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-rose-500 dark:hover:border-rose-500 hover:shadow-md transition-all group flex flex-col items-center gap-3">
-                              <div className="w-12 h-12 bg-rose-50 dark:bg-rose-900/30 rounded-xl flex items-center justify-center text-rose-600 dark:text-rose-400 group-hover:scale-110 transition-transform">
+                          <button onClick={() => navigate('/community')} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-rose-500 dark:hover:border-rose-500 hover:shadow-md transition-all group flex items-start gap-4 text-left">
+                              <div className="w-12 h-12 bg-rose-50 dark:bg-rose-900/30 rounded-xl flex items-center justify-center text-rose-600 dark:text-rose-400 group-hover:scale-110 transition-transform shrink-0">
                                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                               </div>
-                              <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">Community</span>
+                              <div>
+                                <span className="font-bold text-slate-800 dark:text-white text-base block mb-1">Community</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400 block leading-snug">Connect with peers and groups.</span>
+                              </div>
                           </button>
 
-                          <button onClick={() => navigate('/lecturers')} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 hover:shadow-md transition-all group flex flex-col items-center gap-3">
-                              <div className="w-12 h-12 bg-amber-50 dark:bg-amber-900/30 rounded-xl flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
+                          <button onClick={() => navigate('/lecturers')} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 hover:shadow-md transition-all group flex items-start gap-4 text-left">
+                              <div className="w-12 h-12 bg-amber-50 dark:bg-amber-900/30 rounded-xl flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform shrink-0">
                                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                               </div>
-                              <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">Directory</span>
+                              <div>
+                                <span className="font-bold text-slate-800 dark:text-white text-base block mb-1">Directory</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400 block leading-snug">Lecturers & Staff info.</span>
+                              </div>
                           </button>
                       </div>
                   </section>
 
                   {/* RECENT ACTIVITY */}
                   <section>
-                      <div className="flex justify-between items-center mb-4">
+                      <div className="flex justify-between items-center mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
                           <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                              <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                              Recent History
+                              <span className="bg-blue-100 dark:bg-blue-900 p-1 rounded text-blue-600 dark:text-blue-400">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              </span>
+                              Recent Progress
                           </h2>
-                          <button onClick={() => navigate('/test')} className="text-xs font-bold text-indigo-600 hover:underline">View All</button>
+                          <button onClick={() => navigate('/test')} className="text-xs font-bold text-indigo-600 hover:underline">View Full History</button>
                       </div>
 
                       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
@@ -219,11 +235,11 @@ export const UserDashboardPage: React.FC = () => {
 
               {/* RIGHT COLUMN - NEWS & UPDATES (1/3) */}
               <div className="space-y-8">
-                  <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10"></div>
-                      <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden border border-slate-700">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-xl"></div>
+                      <h3 className="font-bold text-lg mb-4 flex items-center gap-2 border-b border-white/10 pb-2">
                           <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
-                          Latest News
+                          Department News
                       </h3>
                       
                       <div className="space-y-4">
@@ -231,7 +247,7 @@ export const UserDashboardPage: React.FC = () => {
                               <div key={news.id} onClick={() => navigate('/announcements')} className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 cursor-pointer hover:bg-white/20 transition-colors">
                                   <h4 className="font-bold text-sm mb-1 line-clamp-1">{news.title}</h4>
                                   <p className="text-xs text-indigo-200 line-clamp-2">{news.content}</p>
-                                  <span className="text-[10px] text-indigo-300 mt-2 block">{new Date(news.date).toLocaleDateString()}</span>
+                                  <span className="text-[10px] text-indigo-300 mt-2 block opacity-70">{new Date(news.date).toLocaleDateString()}</span>
                               </div>
                           )) : (
                               <p className="text-sm text-indigo-200 italic">No recent announcements.</p>
@@ -244,18 +260,21 @@ export const UserDashboardPage: React.FC = () => {
                   </div>
 
                   <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
-                      <h3 className="font-bold text-slate-800 dark:text-white mb-4 text-sm uppercase tracking-wide">Community Status</h3>
+                      <h3 className="font-bold text-slate-800 dark:text-white mb-4 text-sm uppercase tracking-wide border-b border-slate-100 dark:border-slate-700 pb-2">Profile Status</h3>
                       <div className="space-y-3">
                           <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
-                              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Profile Status</span>
+                              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Account Type</span>
                               {user.isVerified ? (
-                                  <span className="text-xs font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded">Verified</span>
+                                  <span className="text-xs font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded border border-emerald-200 dark:border-emerald-800">Verified</span>
                               ) : (
                                   <span className="text-xs font-bold text-slate-500 bg-slate-200 dark:bg-slate-600 px-2 py-1 rounded">Unverified</span>
                               )}
                           </div>
                           <div className="flex items-center justify-center pt-2">
-                              <button onClick={() => navigate('/profile')} className="text-indigo-600 dark:text-indigo-400 text-xs font-bold hover:underline">Edit Profile</button>
+                              <button onClick={() => navigate('/profile')} className="text-indigo-600 dark:text-indigo-400 text-xs font-bold hover:underline flex items-center gap-1">
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                Edit Profile Details
+                              </button>
                           </div>
                       </div>
                   </div>
