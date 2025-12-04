@@ -122,7 +122,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
             const imageUrls: string[] = [];
             const total = imageFiles.length;
 
-            // Upload images one by one or Promise.all.
+            // Upload images one by one
             for (let i = 0; i < total; i++) {
                 setUploadStatus(`Uploading image ${i + 1} of ${total}...`);
                 const url = await uploadToImgBB(imageFiles[i]);

@@ -29,6 +29,7 @@ export const ExecutivesPage: React.FC = () => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Executive));
             
             const getRank = (pos: string) => {
+                if (!pos) return 100;
                 const p = pos.toLowerCase().trim();
                 if (p === 'president' || (p.includes('president') && !p.includes('vice'))) return 1;
                 if (p.includes('vice president') || p === 'vp') return 2;

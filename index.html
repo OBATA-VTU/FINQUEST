@@ -1,19 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="bg-slate-900">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/logo.svg" type="image/svg+xml" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     
-    <!-- PWA Manifest & Theme -->
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#311b92">
-    
-    <!-- iOS Support -->
-    <link rel="apple-touch-icon" href="/logo.svg">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="FINSA">
+    <!-- Removed PWA Manifest and Theme Color for APK removal -->
+    <!-- Removed iOS PWA Support tags -->
     
     <!-- Primary SEO - Specific to User's Department -->
     <title>FINSA-OBA | Department of Finance - Adekunle Ajasin University (AAUA)</title>
@@ -113,6 +106,7 @@
     <style>
       body {
         font-family: 'Inter', sans-serif;
+        background-color: #0f172a; /* Default to dark slate to prevent white flash */
       }
       h1, h2, h3, .font-serif {
         font-family: 'Playfair Display', serif;
@@ -192,20 +186,6 @@
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
     
-    <!-- Service Worker Registration -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          // Use relative path './sw.js' to avoid origin issues in some preview environments
-          navigator.serviceWorker.register('./sw.js')
-            .then(registration => {
-              console.log('SW registered successfully:', registration.scope);
-            })
-            .catch(registrationError => {
-              console.log('SW registration failed:', registrationError);
-            });
-        });
-      }
-    </script>
+    <!-- Service Worker Registration REMOVED for APK cleanup -->
   </body>
 </html>

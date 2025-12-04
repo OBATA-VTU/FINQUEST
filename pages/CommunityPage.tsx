@@ -6,7 +6,6 @@ import { collection, addDoc, query, orderBy, onSnapshot, getDocs, deleteDoc, doc
 import { useNotification } from '../contexts/NotificationContext';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { Role } from '../types';
-import { Link } from 'react-router-dom';
 
 interface Message {
     id: string;
@@ -68,23 +67,24 @@ export const CommunityPage: React.FC = () => {
       }
   }, [messages, view]);
 
-  // 24-HOUR AUTO CLEANUP LOGIC
+  // 24-HOUR AUTO CLEANUP LOGIC (Runs for Admin/Execs to keep DB clean)
   useEffect(() => {
-    if (auth?.user?.role === 'admin') {
+    if (['admin', 'librarian', 'vice_president', 'supplement'].includes(auth?.user?.role || '')) {
         const cleanup = async () => {
             try {
               const now = Date.now();
               const oneDayMs = 24 * 60 * 60 * 1000;
-              const cutoff = new Date(now - oneDayMs).toISOString();
+              // ISO string comparison works for dates if format is consistent
+              const cutoffDate = new Date(now - oneDayMs).toISOString();
 
-              // Query messages older than 24 hours
-              const q = query(collection(db, 'community_messages'), where('createdAt', '<', cutoff));
+              const q = query(collection(db, 'community_messages'), where('createdAt', '<', cutoffDate));
               const snapshot = await getDocs(q);
               
               if (!snapshot.empty) {
                   console.log(`Cleaning up ${snapshot.size} expired messages...`);
                   const deletePromises = snapshot.docs.map(d => deleteDoc(d.ref));
                   await Promise.all(deletePromises);
+                  console.log("Cleanup complete.");
               }
             } catch (e) { console.error("Cleanup error", e); }
         };
@@ -189,19 +189,19 @@ export const CommunityPage: React.FC = () => {
               </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-100 dark:bg-slate-950">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-100 dark:bg-slate-950">
               {messages.map((msg) => {
                   const isMe = msg.senderId === auth.user?.id;
                   return (
-                      <div key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''} animate-fade-in`}>
+                      <div key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''} animate-fade-in group`}>
                           <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 border-white dark:border-slate-800 shadow-sm overflow-hidden ${isMe ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
-                              {msg.avatarUrl ? <img src={msg.avatarUrl} className="w-full h-full object-cover" /> : msg.senderName.charAt(0)}
+                              {msg.avatarUrl ? <img src={msg.avatarUrl} className="w-full h-full object-cover" /> : msg.senderName.charAt(1)}
                           </div>
                           <div className={`max-w-[80%] md:max-w-[60%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                               <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-tl-none'}`}>
                                   {msg.text}
                               </div>
-                              <span className="text-[10px] text-slate-400 mt-1 px-1 flex items-center gap-1">
+                              <span className="text-[10px] text-slate-400 mt-1 px-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   {!isMe && (
                                       <>
                                         <span className="font-bold text-slate-600 dark:text-slate-300">{msg.senderName}</span>

@@ -23,37 +23,47 @@ export const LecturersPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="bg-slate-50 dark:bg-slate-900 min-h-screen transition-colors">
-       <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 py-16 shadow-sm">
-         <div className="container mx-auto px-4 text-center">
-            <h1 className="text-4xl font-serif text-slate-900 dark:text-white mb-4">Department Lecturers</h1>
-            <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+    <div className="bg-slate-50 dark:bg-slate-900 min-h-screen transition-colors font-sans">
+       <div className="bg-indigo-900 dark:bg-slate-950 text-white py-20 text-center shadow-lg relative overflow-hidden">
+         <div className="absolute inset-0 bg-gradient-to-t from-indigo-900 dark:from-slate-950 via-transparent to-transparent"></div>
+         <div className="relative z-10 container mx-auto px-4">
+            <span className="inline-block py-1 px-3 border border-white/20 rounded-full bg-white/5 backdrop-blur-sm text-indigo-200 text-xs font-bold tracking-[0.2em] uppercase mb-4">Faculty</span>
+            <h1 className="text-4xl md:text-5xl font-extrabold mb-4 font-serif">Department Lecturers</h1>
+            <p className="text-indigo-100 text-lg max-w-2xl mx-auto font-light">
                 Distinguished scholars and industry experts shaping the future of finance at Adekunle Ajasin University.
             </p>
          </div>
-       </header>
+       </div>
 
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 py-16 -mt-10 relative z-20">
         {loading ? <div className="text-center py-10 dark:text-slate-400">Loading directory...</div> : lecturers.length === 0 ? (
              <div className="text-center py-10 text-slate-500 dark:text-slate-400">No lecturer profiles found. Admins need to add them.</div>
         ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {lecturers.map(lecturer => (
-            <article key={lecturer.id} className="group bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-6 hover:shadow-xl hover:border-indigo-200 dark:hover:border-indigo-800 transition-all duration-300 flex flex-col items-center text-center">
-              <div className="w-32 h-32 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 mb-4 border-4 border-white dark:border-slate-600 shadow-md">
-                 <img src={lecturer.imageUrl} alt={lecturer.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"/>
-              </div>
+            <article key={lecturer.id} className="group bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300 flex flex-col relative">
+              <div className="h-24 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 relative"></div>
               
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors font-serif mb-1">{lecturer.name}</h3>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full mb-4">{lecturer.title}</p>
-              
-              <div className="w-full border-t border-slate-100 dark:border-slate-700 pt-4 mt-auto">
-                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Area of Specialization</p>
-                <div className="flex flex-wrap justify-center gap-2">
-                    {lecturer.specialization ? lecturer.specialization.split(', ').map((tag, idx) => (
-                        <span key={idx} className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-xs rounded border border-indigo-100 dark:border-indigo-800">{tag}</span>
-                    )) : <span className="text-xs text-slate-400">Not specified</span>}
-                </div>
+              <div className="px-6 flex flex-col items-center -mt-12 flex-1">
+                  <div className="w-24 h-24 rounded-2xl overflow-hidden bg-white dark:bg-slate-800 p-1 shadow-lg mb-4">
+                     <div className="w-full h-full rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-700">
+                        <img src={lecturer.imageUrl} alt={lecturer.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"/>
+                     </div>
+                  </div>
+                  
+                  <div className="text-center w-full mb-6">
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors font-serif mb-1">{lecturer.name}</h3>
+                      <p className="text-sm font-bold text-indigo-500 uppercase tracking-wider mb-4">{lecturer.title}</p>
+                      
+                      <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl w-full">
+                        <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Specialization</p>
+                        <div className="flex flex-wrap justify-center gap-2">
+                            {lecturer.specialization ? lecturer.specialization.split(', ').map((tag, idx) => (
+                                <span key={idx} className="px-2 py-1 bg-white dark:bg-slate-600 text-slate-600 dark:text-slate-200 text-xs font-medium rounded border border-slate-200 dark:border-slate-500">{tag}</span>
+                            )) : <span className="text-xs text-slate-400">Not specified</span>}
+                        </div>
+                      </div>
+                  </div>
               </div>
             </article>
           ))}

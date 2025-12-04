@@ -87,7 +87,7 @@ export const UserDashboardPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20 font-sans transition-colors">
       
-      {/* HERO SECTION - COMPACT & MODERN */}
+      {/* HERO SECTION */}
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 pt-8 pb-10 px-4">
           <div className="container mx-auto max-w-6xl">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">

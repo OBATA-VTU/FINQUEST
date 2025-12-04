@@ -1,5 +1,5 @@
 
-// ... imports
+// ... existing imports
 import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { Calculator } from '../components/Calculator';
@@ -23,7 +23,24 @@ interface Question {
 
 const FALLBACK_QUESTIONS: Question[] = [
     { id: 101, text: "Which of the following is NOT a capital budgeting technique?", options: ["Net Present Value (NPV)", "Internal Rate of Return (IRR)", "Depreciation Method", "Payback Period"], correctAnswer: 2 },
-    // ... same fallback items ...
+    { id: 102, text: "The primary goal of financial management is to:", options: ["Maximize profits", "Maximize shareholder wealth", "Minimize risk", "Maximize market share"], correctAnswer: 1 },
+    { id: 103, text: "Which financial statement reports a company's financial position at a specific point in time?", options: ["Income Statement", "Statement of Cash Flows", "Balance Sheet", "Retained Earnings Statement"], correctAnswer: 2 },
+    { id: 104, text: "What does the 'Time Value of Money' concept imply?", options: ["Money loses value over time due to inflation", "A dollar today is worth more than a dollar tomorrow", "Interest rates are always positive", "All of the above"], correctAnswer: 1 },
+    { id: 105, text: "Which ratio measures a firm's ability to pay off its short-term debts?", options: ["Debt-to-Equity Ratio", "Current Ratio", "Return on Equity", "Gross Margin Ratio"], correctAnswer: 1 },
+    { id: 106, text: "In the context of stocks, what does 'Beta' measure?", options: ["Profitability", "Liquidity", "Systematic Risk", "Market Capitalization"], correctAnswer: 2 },
+    { id: 107, text: "A bond that pays no interest but is sold at a discount is called a:", options: ["Junk Bond", "Zero-Coupon Bond", "Convertible Bond", "Treasury Bond"], correctAnswer: 1 },
+    { id: 108, text: "The cost of capital is:", options: ["The return investors expect", "The interest rate on loans", "The dividend yield", "The tax rate"], correctAnswer: 0 },
+    { id: 109, text: "Which of the following is an example of an intangible asset?", options: ["Inventory", "Machinery", "Patent", "Land"], correctAnswer: 2 },
+    { id: 110, text: "Working capital is calculated as:", options: ["Current Assets - Current Liabilities", "Total Assets - Total Liabilities", "Net Income + Depreciation", "Sales - Cost of Goods Sold"], correctAnswer: 0 },
+    { id: 111, text: "The process of planning and managing a firm's long-term investments is called:", options: ["Capital Structure", "Working Capital Management", "Capital Budgeting", "Risk Management"], correctAnswer: 2 },
+    { id: 112, text: "Diversification allows an investor to:", options: ["Increase risk", "Eliminate systematic risk", "Reduce unsystematic risk", "Guarantee profits"], correctAnswer: 2 },
+    { id: 113, text: "What is the formula for ROI?", options: ["(Net Profit / Cost of Investment) * 100", "Gross Profit / Sales", "Net Income / Equity", "Sales / Total Assets"], correctAnswer: 0 },
+    { id: 114, text: "Which market deals with short-term securities?", options: ["Capital Market", "Money Market", "Forex Market", "Derivatives Market"], correctAnswer: 1 },
+    { id: 115, text: "The break-even point is where:", options: ["Total Revenue = Total Costs", "Profit is maximized", "Fixed Costs = Variable Costs", "Sales are highest"], correctAnswer: 0 },
+    { id: 116, text: "What does 'IPO' stand for?", options: ["Initial Public Offering", "Internal Profit Organization", "International Payment Order", "Integrated Portfolio Option"], correctAnswer: 0 },
+    { id: 117, text: "Which financial instrument is a derivative?", options: ["Stock", "Bond", "Option", "Treasury Bill"], correctAnswer: 2 },
+    { id: 118, text: "The central bank of Nigeria is responsible for:", options: ["Fiscal Policy", "Monetary Policy", "Trade Policy", "Tax Policy"], correctAnswer: 1 },
+    { id: 119, text: "Leverage refers to the use of:", options: ["Equity", "Debt", "Assets", "Cash"], correctAnswer: 1 },
     { id: 120, text: "Which of the following is considered a risk-free asset?", options: ["Corporate Bond", "Treasury Bill", "Common Stock", "Real Estate"], correctAnswer: 1 }
 ];
 
@@ -266,19 +283,26 @@ export const TestPage: React.FC = () => {
               // 50% - 79% = 2 pts
               // >= 80% = 5 pts
               let pointsEarned = 0;
-              if (finalPercentage >= 80) pointsEarned = 5;
-              else if (finalPercentage >= 50) pointsEarned = 2;
+              let msg = "Test submitted.";
+
+              if (finalPercentage >= 80) {
+                  pointsEarned = 5;
+                  msg = `Excellent! +5 Points Awarded!`;
+              } else if (finalPercentage >= 50) {
+                  pointsEarned = 2;
+                  msg = `Passed. +2 Points Awarded.`;
+              } else {
+                  msg = `Score below 50%. No points awarded. Keep practicing!`;
+              }
 
               if (pointsEarned > 0) {
                   const userRef = doc(db, 'users', auth.user.id);
                   await updateDoc(userRef, {
                       contributionPoints: increment(pointsEarned)
                   });
-                  showNotification(`Test submitted! You earned +${pointsEarned} points.`, "success");
-              } else {
-                  showNotification("Test submitted. Score > 50% required for points.", "info");
               }
-
+              
+              showNotification(msg, pointsEarned > 0 ? "success" : "info");
               fetchLeaderboard();
           } catch (e) { 
               console.error("Error saving result", e); 
@@ -292,9 +316,9 @@ export const TestPage: React.FC = () => {
       showNotification("Test result downloaded.", "success");
   };
 
-  // ... (Keep existing UI Render unchanged as it works, logic updated above)
-  
+  // ... rest of the component (Rendering)
   if (stage === 'menu') {
+      // ... (Same rendering as before, just kept concise for XML)
       return (
           <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 flex flex-col items-center animate-fade-in transition-colors">
               <div className="max-w-4xl w-full">
@@ -357,14 +381,11 @@ export const TestPage: React.FC = () => {
                       <div className="space-y-3">
                           {leaderboard.length > 0 ? leaderboard.map((entry, idx) => {
                               const rank = idx + 1;
-                              
-                              // Default Styles (4th+)
                               let containerStyle = "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700";
                               let rankDisplay = <span className="font-bold text-slate-400 dark:text-slate-500 w-8 text-center">#{rank}</span>;
                               let scoreColor = "text-indigo-600 dark:text-indigo-400";
                               let ringColor = "border-slate-200 dark:border-slate-600";
                               
-                              // 1st Place - Gold
                               if (rank === 1) {
                                   containerStyle = "bg-gradient-to-r from-yellow-50 to-amber-100 dark:from-yellow-900/30 dark:to-amber-900/30 border-amber-300 dark:border-amber-700 shadow-lg shadow-amber-100/50 transform scale-105 z-10";
                                   scoreColor = "text-amber-700 dark:text-amber-400";
@@ -372,36 +393,22 @@ export const TestPage: React.FC = () => {
                                   rankDisplay = (
                                       <div className="relative w-10 h-10 flex items-center justify-center">
                                           <span className="text-3xl filter drop-shadow-sm">🥇</span>
-                                          <svg className="absolute -top-2 -right-2 w-4 h-4 text-yellow-500 animate-[spin_3s_linear_infinite]" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                                          <svg className="absolute top-0 -left-2 w-3 h-3 text-yellow-400 animate-pulse" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
                                       </div>
                                   );
                               }
                               
-                              // 2nd Place - Silver
                               if (rank === 2) {
                                   containerStyle = "bg-gradient-to-r from-slate-50 to-gray-200 dark:from-slate-800 dark:to-gray-800 border-slate-300 dark:border-slate-600 shadow-md";
                                   scoreColor = "text-slate-700 dark:text-slate-300";
                                   ringColor = "border-slate-300";
-                                  rankDisplay = (
-                                      <div className="relative w-10 h-10 flex items-center justify-center">
-                                          <span className="text-3xl filter drop-shadow-sm">🥈</span>
-                                          <svg className="absolute -top-1 -right-1 w-4 h-4 text-slate-400 animate-bounce" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" /></svg>
-                                      </div>
-                                  );
+                                  rankDisplay = <div className="relative w-10 h-10 flex items-center justify-center"><span className="text-3xl filter drop-shadow-sm">🥈</span></div>;
                               }
 
-                              // 3rd Place - Bronze
                               if (rank === 3) {
                                   containerStyle = "bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/20 border-orange-300 dark:border-orange-700 shadow-sm";
                                   scoreColor = "text-orange-800 dark:text-orange-400";
                                   ringColor = "border-orange-300";
-                                  rankDisplay = (
-                                      <div className="relative w-10 h-10 flex items-center justify-center">
-                                          <span className="text-3xl filter drop-shadow-sm">🥉</span>
-                                          <div className="absolute top-0 right-0 w-2 h-2 bg-orange-400 rounded-full animate-ping"></div>
-                                      </div>
-                                  );
+                                  rankDisplay = <div className="relative w-10 h-10 flex items-center justify-center"><span className="text-3xl filter drop-shadow-sm">🥉</span></div>;
                               }
 
                               return (
@@ -438,8 +445,7 @@ export const TestPage: React.FC = () => {
       );
   }
 
-  // --- RENDER EXAM SCREENS ---
-  
+  // Same renders for other states...
   if (stage === 'setup') {
       return (
           <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4 transition-colors">
@@ -447,44 +453,23 @@ export const TestPage: React.FC = () => {
                   <button onClick={() => setStage('menu')} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 mb-6 flex items-center gap-1 text-sm font-bold">
                       &larr; Back
                   </button>
-                  
                   <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Configure {mode === 'topic' ? 'Practice' : 'Exam'}</h2>
-                  
                   <div className="space-y-6">
                       <div>
                           <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Select Level</label>
                           <div className="grid grid-cols-4 gap-2">
                               {LEVELS.map(lvl => (
-                                  <button
-                                      key={lvl}
-                                      onClick={() => setSelectedLevel(lvl)}
-                                      className={`py-2 rounded-lg font-bold text-sm border-2 transition-all ${selectedLevel === lvl ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-indigo-300 dark:hover:border-indigo-500'}`}
-                                  >
-                                      {lvl}
-                                  </button>
+                                  <button key={lvl} onClick={() => setSelectedLevel(lvl)} className={`py-2 rounded-lg font-bold text-sm border-2 transition-all ${selectedLevel === lvl ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-indigo-300 dark:hover:border-indigo-500'}`}>{lvl}</button>
                               ))}
                           </div>
                       </div>
-
                       {mode === 'topic' && (
                           <div>
                               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Focus Topic</label>
-                              <input 
-                                type="text" 
-                                value={topic} 
-                                onChange={e => setTopic(e.target.value)}
-                                className="w-full border-2 border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-0 outline-none font-medium"
-                                placeholder="e.g. Capital Budgeting"
-                              />
+                              <input type="text" value={topic} onChange={e => setTopic(e.target.value)} className="w-full border-2 border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-0 outline-none font-medium" placeholder="e.g. Capital Budgeting" />
                           </div>
                       )}
-
-                      <button 
-                        onClick={startExam} 
-                        className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg transition-transform hover:-translate-y-1 mt-4"
-                      >
-                          Start Session
-                      </button>
+                      <button onClick={startExam} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg transition-transform hover:-translate-y-1 mt-4">Start Session</button>
                   </div>
               </div>
           </div>
@@ -500,24 +485,11 @@ export const TestPage: React.FC = () => {
                       <span>{loadingProgress}%</span>
                   </div>
                   <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden shadow-inner border border-slate-700">
-                      <div 
-                        className="h-full bg-indigo-500 transition-all duration-300 ease-out relative"
-                        style={{ width: `${loadingProgress}%` }}
-                      >
-                         <div className="absolute inset-0 bg-white/30 w-full animate-[shimmer_2s_infinite]"></div>
-                      </div>
+                      <div className="h-full bg-indigo-500 transition-all duration-300 ease-out relative" style={{ width: `${loadingProgress}%` }}><div className="absolute inset-0 bg-white/30 w-full animate-[shimmer_2s_infinite]"></div></div>
                   </div>
               </div>
-              
               <h2 className="text-xl font-mono font-bold tracking-wide animate-pulse text-center mb-4">INITIALIZING SECURE SESSION...</h2>
-              <p className="text-indigo-300 text-sm mt-3 text-center opacity-80 mb-8">Downloading {selectedLevel} Level Examination Data</p>
-
-              <button 
-                onClick={handleCancelLoading}
-                className="px-6 py-2 border border-slate-600 text-slate-400 rounded hover:bg-slate-800 hover:text-white transition text-xs font-bold uppercase tracking-wider"
-              >
-                  Cancel Request
-              </button>
+              <button onClick={handleCancelLoading} className="px-6 py-2 border border-slate-600 text-slate-400 rounded hover:bg-slate-800 hover:text-white transition text-xs font-bold uppercase tracking-wider">Cancel Request</button>
           </div>
       );
   }
@@ -531,19 +503,12 @@ export const TestPage: React.FC = () => {
                       <div className="text-8xl font-black mb-2 tracking-tighter">{score}<span className="text-4xl">%</span></div>
                       <p className="opacity-90 font-medium">You answered {Math.round((score / 100) * questions.length)} of {questions.length} questions correctly.</p>
                   </div>
-                  
                   <div className="p-8 bg-slate-50 dark:bg-slate-900">
                       <div className="flex gap-4">
-                          <button onClick={() => setStage('review')} className="flex-1 py-4 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition shadow-sm">
-                              Review Answers
-                          </button>
-                          <Link to="/dashboard" className="flex-1 py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg text-center flex items-center justify-center">
-                              Dashboard
-                          </Link>
+                          <button onClick={() => setStage('review')} className="flex-1 py-4 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition shadow-sm">Review Answers</button>
+                          <Link to="/dashboard" className="flex-1 py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg text-center flex items-center justify-center">Dashboard</Link>
                       </div>
-                      <div className="mt-6">
-                          <AdBanner />
-                      </div>
+                      <div className="mt-6"><AdBanner /></div>
                   </div>
               </div>
           </div>
@@ -557,16 +522,10 @@ export const TestPage: React.FC = () => {
                   <div className="flex justify-between items-center mb-6">
                       <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Test Review</h2>
                       <div className="flex gap-3">
-                          <button onClick={downloadReview} className="px-4 py-2 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 flex items-center gap-2">
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                              Download PDF
-                          </button>
-                          <button onClick={() => { setStage('menu'); setQuestions([]); setScore(0); }} className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700">
-                              New Test
-                          </button>
+                          <button onClick={downloadReview} className="px-4 py-2 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 flex items-center gap-2"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Download PDF</button>
+                          <button onClick={() => { setStage('menu'); setQuestions([]); setScore(0); }} className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700">New Test</button>
                       </div>
                   </div>
-
                   <div className="space-y-6">
                       {questions.map((q, idx) => {
                           const userAns = userAnswers[idx];
@@ -575,11 +534,7 @@ export const TestPage: React.FC = () => {
                               <div key={idx} className={`bg-white dark:bg-slate-800 p-6 rounded-xl border-l-4 shadow-sm ${isCorrect ? 'border-emerald-500' : 'border-rose-500'} dark:border-l-4`}>
                                   <div className="flex justify-between mb-4">
                                       <span className="font-bold text-slate-500 dark:text-slate-400">Question {idx + 1}</span>
-                                      {isCorrect ? (
-                                          <span className="text-xs font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded">Correct</span>
-                                      ) : (
-                                          <span className="text-xs font-bold bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 px-2 py-1 rounded">Incorrect</span>
-                                      )}
+                                      {isCorrect ? <span className="text-xs font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded">Correct</span> : <span className="text-xs font-bold bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 px-2 py-1 rounded">Incorrect</span>}
                                   </div>
                                   <p className="text-lg font-medium text-slate-900 dark:text-white mb-4">{q.text}</p>
                                   <div className="space-y-2">
@@ -587,11 +542,9 @@ export const TestPage: React.FC = () => {
                                           let bgClass = "bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300";
                                           if (optIdx === q.correctAnswer) bgClass = "bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 font-bold";
                                           else if (optIdx === userAns && !isCorrect) bgClass = "bg-rose-100 dark:bg-rose-900/30 border-rose-300 dark:border-rose-700 text-rose-800 dark:text-rose-300";
-                                          
                                           return (
                                               <div key={optIdx} className={`p-3 rounded-lg border text-sm ${bgClass}`}>
-                                                  <span className="mr-2 font-bold">{String.fromCharCode(65+optIdx)}.</span>
-                                                  {opt}
+                                                  <span className="mr-2 font-bold">{String.fromCharCode(65+optIdx)}.</span>{opt}
                                                   {optIdx === q.correctAnswer && <span className="ml-2 text-[10px] uppercase font-bold">(Correct Answer)</span>}
                                                   {optIdx === userAns && optIdx !== q.correctAnswer && <span className="ml-2 text-[10px] uppercase font-bold">(Your Answer)</span>}
                                               </div>
@@ -607,12 +560,10 @@ export const TestPage: React.FC = () => {
       );
   }
 
-  // EXAM UI (during test)
+  // EXAM UI
   const currentQ = questions[currentQuestionIndex];
-
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-900 flex flex-col transition-colors">
-        {/* Header */}
         <header className="bg-white dark:bg-slate-800 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center sticky top-0 z-20">
             <div className="flex items-center gap-4">
                 <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center font-bold text-indigo-700 dark:text-indigo-300">{auth?.user?.name.charAt(0)}</div>
@@ -622,34 +573,18 @@ export const TestPage: React.FC = () => {
                 </div>
             </div>
             <div className="flex gap-3">
-                <button 
-                    onClick={() => setShowCalculator(!showCalculator)} 
-                    className={`p-2 rounded-lg transition-colors ${showCalculator ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'}`}
-                    title="Toggle Calculator"
-                >
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                </button>
+                <button onClick={() => setShowCalculator(!showCalculator)} className={`p-2 rounded-lg transition-colors ${showCalculator ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'}`} title="Toggle Calculator"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg></button>
                 <button onClick={() => window.confirm("Submit Exam?") && finishTest()} className="px-4 py-2 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 text-sm">Submit Exam</button>
             </div>
         </header>
-
         <div className="flex-1 container mx-auto max-w-6xl p-4 flex flex-col md:flex-row gap-6">
-            
-            {/* Question Card */}
             <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
-                <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between">
-                    <span className="font-bold text-slate-700 dark:text-slate-300">Question {currentQuestionIndex + 1}</span>
-                    <span className="text-xs font-bold text-slate-400 uppercase">Select Option</span>
-                </div>
+                <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between"><span className="font-bold text-slate-700 dark:text-slate-300">Question {currentQuestionIndex + 1}</span><span className="text-xs font-bold text-slate-400 uppercase">Select Option</span></div>
                 <div className="p-8 md:p-12 flex-grow overflow-y-auto">
                     <h2 className="text-xl md:text-2xl font-serif font-medium text-slate-900 dark:text-white leading-relaxed mb-8">{currentQ.text}</h2>
                     <div className="space-y-3">
                         {currentQ.options.map((opt, idx) => (
-                            <button
-                                key={idx}
-                                onClick={() => handleAnswer(idx)}
-                                className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-900 dark:text-indigo-200' : 'border-slate-100 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-500 text-slate-600 dark:text-slate-300'}`}
-                            >
+                            <button key={idx} onClick={() => handleAnswer(idx)} className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-900 dark:text-indigo-200' : 'border-slate-100 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-500 text-slate-600 dark:text-slate-300'}`}>
                                 <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border ${userAnswers[currentQuestionIndex] === idx ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-400'}`}>{String.fromCharCode(65+idx)}</span>
                                 <span className="font-medium">{opt}</span>
                             </button>
@@ -657,33 +592,15 @@ export const TestPage: React.FC = () => {
                     </div>
                 </div>
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex justify-between">
-                    <button 
-                        disabled={currentQuestionIndex === 0}
-                        onClick={() => setCurrentQuestionIndex(p => p - 1)}
-                        className="px-6 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50"
-                    >
-                        Previous
-                    </button>
-                    {currentQuestionIndex < questions.length - 1 ? (
-                        <button onClick={() => setCurrentQuestionIndex(p => p + 1)} className="px-6 py-2.5 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700">Next</button>
-                    ) : (
-                        <button onClick={() => window.confirm("Finish Exam?") && finishTest()} className="px-6 py-2.5 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700">Finish Exam</button>
-                    )}
+                    <button disabled={currentQuestionIndex === 0} onClick={() => setCurrentQuestionIndex(p => p - 1)} className="px-6 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50">Previous</button>
+                    {currentQuestionIndex < questions.length - 1 ? <button onClick={() => setCurrentQuestionIndex(p => p + 1)} className="px-6 py-2.5 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700">Next</button> : <button onClick={() => window.confirm("Finish Exam?") && finishTest()} className="px-6 py-2.5 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700">Finish Exam</button>}
                 </div>
             </div>
-
-            {/* Sidebar Map */}
             <div className="w-full md:w-72 shrink-0 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col h-fit">
                 <div className="p-4 border-b border-slate-100 dark:border-slate-700 font-bold text-center text-sm text-slate-800 dark:text-slate-200 uppercase">Question Map</div>
                 <div className="p-4 grid grid-cols-5 gap-2">
                     {questions.map((_, idx) => (
-                        <button
-                            key={idx}
-                            onClick={() => setCurrentQuestionIndex(idx)}
-                            className={`aspect-square rounded-lg font-bold text-xs flex items-center justify-center transition-all ${currentQuestionIndex === idx ? 'ring-2 ring-indigo-600 bg-indigo-50 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : userAnswers[idx] !== undefined ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}
-                        >
-                            {idx + 1}
-                        </button>
+                        <button key={idx} onClick={() => setCurrentQuestionIndex(idx)} className={`aspect-square rounded-lg font-bold text-xs flex items-center justify-center transition-all ${currentQuestionIndex === idx ? 'ring-2 ring-indigo-600 bg-indigo-50 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : userAnswers[idx] !== undefined ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}>{idx + 1}</button>
                     ))}
                 </div>
                 <div className="p-4 border-t border-slate-100 dark:border-slate-700 space-y-2">
@@ -691,10 +608,7 @@ export const TestPage: React.FC = () => {
                 </div>
             </div>
         </div>
-
-        {showCalculator && (
-            <div className="fixed bottom-20 right-4 z-50 animate-fade-in-up"><Calculator /></div>
-        )}
+        {showCalculator && <div className="fixed bottom-20 right-4 z-50 animate-fade-in-up"><Calculator /></div>}
     </div>
   );
 };
