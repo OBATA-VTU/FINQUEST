@@ -23,8 +23,8 @@ export const LecturersPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="bg-white dark:bg-slate-900 min-h-screen transition-colors">
-       <header className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 py-16">
+    <div className="bg-slate-50 dark:bg-slate-900 min-h-screen transition-colors">
+       <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 py-16 shadow-sm">
          <div className="container mx-auto px-4 text-center">
             <h1 className="text-4xl font-serif text-slate-900 dark:text-white mb-4">Department Lecturers</h1>
             <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
@@ -37,25 +37,23 @@ export const LecturersPage: React.FC = () => {
         {loading ? <div className="text-center py-10 dark:text-slate-400">Loading directory...</div> : lecturers.length === 0 ? (
              <div className="text-center py-10 text-slate-500 dark:text-slate-400">No lecturer profiles found. Admins need to add them.</div>
         ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {lecturers.map(lecturer => (
-            <article key={lecturer.id} className="group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-500 transition-all duration-300 flex flex-col sm:flex-row gap-6" itemScope itemType="https://schema.org/Person">
-              <div className="shrink-0 relative">
-                 <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg overflow-hidden bg-slate-200 dark:bg-slate-700">
-                    <img src={lecturer.imageUrl} alt={lecturer.name} itemProp="image" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
-                 </div>
+            <article key={lecturer.id} className="group bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-6 hover:shadow-xl hover:border-indigo-200 dark:hover:border-indigo-800 transition-all duration-300 flex flex-col items-center text-center">
+              <div className="w-32 h-32 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 mb-4 border-4 border-white dark:border-slate-600 shadow-md">
+                 <img src={lecturer.imageUrl} alt={lecturer.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"/>
               </div>
-              <div className="flex-1">
-                 <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors" itemProp="name">{lecturer.name}</h3>
-                 <p className="text-slate-500 dark:text-slate-400 font-medium" itemProp="jobTitle">{lecturer.title}</p>
-                 <div className="mt-4">
-                    <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Research Interests</p>
-                    <div className="flex flex-wrap gap-2">
-                        {lecturer.specialization ? lecturer.specialization.split(', ').map((tag, idx) => (
-                            <span key={idx} className="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs rounded-md border border-slate-200 dark:border-slate-600">{tag}</span>
-                        )) : <span className="text-xs text-slate-400">Not specified</span>}
-                    </div>
-                 </div>
+              
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors font-serif mb-1">{lecturer.name}</h3>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full mb-4">{lecturer.title}</p>
+              
+              <div className="w-full border-t border-slate-100 dark:border-slate-700 pt-4 mt-auto">
+                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Area of Specialization</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                    {lecturer.specialization ? lecturer.specialization.split(', ').map((tag, idx) => (
+                        <span key={idx} className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-xs rounded border border-indigo-100 dark:border-indigo-800">{tag}</span>
+                    )) : <span className="text-xs text-slate-400">Not specified</span>}
+                </div>
               </div>
             </article>
           ))}

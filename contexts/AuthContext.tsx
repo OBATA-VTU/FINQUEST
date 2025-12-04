@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { User, Level } from '../types';
 import { auth, db } from '../firebase';
@@ -66,7 +67,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     avatarUrl: userData.avatarUrl || firebaseUser.photoURL,
                     contributionPoints: userData.contributionPoints || 0,
                     savedQuestions: userData.savedQuestions || [],
-                    lastActive: userData.lastActive
+                    lastActive: userData.lastActive,
+                    isVerified: userData.isVerified
                 });
             } else {
                 // If auth exists but no DB doc, treat as partial user
@@ -173,8 +175,16 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
 
   const loginWithGoogle = async (): Promise<boolean> => {
     try {
+        console.log("Starting Google Sign In...");
         const provider = new GoogleAuthProvider();
+        
+        // Force account selection to prevent auto-sign-in loops with wrong accounts
+        provider.setCustomParameters({
+            prompt: 'select_account'
+        });
+
         const result = await signInWithPopup(auth, provider);
+        console.log("Google Sign In Result:", result.user.uid);
         const firebaseUser = result.user;
         
         let isIncompleteProfile = false;
@@ -184,6 +194,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             const userDoc = await getDoc(userDocRef);
             
             if (!userDoc.exists()) {
+               console.log("New User - Creating Doc");
                // New Google User - Create Basic Doc
                const cleanData = sanitizeData({
                 name: firebaseUser.displayName || 'User',
@@ -201,6 +212,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
               showNotification("Account created! Please complete your profile.", "success");
               isIncompleteProfile = true;
             } else {
+              console.log("Existing User - Checking profile");
               const data = userDoc.data();
               // STRICT CHECK FOR MISSING FIELDS
               if (!data.matricNumber || !data.username) {
@@ -212,15 +224,26 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             }
         } catch (dbError) {
             console.error("Firestore error during Google Sign In:", dbError);
-            showNotification("Logged in (Profile sync issue)", "info");
+            showNotification("Logged in, but profile sync issue. Contact admin if persists.", "warning");
         }
         
         return isIncompleteProfile;
     } catch (error: any) {
         console.error("Google Sign-in Error Full:", error);
+        
         if (error.code === 'auth/unauthorized-domain') {
-            throw new Error(`Domain not authorized. Add '${window.location.hostname}' to Firebase Console.`);
+            showNotification(`Domain not authorized. Please add '${window.location.hostname}' to Firebase Console > Authentication > Settings.`, 'error');
+            throw new Error(`Domain not authorized.`);
         }
+        if (error.code === 'auth/popup-closed-by-user') {
+            showNotification("Sign-in cancelled.", "info");
+            throw new Error("Cancelled");
+        }
+        if (error.code === 'auth/popup-blocked') {
+            showNotification("Popup blocked. Please allow popups for this site.", "error");
+            throw new Error("Popup Blocked");
+        }
+        
         throw error;
     }
   };

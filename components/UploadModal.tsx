@@ -16,6 +16,8 @@ interface UploadModalProps {
 
 type UploadType = 'select' | 'document' | 'images';
 
+const CATEGORIES = ["Past Question", "Lecture Note", "Handout", "Textbook", "Other"];
+
 export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpload }) => {
     const auth = useContext(AuthContext);
     const { showNotification } = useNotification();
@@ -27,6 +29,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
     const [lecturer, setLecturer] = useState('');
     const [level, setLevel] = useState<Level>(100);
     const [year, setYear] = useState(new Date().getFullYear());
+    const [category, setCategory] = useState("Past Question");
     
     // Document State
     const [file, setFile] = useState<File | null>(null);
@@ -51,6 +54,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
             setCourseCode('');
             setCourseTitle('');
             setLecturer('');
+            setCategory("Past Question");
             setIsUploading(false);
         }
     }, [isOpen]);
@@ -81,6 +85,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                 lecturer,
                 level,
                 year,
+                category,
                 fileUrl: url,
                 storagePath: path,
                 uploadedBy: auth.user.id,
@@ -133,6 +138,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                 lecturer,
                 level,
                 year,
+                category,
                 fileUrl: imageUrls[0], // Use first image as main preview/url for backward compatibility
                 pages: imageUrls, // Store all images here
                 uploadedBy: auth.user.id,
@@ -291,6 +297,13 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                             </div>
 
                             {/* FIELDS */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Category</label>
+                                <select value={category} onChange={e => setCategory(e.target.value)} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Code</label>
