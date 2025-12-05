@@ -56,7 +56,7 @@ export const HomePage: React.FC = () => {
     <div className="font-sans bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 overflow-x-hidden transition-colors duration-300">
       
       {/* 1. HERO SECTION */}
-      <div className="relative h-[95vh] min-h-[600px] flex items-center justify-center bg-slate-950 overflow-hidden">
+      <div className="relative h-[85vh] min-h-[600px] flex items-center justify-center bg-slate-950 overflow-hidden">
         <div className="absolute inset-0 z-0">
              <img 
                 src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" 
@@ -92,30 +92,45 @@ export const HomePage: React.FC = () => {
       </div>
 
       {/* 2. HOD WELCOME */}
-      <section className="py-24 bg-white dark:bg-slate-950 transition-colors reveal">
+      <section className="py-24 bg-slate-50 dark:bg-slate-900 transition-colors reveal">
           <div className="container mx-auto px-4">
-              <div className="flex flex-col lg:flex-row items-center gap-16">
-                  <div className="lg:w-5/12 relative w-full group">
-                      <div className="absolute inset-0 bg-indigo-600 rounded-2xl transform translate-x-4 translate-y-4 transition-transform group-hover:translate-x-2 group-hover:translate-y-2"></div>
-                      <img 
-                        src={hodData?.imageUrl || "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"} 
-                        alt="Head of Department" 
-                        className="w-full h-auto shadow-2xl rounded-2xl relative z-10 grayscale group-hover:grayscale-0 transition-all duration-700"
-                      />
-                  </div>
-                  <div className="lg:w-7/12">
-                      <h2 className="text-indigo-600 dark:text-indigo-400 font-bold tracking-[0.2em] uppercase text-sm mb-6">From the Desk of the H.O.D</h2>
-                      <h3 className="text-4xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white mb-8 leading-tight">
-                         {hodData?.title || "Breeding Financial Experts."}
-                      </h3>
-                      <div className="prose prose-lg text-slate-600 dark:text-slate-400 mb-10 leading-loose">
-                        <p>{hodData?.message || "Welcome to the Department of Finance at AAUA. Our curriculum is designed not just to teach market theories, but to instill the critical thinking and ethical grounding necessary for the modern financial landscape. We are committed to fostering an environment where innovation meets tradition."}</p>
+              <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 md:p-12 shadow-xl border border-slate-100 dark:border-slate-700">
+                  <div className="flex flex-col lg:flex-row items-start gap-12">
+                      {/* Image Column */}
+                      <div className="w-full lg:w-1/3 shrink-0">
+                          <div className="relative group">
+                              <div className="absolute inset-0 bg-indigo-600 rounded-2xl transform translate-x-3 translate-y-3 transition-transform group-hover:translate-x-2 group-hover:translate-y-2"></div>
+                              <img 
+                                src={hodData?.imageUrl || "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"} 
+                                alt="Head of Department" 
+                                className="w-full h-auto shadow-lg rounded-2xl relative z-10 object-cover aspect-[3/4]"
+                              />
+                          </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                          <div className="h-12 w-1 bg-indigo-500"></div>
-                          <div>
-                              <p className="font-bold text-slate-900 dark:text-white text-lg">{hodData?.name || "Dr. A. A. Adebayo"}</p>
-                              <p className="text-xs text-indigo-500 uppercase tracking-widest font-bold">Head of Department</p>
+
+                      {/* Text Column */}
+                      <div className="w-full lg:w-2/3 flex flex-col justify-center pt-4">
+                          <div className="mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
+                              <span className="text-indigo-600 dark:text-indigo-400 font-bold tracking-[0.2em] uppercase text-xs block mb-2">
+                                  From the Desk of the H.O.D
+                              </span>
+                              <h2 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 dark:text-white mb-2">
+                                  {hodData?.name || "Dr. A. A. Adebayo"}
+                              </h2>
+                              <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">
+                                  {hodData?.title || "Head of Department, Finance"}
+                              </p>
+                          </div>
+                          
+                          <div className="prose prose-lg text-slate-600 dark:text-slate-300 leading-loose">
+                            <p>
+                                {hodData?.message || "Welcome to the Department of Finance at AAUA. Our curriculum is designed not just to teach market theories, but to instill the critical thinking and ethical grounding necessary for the modern financial landscape. We are committed to fostering an environment where innovation meets tradition."}
+                            </p>
+                          </div>
+                          
+                          <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-700 flex items-center gap-4">
+                              <div className="h-10 w-1 bg-indigo-500 rounded-full"></div>
+                              <p className="text-sm font-bold text-indigo-900 dark:text-indigo-300 italic">"Breeding Financial Experts"</p>
                           </div>
                       </div>
                   </div>
@@ -124,15 +139,15 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* 3. FEATURE CARDS */}
-      <section className="py-24 bg-slate-50 dark:bg-slate-900 relative overflow-hidden reveal">
+      <section className="py-24 bg-white dark:bg-slate-950 relative overflow-hidden reveal">
           <div className="container mx-auto px-4 relative z-10">
               <div className="text-center max-w-3xl mx-auto mb-16">
                   <h2 className="text-3xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white mb-6">The FINSA Hub</h2>
-                  <p className="text-slate-600 dark:text-slate-400 text-lg">A centralized digital ecosystem designed to support your academic journey from admission to graduation.</p>
+                  <p className="text-slate-600 dark:text-slate-400 text-lg">A centralized digital ecosystem designed to support your academic journey.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  <div onClick={() => navigate('/questions')} className="group bg-white dark:bg-slate-800 p-10 rounded-3xl shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-pointer border border-slate-100 dark:border-slate-700">
+                  <div onClick={() => navigate('/questions')} className="group bg-slate-50 dark:bg-slate-900 p-10 rounded-3xl shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-pointer border border-slate-100 dark:border-slate-800">
                       <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-8 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                           <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                       </div>
@@ -142,7 +157,7 @@ export const HomePage: React.FC = () => {
                       </p>
                   </div>
                   
-                  <div onClick={() => navigate('/community')} className="group bg-white dark:bg-slate-800 p-10 rounded-3xl shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-pointer border border-slate-100 dark:border-slate-700">
+                  <div onClick={() => navigate('/community')} className="group bg-slate-50 dark:bg-slate-900 p-10 rounded-3xl shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-pointer border border-slate-100 dark:border-slate-800">
                       <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 rounded-2xl flex items-center justify-center mb-8 text-rose-600 dark:text-rose-400 group-hover:bg-rose-600 group-hover:text-white transition-colors">
                           <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                       </div>
@@ -152,7 +167,7 @@ export const HomePage: React.FC = () => {
                       </p>
                   </div>
 
-                  <div onClick={() => navigate('/lecturers')} className="group bg-white dark:bg-slate-800 p-10 rounded-3xl shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-pointer border border-slate-100 dark:border-slate-700">
+                  <div onClick={() => navigate('/lecturers')} className="group bg-slate-50 dark:bg-slate-900 p-10 rounded-3xl shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-pointer border border-slate-100 dark:border-slate-800">
                       <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mb-8 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                           <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
                       </div>
@@ -166,7 +181,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* 4. NEWS & EVENTS */}
-      <section className="py-24 bg-white dark:bg-slate-950 transition-colors reveal">
+      <section className="py-24 bg-slate-50 dark:bg-slate-900 transition-colors reveal">
           <div className="container mx-auto px-4">
               <div className="flex flex-col lg:flex-row gap-16">
                   <div className="lg:w-1/3">
@@ -178,9 +193,9 @@ export const HomePage: React.FC = () => {
                       <div className="grid gap-8">
                           {announcements.length > 0 ? (
                               announcements.map((news) => (
-                                  <div key={news.id} className="group flex flex-col sm:flex-row gap-8 p-8 border border-slate-100 dark:border-slate-800 hover:border-indigo-100 dark:hover:border-indigo-900/50 hover:shadow-lg transition-all bg-white dark:bg-slate-900 cursor-pointer rounded-2xl" onClick={() => navigate('/announcements')}>
+                                  <div key={news.id} className="group flex flex-col sm:flex-row gap-8 p-8 border border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-900/50 hover:shadow-lg transition-all bg-white dark:bg-slate-950 cursor-pointer rounded-2xl" onClick={() => navigate('/announcements')}>
                                       <div className="w-auto sm:w-24 shrink-0 flex flex-row sm:flex-col items-center sm:items-center text-center border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-800 pb-4 sm:pb-0 sm:pr-8 justify-center gap-4 sm:gap-0">
-                                          <span className="block text-4xl md:text-5xl font-serif font-black text-indigo-200 dark:text-indigo-500/50 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{new Date(news.date).getDate()}</span>
+                                          <span className="block text-4xl md:text-5xl font-serif font-black text-indigo-300 dark:text-indigo-500/50 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{new Date(news.date).getDate()}</span>
                                           <span className="text-xs font-bold uppercase text-slate-400 dark:text-slate-500">{new Date(news.date).toLocaleDateString(undefined, {month: 'short'})}</span>
                                       </div>
                                       <div>

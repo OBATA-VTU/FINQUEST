@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 type NotificationType = 'success' | 'error' | 'info' | 'warning';
@@ -23,10 +24,13 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     const id = Date.now();
     setNotifications((prev) => [...prev, { id, message, type }]);
     
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        removeNotification(id);
-    }, 5000);
+    // Only auto-remove info/success messages after 8 seconds (longer than before).
+    // Errors and warnings persist until clicked or navigated away.
+    if (type === 'info' || type === 'success') {
+        setTimeout(() => {
+            removeNotification(id);
+        }, 8000);
+    }
   };
 
   const removeNotification = (id: number) => {
@@ -68,6 +72,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
 export const useNotification = () => {
   const context = useContext(NotificationContext);
-  if (!context) throw new Error("useNotification must be used within NotificationProvider");
+  if (!context) {
+    throw new Error('useNotification must be used within a NotificationProvider');
+  }
   return context;
 };

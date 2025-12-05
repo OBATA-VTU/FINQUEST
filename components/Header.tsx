@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { useNotification } from '../contexts/NotificationContext';
 import { AuthContext } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { collection, query, where, orderBy, limit, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, limit, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 interface HeaderProps {
@@ -18,6 +18,7 @@ interface FirestoreNotification {
     type: 'info' | 'success' | 'warning' | 'error';
     createdAt: string;
     read: boolean;
+    userId: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
@@ -41,15 +42,16 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
   }, []);
 
   // Fetch Notifications from Firestore
+  // Simplified query to avoid "Missing Index" errors for composite queries (userId in [...] + orderBy)
   useEffect(() => {
       if (!auth?.user) return;
 
-      // Listen for notifications targeted to this user OR 'all'
-      // We fetch more than we need and filter by time client-side to ensure the 24hr rule is accurate
+      // We query for messages targeted to this user OR all users. 
+      // We removed 'orderBy' from the firestore query to prevent index errors. 
+      // We will sort in Javascript instead.
       const q = query(
           collection(db, 'notifications'), 
           where('userId', 'in', [auth.user.id, 'all']),
-          orderBy('createdAt', 'desc'),
           limit(50) 
       );
 
@@ -63,7 +65,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
                 // Filter: Keep only if created within the last 24 hours
                 const createdTime = new Date(note.createdAt).getTime();
                 return (now - createdTime) < oneDayMs;
-            });
+            })
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Sort Descending
             
           setDbNotifications(notes);
       });
@@ -79,9 +82,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
   };
 
   const handleClearAll = async () => {
-      // Loop through and delete all currently visible notifications for this user
-      // Note: In a production app with many notifs, use a Batch write. 
-      // For user specific notifications this is acceptable.
       const deletionPromises = dbNotifications.map(note => 
           deleteDoc(doc(db, 'notifications', note.id))
       );
@@ -90,7 +90,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
 
   const handleToggle = (e: React.MouseEvent) => {
       e.preventDefault();
-      e.stopPropagation(); // Critical: Stop event bubbling to prevent immediate closure via document listener
+      e.stopPropagation(); 
       setShowNotifications((prev) => !prev);
   };
 
@@ -145,7 +145,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                             </svg>
-                            {(dbNotifications.length > 0 || toastNotifications.length > 0) && (
+                            {(dbNotifications.length > 0) && (
                                 <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></span>
                             )}
                         </button>
@@ -168,14 +168,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
                                     )}
                                 </div>
                                 <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-100 dark:scrollbar-thumb-slate-700">
-                                    {dbNotifications.length === 0 && toastNotifications.length === 0 ? (
+                                    {dbNotifications.length === 0 ? (
                                         <div className="p-8 text-center text-slate-400 text-sm flex flex-col items-center">
                                             <svg className="w-10 h-10 text-slate-200 dark:text-slate-700 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
                                             <p>No new notifications</p>
                                         </div>
                                     ) : (
                                         <ul className="divide-y divide-slate-50 dark:divide-slate-800">
-                                            {/* DB Notifications */}
                                             {dbNotifications.map((note) => (
                                                 <li key={note.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-start gap-3 relative group animate-fade-in">
                                                     <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
@@ -194,16 +193,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
                                                     >
                                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                                                     </button>
-                                                </li>
-                                            ))}
-                                            {/* Toast Notifications (Temporary) */}
-                                            {toastNotifications.map((note) => (
-                                                <li key={note.id} className="p-4 bg-amber-50 dark:bg-amber-900/10 hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors flex items-start gap-3">
-                                                    <div className="mt-1 w-2 h-2 rounded-full shrink-0 bg-amber-500 animate-pulse"></div>
-                                                    <div className="flex-1">
-                                                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-snug font-medium">{note.message}</p>
-                                                        <p className="text-xs text-slate-400 mt-1 uppercase tracking-wide font-bold">New Alert</p>
-                                                    </div>
                                                 </li>
                                             ))}
                                         </ul>
