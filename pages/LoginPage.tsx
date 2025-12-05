@@ -14,21 +14,9 @@ import { useNavigate, Link } from 'react-router-dom';
 const getFriendlyErrorMessage = (error: any): string => {
     const code = error.code || '';
     const msg = error.message || '';
-    
-    // Auth Errors
     if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') return 'Incorrect email or password.';
-    if (code === 'auth/email-already-in-use') return 'That email is already registered. Please log in.';
-    if (code === 'auth/invalid-email') return 'Please enter a valid email address.';
+    if (code === 'auth/email-already-in-use') return 'Email already registered. Please log in.';
     if (code === 'auth/weak-password') return 'Password should be at least 6 characters.';
-    
-    // Popup / Network Errors
-    if (code === 'auth/popup-closed-by-user') return 'Sign-in popup was closed.';
-    if (code === 'auth/cancelled-popup-request') return 'Another popup is already open.';
-    if (code === 'auth/network-request-failed') return 'Network Error. Check internet or Authorized Domains in Firebase Console.';
-    
-    // Permission Errors
-    if (code === 'permission-denied') return 'Access denied. Please check your permissions.';
-
     return msg.replace('Firebase:', '').trim() || 'An unexpected error occurred.';
 };
 
@@ -47,10 +35,9 @@ export const LoginPage: React.FC = () => {
   const [matricNumber, setMatricNumber] = useState('');
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('');
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'short'>('idle');
   
-  // Forgot Password State
+  // Forgot Password
   const [showForgot, setShowForgot] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [isResetting, setIsResetting] = useState(false);
@@ -67,7 +54,6 @@ export const LoginPage: React.FC = () => {
 
   useEffect(() => {
       if ((isLogin && viewState === 'auth') || !username) { setUsernameStatus('idle'); return; }
-      
       const cleanUsername = username.trim().toLowerCase();
       if (cleanUsername.length < 3) { setUsernameStatus('short'); return; }
       
@@ -78,67 +64,14 @@ export const LoginPage: React.FC = () => {
                   const available = await auth.checkUsernameAvailability(cleanUsername);
                   setUsernameStatus(available ? 'available' : 'taken');
               }
-          } catch (e) { 
-              setUsernameStatus('available'); 
-          }
+          } catch (e) { setUsernameStatus('available'); }
       }, 700);
       return () => clearTimeout(timer);
   }, [username, isLogin, auth, viewState]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files && e.target.files[0]) setProfileImage(e.target.files[0]);
-  };
-
   const handleMatricChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const val = e.target.value.replace(/\D/g, ''); 
-      if (val.length <= 9) {
-          setMatricNumber(val);
-      }
-  };
-
-  const handleFinishSetup = async () => {
-      if (!auth?.user) return;
-      
-      if (viewState === 'google_setup') {
-          if (!matricNumber || matricNumber.length !== 9) {
-              showNotification("Matric number must be exactly 9 digits.", "error");
-              return;
-          }
-          if (!username || usernameStatus === 'taken' || usernameStatus === 'short') {
-              showNotification("Please select a valid username.", "error");
-              return;
-          }
-          if (!level) {
-              showNotification("Please select your level.", "error");
-              return;
-          }
-      }
-
-      setIsLoading(true);
-      setLoadingMessage('Finalizing profile...');
-      try {
-          let url = auth.user.avatarUrl;
-          if (profileImage) {
-              url = await uploadToImgBB(profileImage);
-              if (firebaseAuth.currentUser) {
-                  await updateProfile(firebaseAuth.currentUser, { photoURL: url });
-              }
-          }
-          const userRef = doc(db, 'users', auth.user.id);
-          const updates: any = { avatarUrl: url };
-          
-          if (viewState === 'google_setup') { 
-              updates.level = level; 
-              updates.matricNumber = matricNumber; 
-              updates.username = username.trim().toLowerCase();
-          }
-          
-          await updateDoc(userRef, updates);
-          window.location.href = '/dashboard';
-      } catch (error) {
-          console.error(error);
-          showNotification("Failed to save profile. Try again.", "error");
-      } finally { setIsLoading(false); }
+      if (val.length <= 9) setMatricNumber(val);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -149,27 +82,17 @@ export const LoginPage: React.FC = () => {
         if (isLogin) {
             await auth.login(email, password);
         } else {
-            if (usernameStatus === 'taken') {
-                showNotification("Username is unavailable. Please choose another.", "error");
-                return;
-            }
-            if (usernameStatus === 'short') {
-                showNotification("Username must be at least 3 characters.", "error");
+            if (usernameStatus === 'taken' || usernameStatus === 'short') {
+                showNotification("Invalid username selection.", "error");
                 return;
             }
             if (matricNumber.length !== 9) {
-                showNotification("Matric number must be exactly 9 digits.", "error");
+                showNotification("Matric number must be 9 digits.", "error");
                 return;
             }
-            
-            setLoadingMessage('Creating account...');
             await auth.signup({ 
-                name, 
-                email, 
-                pass: password, 
-                level, 
-                username: username.trim().toLowerCase(), 
-                matricNumber 
+                name, email, pass: password, level, 
+                username: username.trim().toLowerCase(), matricNumber 
             });
             setViewState('upload_photo');
         }
@@ -185,15 +108,38 @@ export const LoginPage: React.FC = () => {
           setIsLoading(true);
           if (!auth) throw new Error("Auth missing");
           const isIncomplete = await auth.loginWithGoogle();
-          
-          if (isIncomplete) { 
-              setViewState('google_setup'); 
-              setIsLoading(false); 
-          } 
+          if (isIncomplete) { setViewState('google_setup'); setIsLoading(false); } 
       } catch (err: any) {
           showNotification(getFriendlyErrorMessage(err), 'error');
           setIsLoading(false);
       }
+  };
+
+  const handleFinishSetup = async () => {
+      if (!auth?.user) return;
+      setIsLoading(true);
+      try {
+          let url = auth.user.avatarUrl;
+          if (profileImage) {
+              url = await uploadToImgBB(profileImage);
+              if (firebaseAuth.currentUser) await updateProfile(firebaseAuth.currentUser, { photoURL: url });
+          }
+          const userRef = doc(db, 'users', auth.user.id);
+          const updates: any = { avatarUrl: url };
+          
+          if (viewState === 'google_setup') { 
+              if (!username || usernameStatus === 'taken') throw new Error("Invalid username");
+              if (matricNumber.length !== 9) throw new Error("Invalid matric number");
+              updates.level = level; 
+              updates.matricNumber = matricNumber; 
+              updates.username = username.trim().toLowerCase();
+          }
+          
+          await updateDoc(userRef, updates);
+          window.location.href = '/dashboard';
+      } catch (error: any) {
+          showNotification(error.message || "Failed to save profile.", "error");
+      } finally { setIsLoading(false); }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -202,129 +148,149 @@ export const LoginPage: React.FC = () => {
       setIsResetting(true);
       try {
           await sendPasswordResetEmail(firebaseAuth, resetEmail);
-          showNotification("Password reset email sent!", "success");
-          setShowForgot(false);
-          setResetEmail('');
+          showNotification("Reset link sent to your email!", "success");
+          setShowForgot(false); setResetEmail('');
       } catch (err: any) {
           showNotification(getFriendlyErrorMessage(err), "error");
-      } finally {
-          setIsResetting(false);
-      }
+      } finally { setIsResetting(false); }
   };
 
-  if (viewState === 'upload_photo' || viewState === 'google_setup') {
-      // ... (Existing Profile Setup UI remains the same)
+  // Upload/Setup UI (Simplified for brevity but consistent style)
+  if (viewState !== 'auth') {
       return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden transition-colors">
-            <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 text-center animate-fade-in-down border border-slate-100 dark:border-slate-700 relative z-10">
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Final Step!</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Setup your academic identity.</p>
-                {/* Simplified for brevity in this response block, assume previous UI logic here */}
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
+            <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-100 dark:border-slate-700">
+                <div className="text-center mb-6">
+                    <Logo className="h-16 w-16 mx-auto mb-4" />
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Complete Setup</h2>
+                    <p className="text-slate-500">Just a few more details.</p>
+                </div>
                 {viewState === 'google_setup' && (
-                    <div className="space-y-5 mb-8 text-left">
-                        <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full border p-3 rounded" placeholder="Username" />
-                        <input type="text" value={matricNumber} onChange={handleMatricChange} className="w-full border p-3 rounded" placeholder="Matric No" />
-                        <select value={level} onChange={e => setLevel(Number(e.target.value) as Level)} className="w-full border p-3 rounded">
+                    <div className="space-y-4 mb-6">
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Username</label>
+                            <div className="relative">
+                                <input value={username} onChange={e => setUsername(e.target.value)} className={`w-full p-3 rounded-lg border ${usernameStatus === 'taken' ? 'border-red-500' : 'border-slate-300'} dark:bg-slate-700`} placeholder="Choose username" />
+                                {usernameStatus === 'checking' && <span className="absolute right-3 top-3 text-xs text-slate-400">Checking...</span>}
+                                {usernameStatus === 'available' && <span className="absolute right-3 top-3 text-xs text-emerald-500 font-bold">Available</span>}
+                                {usernameStatus === 'taken' && <span className="absolute right-3 top-3 text-xs text-red-500 font-bold">Taken</span>}
+                            </div>
+                        </div>
+                        <input value={matricNumber} onChange={handleMatricChange} className="w-full p-3 rounded-lg border border-slate-300 dark:bg-slate-700" placeholder="Matric Number (9 digits)" />
+                        <select value={level} onChange={e => setLevel(Number(e.target.value) as Level)} className="w-full p-3 rounded-lg border border-slate-300 dark:bg-slate-700">
                             {LEVELS.map(l => <option key={l} value={l}>{l} Level</option>)}
                         </select>
                     </div>
                 )}
-                <button onClick={handleFinishSetup} disabled={isLoading} className="w-full py-3 bg-indigo-600 text-white rounded font-bold">{isLoading ? 'Saving...' : 'Complete'}</button>
+                <div className="mb-6">
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Profile Photo (Optional)</label>
+                    <input type="file" onChange={e => e.target.files && setProfileImage(e.target.files[0])} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                </div>
+                <button onClick={handleFinishSetup} disabled={isLoading} className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 disabled:opacity-50">
+                    {isLoading ? 'Saving...' : 'Finish Setup'}
+                </button>
             </div>
         </div>
       );
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 flex items-center justify-center p-4 relative transition-colors">
-        {/* Animated Background Mesh */}
-        <div className="absolute inset-0 z-0 overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-50 to-white dark:from-slate-900 dark:to-slate-800"></div>
-            <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-purple-300/30 dark:bg-purple-900/20 blur-3xl animate-blob"></div>
-            <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full bg-indigo-300/30 dark:bg-indigo-900/20 blur-3xl animate-blob animation-delay-2000"></div>
+    <div className="min-h-screen bg-white dark:bg-slate-900 flex transition-colors">
+        {/* Left Side (Desktop Only) */}
+        <div className="hidden lg:flex w-1/2 bg-indigo-900 relative items-center justify-center text-white overflow-hidden">
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80')] bg-cover opacity-20 mix-blend-overlay"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/90 to-slate-900/90"></div>
+            <div className="relative z-10 p-12 text-center">
+                <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-sm inline-block mb-6 shadow-lg">
+                    <Logo className="h-24 w-24" />
+                </div>
+                <h1 className="text-5xl font-serif font-bold mb-4">FINSA Portal</h1>
+                <p className="text-indigo-200 text-xl max-w-md mx-auto">Your gateway to academic excellence and departmental resources.</p>
+            </div>
         </div>
 
-        <Link to="/" className="fixed top-4 left-4 md:top-8 md:left-8 z-50 flex items-center gap-2 px-5 py-2.5 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-full shadow-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-bold text-sm transition-all hover:pl-3 group">
-            <svg className="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-            <span>Back to Home</span>
-        </Link>
-
-        <div className="relative z-10 w-full max-w-5xl h-auto min-h-[650px] bg-white dark:bg-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-fade-in-up border border-white/50 dark:border-slate-700">
-            
-            {/* Left Panel */}
-            <div className="hidden md:flex md:w-5/12 bg-indigo-900 relative flex-col justify-between p-12 text-white overflow-hidden">
-                <div className="absolute inset-0">
-                    <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" className="w-full h-full object-cover opacity-20 mix-blend-overlay" alt="Background" />
-                    <div className="absolute inset-0 bg-gradient-to-b from-indigo-900/90 to-slate-900/90"></div>
-                </div>
-                <div className="relative z-10">
-                    <div className="flex items-center gap-3 mb-8">
-                        <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
-                            <Logo className="h-10 w-10 text-white" />
-                        </div>
-                        <span className="font-serif font-bold text-2xl tracking-wide">FINSA</span>
-                    </div>
-                    <div className="space-y-6">
-                        <h2 className="text-4xl font-serif font-bold leading-tight">
-                            {isLogin ? 'Welcome back to your portal.' : 'Begin your journey with us.'}
-                        </h2>
-                    </div>
-                </div>
-                <div className="relative z-10 text-xs text-indigo-300 font-medium">
-                    &copy; {new Date().getFullYear()} FINSA-OBA. Secure Portal.
-                </div>
-            </div>
-
-            {/* Right Panel */}
-            <div className="w-full md:w-7/12 p-8 md:p-12 flex flex-col justify-center bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm">
-                <div className="flex bg-slate-100 dark:bg-slate-700/50 p-1 rounded-xl mb-8 relative w-full max-w-xs mx-auto md:mx-0">
-                    <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white dark:bg-slate-600 rounded-lg shadow-sm transition-all duration-300 ease-in-out ${isLogin ? 'left-1' : 'left-[calc(50%+4px)]'}`}></div>
-                    <button onClick={() => setIsLogin(true)} className={`flex-1 py-2 text-sm font-bold text-center relative z-10 transition-colors ${isLogin ? 'text-indigo-600 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>Sign In</button>
-                    <button onClick={() => setIsLogin(false)} className={`flex-1 py-2 text-sm font-bold text-center relative z-10 transition-colors ${!isLogin ? 'text-indigo-600 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>Sign Up</button>
+        {/* Right Side (Form) */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-slate-50 dark:bg-slate-900">
+            <div className="max-w-md w-full">
+                {/* Mobile Logo */}
+                <div className="lg:hidden text-center mb-8">
+                    <Logo className="h-16 w-16 mx-auto mb-2" />
+                    <h2 className="text-2xl font-serif font-bold text-slate-900 dark:text-white">FINSA</h2>
                 </div>
 
-                <div className="mb-6">
-                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">{isLogin ? 'Sign In' : 'Create Account'}</h3>
+                <div className="mb-8">
+                    <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
+                    <p className="text-slate-500 dark:text-slate-400">
+                        {isLogin ? 'Please enter your details to sign in.' : 'Join the department portal today.'}
+                    </p>
                 </div>
 
-                <button onClick={handleGoogleLogin} type="button" className="w-full flex items-center justify-center gap-3 px-6 py-3.5 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 transition-all shadow-sm group">
-                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5 group-hover:scale-110 transition-transform" alt="Google" />
-                    <span className="text-slate-700 dark:text-white font-bold text-sm">Continue with Google</span>
+                {/* Google Button */}
+                <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center gap-3 px-6 py-3 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all text-slate-700 dark:text-white font-bold mb-6 shadow-sm">
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
+                    <span>Continue with Google</span>
                 </button>
 
-                <div className="relative flex py-6 items-center">
+                <div className="relative flex py-2 items-center mb-6">
                     <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
-                    <span className="flex-shrink-0 mx-4 text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-wider">Or with email</span>
+                    <span className="flex-shrink-0 mx-4 text-slate-400 text-xs font-bold uppercase">Or use email</span>
                     <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-5">
                     {!isLogin && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input type="text" required value={name} onChange={e => setName(e.target.value)} className="col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Full Name" />
-                            <input type="text" required value={username} onChange={e => setUsername(e.target.value)} className="col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Username" />
-                            <select value={level} onChange={e => setLevel(Number(e.target.value) as Level)} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
-                                {LEVELS.map(l => <option key={l} value={l}>{l} Level</option>)}
-                            </select>
-                            <input type="text" required value={matricNumber} onChange={handleMatricChange} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Matric No" />
-                        </div>
+                        <>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold uppercase text-slate-500 ml-1">Full Name</label>
+                                <input required value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="John Doe" />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold uppercase text-slate-500 ml-1">Username</label>
+                                <div className="relative">
+                                    <input required value={username} onChange={e => setUsername(e.target.value)} className={`w-full px-4 py-3 rounded-xl border ${usernameStatus === 'taken' ? 'border-red-500' : 'border-slate-200'} dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none`} placeholder="username" />
+                                    {usernameStatus === 'available' && <span className="absolute right-3 top-3.5 text-xs text-emerald-500 font-bold">✓ Available</span>}
+                                    {usernameStatus === 'taken' && <span className="absolute right-3 top-3.5 text-xs text-red-500 font-bold">✕ Taken</span>}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Level</label>
+                                    <select value={level} onChange={e => setLevel(Number(e.target.value) as Level)} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white outline-none">
+                                        {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Matric No</label>
+                                    <input required value={matricNumber} onChange={handleMatricChange} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white outline-none" placeholder="9 digits" />
+                                </div>
+                            </div>
+                        </>
                     )}
 
-                    <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Email Address" />
-                    
-                    <div>
-                        <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Password" />
-                        {isLogin && (
-                            <div className="flex justify-end mt-2">
-                                <button type="button" onClick={() => setShowForgot(true)} className="text-xs text-indigo-600 dark:text-indigo-400 font-bold hover:underline">Forgot Password?</button>
-                            </div>
-                        )}
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold uppercase text-slate-500 ml-1">Email Address</label>
+                        <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="student@example.com" />
                     </div>
 
-                    <button type="submit" disabled={isLoading} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg mt-6">
-                        {isLoading ? 'Processing...' : (isLogin ? 'Sign In to Portal' : 'Create Account')}
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold uppercase text-slate-500 ml-1">Password</label>
+                        <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="••••••••" />
+                        {isLogin && <div className="flex justify-end"><button type="button" onClick={() => setShowForgot(true)} className="text-xs text-indigo-600 font-bold hover:underline">Forgot password?</button></div>}
+                    </div>
+
+                    <button type="submit" disabled={isLoading} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-transform hover:-translate-y-1 disabled:opacity-70 disabled:transform-none">
+                        {isLoading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
                     </button>
                 </form>
+
+                <div className="mt-8 text-center">
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">
+                        {isLogin ? "Don't have an account? " : "Already have an account? "}
+                        <button onClick={() => setIsLogin(!isLogin)} className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">
+                            {isLogin ? 'Sign Up' : 'Log In'}
+                        </button>
+                    </p>
+                </div>
             </div>
         </div>
 

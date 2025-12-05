@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { db } from '../firebase';
-import { collection, addDoc, query, orderBy, onSnapshot, getDocs, deleteDoc, doc, getDoc, where } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { Role } from '../types';
@@ -30,8 +30,9 @@ export const CommunityPage: React.FC = () => {
   const [sending, setSending] = useState(false);
   const dummyRef = useRef<HTMLDivElement>(null);
   
-  // Image Upload
-  const [chatImage, setChatImage] = useState<File | null>(null);
+  // Image Upload & Preview State
+  const [previewImage, setPreviewImage] = useState<File | null>(null);
+  const [imageCaption, setImageCaption] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [socialLinks, setSocialLinks] = useState({ whatsapp: '', telegram: '' });
@@ -61,21 +62,45 @@ export const CommunityPage: React.FC = () => {
       if (view === 'chat') dummyRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, view]);
 
-  const handleSend = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if ((!newMessage.trim() && !chatImage) || !auth?.user || sending) return;
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files[0]) {
+          setPreviewImage(e.target.files[0]);
+          setImageCaption(''); // Reset caption
+      }
+  };
+
+  const cancelImagePreview = () => {
+      setPreviewImage(null);
+      setImageCaption('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleDeleteMessage = async (msgId: string) => {
+      if (!window.confirm("Delete this message?")) return;
+      try {
+          await deleteDoc(doc(db, 'community_messages', msgId));
+      } catch (e) { showNotification("Failed to delete", "error"); }
+  };
+
+  const handleSend = async (e?: React.FormEvent) => {
+      if (e) e.preventDefault();
+      
+      const textToSend = previewImage ? imageCaption.trim() : newMessage.trim();
+      const hasImage = !!previewImage;
+
+      if ((!textToSend && !hasImage) || !auth?.user || sending) return;
 
       setSending(true);
       try {
           let imageUrl = '';
-          if (chatImage) {
-              imageUrl = await uploadToImgBB(chatImage);
+          if (previewImage) {
+              imageUrl = await uploadToImgBB(previewImage);
           }
 
           const displayName = auth.user.username ? `@${auth.user.username}` : (auth.user.name || 'User');
 
           await addDoc(collection(db, 'community_messages'), {
-              text: newMessage.trim(),
+              text: textToSend, // Caption or regular message
               imageUrl,
               senderId: auth.user.id,
               senderName: displayName,
@@ -84,8 +109,9 @@ export const CommunityPage: React.FC = () => {
               avatarUrl: auth.user.avatarUrl || '',
               createdAt: new Date().toISOString()
           });
+          
           setNewMessage('');
-          setChatImage(null);
+          cancelImagePreview();
       } catch (error: any) {
           showNotification("Failed to send.", "error");
       } finally {
@@ -132,24 +158,42 @@ export const CommunityPage: React.FC = () => {
           <div className="px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center shadow-sm z-10">
               <div className="flex items-center gap-3">
                   <button onClick={() => setView('hub')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
-                  <div className="font-bold text-slate-900 dark:text-white">Student Lounge</div>
+                  <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center font-bold text-indigo-700 dark:text-indigo-300">
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" /></svg>
+                      </div>
+                      <div>
+                          <h2 className="font-bold text-slate-900 dark:text-white leading-tight">Student Lounge</h2>
+                          <p className="text-xs text-green-500 font-medium">● Online</p>
+                      </div>
+                  </div>
               </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#e5ddd5] dark:bg-slate-950">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#e5ddd5] dark:bg-slate-950/50 dark:bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
               {messages.map((msg) => {
                   const isMe = msg.senderId === auth.user?.id;
                   return (
                       <div key={msg.id} className={`flex gap-2 ${isMe ? 'flex-row-reverse' : ''} animate-fade-in group`}>
-                          {!isMe && <div className="w-8 h-8 rounded-full bg-slate-300 overflow-hidden"><img src={msg.avatarUrl || `https://ui-avatars.com/api/?name=${msg.senderName}`} className="w-full h-full" /></div>}
+                          {!isMe && <div className="w-8 h-8 rounded-full bg-slate-300 overflow-hidden shrink-0"><img src={msg.avatarUrl || `https://ui-avatars.com/api/?name=${msg.senderName}`} className="w-full h-full object-cover" /></div>}
                           
-                          <div className={`max-w-[70%] rounded-2xl px-4 py-2 shadow-sm ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-tl-none'}`}>
+                          <div className={`relative max-w-[80%] md:max-w-[60%] rounded-2xl px-4 py-2 shadow-sm ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-tl-none'}`}>
                               {!isMe && <div className="flex items-center gap-1 mb-1"><span className={`text-xs font-bold ${['admin', 'executive'].includes(msg.senderRole || '') ? 'text-rose-500' : 'text-indigo-500'}`}>{msg.senderName}</span><VerificationBadge role={msg.senderRole || 'student'} isVerified={msg.isVerified} className="w-3 h-3" /></div>}
                               
-                              {msg.imageUrl && <img src={msg.imageUrl} alt="Attachment" className="rounded-lg mb-2 max-w-full h-auto cursor-pointer hover:opacity-90" onClick={() => window.open(msg.imageUrl, '_blank')} />}
+                              {msg.imageUrl && <img src={msg.imageUrl} alt="Attachment" className="rounded-lg mb-2 max-w-full h-auto cursor-pointer hover:opacity-90 border-2 border-transparent hover:border-white/20" onClick={() => window.open(msg.imageUrl, '_blank')} />}
                               
-                              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                              <p className={`text-[10px] mt-1 text-right ${isMe ? 'text-indigo-200' : 'text-slate-400'}`}>{new Date(msg.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
+                              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
+                              
+                              <div className={`flex items-center justify-end gap-1 mt-1 opacity-70`}>
+                                  <span className="text-[10px]">{new Date(msg.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                                  {isMe && <span className="text-[10px]">✓✓</span>}
+                              </div>
+
+                              {isMe && (
+                                  <button onClick={() => handleDeleteMessage(msg.id)} className="absolute top-0 -left-8 p-1 text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-slate-800 rounded-full shadow-sm">
+                                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                  </button>
+                              )}
                           </div>
                       </div>
                   );
@@ -157,26 +201,45 @@ export const CommunityPage: React.FC = () => {
               <div ref={dummyRef}></div>
           </div>
 
-          <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
-              {chatImage && (
-                  <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg mb-2">
-                      <span className="text-xs truncate flex-1">{chatImage.name}</span>
-                      <button onClick={() => setChatImage(null)} className="text-rose-500 font-bold">×</button>
+          <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 relative z-20">
+              {/* Image Preview Modal Overlay */}
+              {previewImage && (
+                  <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                      <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 w-full max-w-md shadow-2xl animate-fade-in-up">
+                          <div className="relative mb-4 rounded-xl overflow-hidden bg-slate-900">
+                              <img src={URL.createObjectURL(previewImage)} alt="Preview" className="max-h-[60vh] w-full object-contain mx-auto" />
+                              <button onClick={cancelImagePreview} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-rose-500 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                          </div>
+                          <div className="flex gap-2">
+                              <input 
+                                  autoFocus
+                                  className="flex-1 bg-slate-100 dark:bg-slate-700 dark:text-white px-4 py-3 rounded-xl outline-none" 
+                                  placeholder="Add a caption..." 
+                                  value={imageCaption}
+                                  onChange={e => setImageCaption(e.target.value)}
+                                  onKeyDown={e => e.key === 'Enter' && handleSend()}
+                              />
+                              <button onClick={handleSend} disabled={sending} className="bg-indigo-600 text-white p-3 rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                                  {sending ? <div className="w-6 h-6 border-2 border-white/50 border-t-white rounded-full animate-spin"/> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>}
+                              </button>
+                          </div>
+                      </div>
                   </div>
               )}
-              <form onSubmit={handleSend} className="flex items-center gap-2">
-                  <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+
+              <form onSubmit={handleSend} className="flex items-center gap-2 max-w-4xl mx-auto">
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors" title="Attach Image">
                       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                   </button>
-                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={e => e.target.files && setChatImage(e.target.files[0])} />
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileSelect} />
                   
                   <input 
                       value={newMessage} 
                       onChange={e => setNewMessage(e.target.value)} 
-                      className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-full px-5 py-3 focus:outline-none text-sm dark:text-white" 
+                      className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-full px-5 py-3 focus:outline-none text-sm dark:text-white border border-transparent focus:border-indigo-300 dark:focus:border-indigo-700 transition-colors" 
                       placeholder="Type a message..." 
                   />
-                  <button type="submit" disabled={(!newMessage.trim() && !chatImage) || sending} className="p-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-lg">
+                  <button type="submit" disabled={!newMessage.trim() || sending} className="p-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-lg">
                       {sending ? <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" /> : <svg className="w-5 h-5 translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>}
                   </button>
               </form>

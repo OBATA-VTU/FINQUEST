@@ -47,7 +47,6 @@ export const UserDashboardPage: React.FC = () => {
       const fetchData = async () => {
           if (!user?.id) return;
           try {
-              // Fetch Test Stats
               const q = query(
                   collection(db, 'test_results'), 
                   where('userId', '==', user.id),
@@ -66,7 +65,6 @@ export const UserDashboardPage: React.FC = () => {
                   setAvgScore(Math.round(total / tests.length));
               }
 
-              // Fetch Recent News (Limit 3)
               const newsQ = query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(3));
               const newsSnap = await getDocs(newsQ);
               setRecentNews(newsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement)));
@@ -88,8 +86,8 @@ export const UserDashboardPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20 font-sans transition-colors">
       
-      {/* 1. WELCOME HERO */}
-      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 pt-8 pb-12 px-4">
+      {/* 1. HERO SECTION */}
+      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 pt-8 pb-12 px-4 transition-colors">
           <div className="container mx-auto max-w-6xl">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                   <div>
