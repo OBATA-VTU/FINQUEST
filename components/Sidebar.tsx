@@ -1,3 +1,4 @@
+
 import React, { useContext, useState } from 'react';
 import { Logo } from './Logo';
 import { AuthContext } from '../contexts/AuthContext';
@@ -14,18 +15,19 @@ const NavItem: React.FC<NavItemProps> = ({ to, label, icon, onClose }) => (
     <NavLink
         to={to}
         onClick={onClose}
-        className={({ isActive }) => `w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group ${
+        className={({ isActive }) => `w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group relative ${
             isActive
-                ? 'bg-white/10 text-white shadow-inner backdrop-blur-sm border-l-4 border-indigo-400'
+                ? 'bg-white/10 text-white shadow-inner border-l-4 border-indigo-400'
                 : 'text-indigo-200 hover:bg-white/5 hover:text-white'
         }`}
     >
         {({ isActive }) => (
             <>
-                <div className={`${isActive ? 'text-indigo-400' : 'text-indigo-300 group-hover:text-white'}`}>
+                <div className={`${isActive ? 'text-indigo-400' : 'text-indigo-300 group-hover:text-white'} transition-colors`}>
                     {icon}
                 </div>
-                <span className="font-medium text-sm tracking-wide">{label}</span>
+                <span className={`font-medium text-sm tracking-wide ${isActive ? 'font-bold' : ''}`}>{label}</span>
+                {isActive && <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-transparent rounded-xl pointer-events-none"></div>}
             </>
         )}
     </NavLink>
@@ -40,21 +42,21 @@ interface NavSectionProps {
 
 const NavSection: React.FC<NavSectionProps> = ({ title, children, isExpanded, onToggle }) => {
     return (
-        <div className="mb-4">
+        <div className="mb-6">
             <button
                 onClick={onToggle}
-                className="w-full flex items-center justify-between px-4 py-2 text-xs font-bold text-indigo-400 uppercase tracking-widest hover:text-white transition-colors group focus:outline-none"
+                className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] hover:text-white transition-colors group focus:outline-none mb-2 opacity-80 hover:opacity-100"
             >
                 <span>{title}</span>
                 <svg
-                    className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                    className={`w-3 h-3 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
                     fill="none" viewBox="0 0 24 24" stroke="currentColor"
                 >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
             <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                <div className="mt-1 space-y-1">
+                <div className="space-y-1">
                     {children}
                 </div>
             </div>
@@ -97,22 +99,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     <>
         {/* Mobile Overlay */}
         <div 
-            className={`fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-40 transition-opacity duration-300 xl:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            className={`fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 transition-opacity duration-300 xl:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             onClick={onClose}
         ></div>
 
         {/* Sidebar Container */}
         <aside 
             className={`
-                fixed xl:sticky top-0 left-0 h-[100dvh] w-72 bg-indigo-900 dark:bg-slate-950 z-50 
-                transform transition-transform duration-300 ease-in-out shrink-0 flex flex-col shadow-2xl xl:shadow-none
+                fixed xl:sticky top-0 left-0 h-[100dvh] w-72 bg-gradient-to-b from-indigo-950 to-slate-950 z-50 
+                transform transition-transform duration-300 ease-in-out shrink-0 flex flex-col shadow-2xl xl:shadow-none border-r border-indigo-900/50
                 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'}
             `}
         >
           {/* Header (Fixed) */}
-          <div className="p-6 flex items-center justify-between border-b border-indigo-800/50 dark:border-slate-800 shrink-0">
+          <div className="p-6 flex items-center justify-between border-b border-indigo-800/30 shrink-0 bg-indigo-950/50 backdrop-blur-sm">
             <div className="flex items-center gap-3">
-                <div className="bg-white rounded-full p-1 shadow-lg">
+                <div className="bg-white rounded-full p-1 shadow-lg ring-2 ring-indigo-500/50">
                     <Logo className="h-8 w-8" />
                 </div>
                 <div>
@@ -125,7 +127,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </button>
           </div>
 
-          <nav className="flex-1 px-3 py-6 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-700">
+          <nav className="flex-1 px-3 py-6 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-900">
             
             <NavSection 
                 title="Main Menu" 
@@ -226,12 +228,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </NavSection>
           </nav>
 
-          <div className="p-4 border-t border-indigo-800 bg-indigo-950 dark:bg-slate-900 shrink-0">
+          <div className="p-4 border-t border-indigo-900 bg-black/20 shrink-0">
             {auth?.user ? (
                 <div>
                     <div 
                         onClick={() => { navigate('/profile'); onClose(); }}
-                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/10 cursor-pointer transition-all mb-3 group"
+                        className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 cursor-pointer transition-all mb-3 group"
                     >
                         <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold border-2 border-indigo-400 overflow-hidden shrink-0 group-hover:border-white transition-colors">
                             {auth.user.avatarUrl ? (
@@ -252,7 +254,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                         {isAdminUser && (
                             <button 
                                 onClick={() => { navigate('/admin/dashboard'); onClose(); }}
-                                className="col-span-3 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-md transition-colors flex items-center justify-center gap-2"
+                                className="col-span-3 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg"
                             >
                                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                 Admin
@@ -260,7 +262,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                         )}
                         <button 
                             onClick={handleLogout}
-                            className={`px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-md transition-colors flex items-center justify-center ${isAdminUser ? 'col-span-1' : 'col-span-4'}`}
+                            className={`px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition-colors flex items-center justify-center shadow-lg ${isAdminUser ? 'col-span-1' : 'col-span-4'}`}
                             title="Logout"
                         >
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
@@ -270,7 +272,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             ) : (
                 <button
                     onClick={() => { navigate('/login'); onClose(); }}
-                    className="w-full py-3 rounded-lg bg-white hover:bg-indigo-50 text-indigo-900 font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                    className="w-full py-3 rounded-xl bg-white hover:bg-indigo-50 text-indigo-900 font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
                 >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                     Student Login
