@@ -68,7 +68,7 @@ export const uploadFile = async (file: File, folder: string = 'materials', onPro
 
         } catch (error: any) {
             console.error("Storage Upload Error:", error);
-            reject(new Error("Failed to upload document to cloud storage. Please try again."));
+            reject(new Error("Failed to upload document to cloud storage. Please try again or check connection."));
         }
     });
 };
@@ -101,6 +101,6 @@ export const uploadToImgBB = async (file: File): Promise<string> => {
         throw new Error("Invalid response");
     } catch (e: any) {
         console.warn("Image Upload failed:", e);
-        throw new Error("Failed to upload image to server.");
+        throw new Error("Failed to upload image. Please try again.");
     }
 };

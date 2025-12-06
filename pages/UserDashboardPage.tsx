@@ -87,7 +87,7 @@ export const UserDashboardPage: React.FC = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20 font-sans transition-colors">
       
       {/* 1. HERO SECTION */}
-      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 pt-8 pb-12 px-4 transition-colors">
+      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 pt-10 pb-12 px-4 transition-colors">
           <div className="container mx-auto max-w-6xl">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                   <div>
@@ -109,7 +109,7 @@ export const UserDashboardPage: React.FC = () => {
                   </div>
                   
                   <div className="max-w-md w-full bg-slate-50 dark:bg-slate-700/30 p-4 rounded-xl border-l-4 border-indigo-500">
-                      <p className="text-slate-600 dark:text-slate-300 text-sm italic font-medium">"{quote}"</p>
+                      <p className="text-slate-600 dark:text-slate-300 text-sm italic font-medium leading-relaxed">"{quote}"</p>
                   </div>
               </div>
           </div>
