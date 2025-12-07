@@ -14,10 +14,6 @@ const QUOTES = [
     "In investing, what is comfortable is rarely profitable. - Robert Arnott",
     "Compound interest is the eighth wonder of the world. - Albert Einstein",
     "Risk comes from not knowing what you are doing. - Warren Buffett",
-    "The individual investor should act consistently as an investor and not as a speculator. - Ben Graham",
-    "Price is what you pay. Value is what you get. - Warren Buffett",
-    "Know what you own, and know why you own it. - Peter Lynch",
-    "The four most dangerous words in investing are: 'This time it's different.' - Sir John Templeton",
     "Financial freedom is available to those who learn about it and work for it. - Robert Kiyosaki"
 ];
 
@@ -49,7 +45,6 @@ export const UserDashboardPage: React.FC = () => {
       const fetchData = async () => {
           if (!user?.id) return;
           try {
-              // 1. Fetch Test Stats & History
               const testQuery = query(
                   collection(db, 'test_results'), 
                   where('userId', '==', user.id),
@@ -61,29 +56,22 @@ export const UserDashboardPage: React.FC = () => {
               const tests = testSnap.docs.map(d => ({ id: d.id, ...d.data() } as TestResult));
               
               setRecentTests(tests);
-              
-              // Note: To get total count accurately without reading all docs, we'd need a counter in user doc.
-              // For now, we estimate based on what we have or just show recent. 
-              // If we want total, we can do a count query (costly) or just show length of recent if small.
-              // Let's rely on user.contributionPoints for a metric and just show recent test count or calculate avg from recent.
-              setTestCount(tests.length);
+              setTestCount(tests.length); // Approximate
               
               if (tests.length > 0) {
                   const total = tests.reduce((acc, curr) => acc + curr.score, 0);
                   setAvgScore(Math.round(total / tests.length));
               }
 
-              // 2. Fetch Recent News
               const newsQ = query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(3));
               const newsSnap = await getDocs(newsQ);
               setRecentNews(newsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement)));
 
-              // 3. Fetch Recommended Resources (Same Level)
               const recQ = query(
                   collection(db, 'questions'),
                   where('level', '==', user.level),
                   where('status', '==', 'approved'),
-                  limit(3)
+                  limit(2)
               );
               const recSnap = await getDocs(recQ);
               setRecommendedQuestions(recSnap.docs.map(d => ({ id: d.id, ...d.data() } as PastQuestion)));
@@ -103,252 +91,172 @@ export const UserDashboardPage: React.FC = () => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20 font-sans transition-colors">
-      
-      {/* 1. HERO SECTION */}
-      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 pt-10 pb-12 px-4 transition-colors">
-          <div className="container mx-auto max-w-6xl">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-                  <div>
-                      <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xs font-bold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded-full uppercase tracking-wider">
-                              {user.level} Level Student
-                          </span>
-                          <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
-                              {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-                          </span>
-                      </div>
-                      <h1 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 dark:text-white mb-2">
-                          {greeting}, {user.name.split(' ')[0]}
-                      </h1>
-                      <div className="flex items-center gap-2">
-                          <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">@{user.username}</span>
-                          <VerificationBadge role={user.role} isVerified={user.isVerified} className="w-4 h-4" />
-                      </div>
-                  </div>
-                  
-                  <div className="max-w-md w-full bg-slate-50 dark:bg-slate-700/30 p-4 rounded-xl border-l-4 border-indigo-500 shadow-sm">
-                      <p className="text-slate-600 dark:text-slate-300 text-sm italic font-medium leading-relaxed">"{quote}"</p>
-                  </div>
-              </div>
-          </div>
-      </div>
-
-      <div className="container mx-auto px-4 max-w-6xl -mt-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 font-sans transition-colors p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
           
-          {/* 2. STATS GRID */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:-translate-y-1 transition-transform duration-300">
-                  <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-indigo-600 dark:text-indigo-400">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+          {/* 1. HERO - COMMAND CENTER STYLE */}
+          <div className="rounded-3xl overflow-hidden relative shadow-xl bg-indigo-900 text-white min-h-[220px] flex flex-col justify-center p-8 md:p-12">
+              <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&q=80')] bg-cover opacity-20 mix-blend-overlay"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900/80"></div>
+              
+              <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                  <div>
+                      <div className="flex items-center gap-3 mb-3">
+                          <div className="w-12 h-12 rounded-full border-2 border-white/30 overflow-hidden bg-white/10 backdrop-blur-md">
+                              {user.avatarUrl ? <img src={user.avatarUrl} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full font-bold">{user.name.charAt(0)}</div>}
+                          </div>
+                          <div>
+                              <p className="text-indigo-200 text-sm font-medium tracking-wider uppercase">{user.level} Level Finance Student</p>
+                              <div className="flex items-center gap-1">
+                                  <span className="font-bold text-white text-lg">{user.name}</span>
+                                  <VerificationBadge role={user.role} isVerified={user.isVerified} className="w-5 h-5 text-white" />
+                              </div>
+                          </div>
                       </div>
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Recent Tests</span>
+                      <h1 className="text-3xl md:text-5xl font-serif font-black leading-tight mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white to-indigo-200">
+                          {greeting}
+                      </h1>
+                      <p className="text-indigo-100 max-w-xl text-sm md:text-base opacity-90 italic">"{quote}"</p>
                   </div>
-                  <p className="text-3xl font-black text-slate-800 dark:text-white">{testCount}</p>
-              </div>
-
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:-translate-y-1 transition-transform duration-300">
-                  <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-emerald-600 dark:text-emerald-400">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                  
+                  <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl flex items-center gap-6">
+                      <div className="text-center">
+                          <span className="block text-2xl font-black">{user.contributionPoints || 0}</span>
+                          <span className="text-[10px] uppercase tracking-wider opacity-70">Points</span>
                       </div>
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Avg Score</span>
-                  </div>
-                  <p className="text-3xl font-black text-slate-800 dark:text-white">{avgScore}%</p>
-              </div>
-
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:-translate-y-1 transition-transform duration-300">
-                  <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-amber-600 dark:text-amber-400">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <div className="w-px h-8 bg-white/20"></div>
+                      <div className="text-center">
+                          <span className="block text-2xl font-black">{testCount}</span>
+                          <span className="text-[10px] uppercase tracking-wider opacity-70">Tests</span>
                       </div>
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Points</span>
                   </div>
-                  <p className="text-3xl font-black text-slate-800 dark:text-white">{user.contributionPoints || 0}</p>
-              </div>
-
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:-translate-y-1 transition-transform duration-300">
-                  <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-rose-50 dark:bg-rose-900/20 rounded-lg text-rose-600 dark:text-rose-400">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
-                      </div>
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Saved</span>
-                  </div>
-                  <p className="text-3xl font-black text-slate-800 dark:text-white">{user.savedQuestions?.length || 0}</p>
               </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* 2. BENTO GRID LAYOUT */}
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
               
-              {/* LEFT COLUMN - MAIN CONTENT */}
-              <div className="lg:col-span-2 space-y-8">
-                  
-                  {/* QUICK ACTIONS */}
-                  <section>
-                      <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-2">
-                          <span className="bg-indigo-100 dark:bg-indigo-900 p-1 rounded text-indigo-600 dark:text-indigo-400">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                          </span>
-                          Quick Actions
-                      </h2>
-                      <div className="grid grid-cols-2 gap-4">
-                          <button onClick={() => navigate('/test')} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-500 hover:shadow-md transition-all group flex items-start gap-4 text-left">
-                              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform shrink-0">
-                                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
-                              </div>
-                              <div>
-                                <span className="font-bold text-slate-800 dark:text-white text-base block mb-1">CBT Practice</span>
-                                <span className="text-xs text-slate-500 dark:text-slate-400 block leading-snug">Take mock exams and test your knowledge.</span>
-                              </div>
-                          </button>
-
-                          <button onClick={() => navigate('/questions')} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 hover:shadow-md transition-all group flex items-start gap-4 text-left">
-                              <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform shrink-0">
-                                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                              </div>
-                              <div>
-                                <span className="font-bold text-slate-800 dark:text-white text-base block mb-1">Past Questions</span>
-                                <span className="text-xs text-slate-500 dark:text-slate-400 block leading-snug">Access verified exam archives.</span>
-                              </div>
-                          </button>
-
-                          <button onClick={() => navigate('/community')} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-rose-500 dark:hover:border-rose-500 hover:shadow-md transition-all group flex items-start gap-4 text-left">
-                              <div className="w-12 h-12 bg-rose-50 dark:bg-rose-900/30 rounded-xl flex items-center justify-center text-rose-600 dark:text-rose-400 group-hover:scale-110 transition-transform shrink-0">
-                                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                              </div>
-                              <div>
-                                <span className="font-bold text-slate-800 dark:text-white text-base block mb-1">Community</span>
-                                <span className="text-xs text-slate-500 dark:text-slate-400 block leading-snug">Connect with peers and groups.</span>
-                              </div>
-                          </button>
-
-                          <button onClick={() => navigate('/lecturers')} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 hover:shadow-md transition-all group flex items-start gap-4 text-left">
-                              <div className="w-12 h-12 bg-amber-50 dark:bg-amber-900/30 rounded-xl flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform shrink-0">
-                                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                              </div>
-                              <div>
-                                <span className="font-bold text-slate-800 dark:text-white text-base block mb-1">Directory</span>
-                                <span className="text-xs text-slate-500 dark:text-slate-400 block leading-snug">Lecturers & Staff info.</span>
-                              </div>
-                          </button>
-                      </div>
-                  </section>
-
-                  {/* RECOMMENDED RESOURCES (New) */}
-                  <section>
-                      <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-2">
-                          <span className="bg-amber-100 dark:bg-amber-900 p-1 rounded text-amber-600 dark:text-amber-400">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                          </span>
-                          Recommended Resources
-                      </h2>
-                      {loading ? (
-                          <div className="p-4 text-center text-slate-400 text-sm">Loading recommendations...</div>
-                      ) : recommendedQuestions.length === 0 ? (
-                          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-center">
-                              <p className="text-slate-500 dark:text-slate-400 text-sm">No specific recommendations found for your level yet.</p>
-                              <button onClick={() => navigate('/questions')} className="text-indigo-600 font-bold text-xs mt-2 hover:underline">Browse All</button>
+              {/* Quick Actions (Span 2) */}
+              <div className="md:col-span-2 lg:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+                  <h3 className="font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+                      <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                      Quick Access
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 h-full">
+                      <button onClick={() => navigate('/test')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors group">
+                          <div className="w-10 h-10 bg-white dark:bg-indigo-900 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-300 shadow-sm mb-3 group-hover:scale-110 transition-transform">
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
                           </div>
-                      ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              {recommendedQuestions.map(q => (
-                                  <QuestionCard key={q.id} question={q} />
-                              ))}
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">CBT</span>
+                      </button>
+                      <button onClick={() => navigate('/questions')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors group">
+                          <div className="w-10 h-10 bg-white dark:bg-emerald-900 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-300 shadow-sm mb-3 group-hover:scale-110 transition-transform">
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                           </div>
-                      )}
-                  </section>
-
-                  {/* RECENT ACTIVITY */}
-                  <section>
-                      <div className="flex justify-between items-center mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
-                          <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                              <span className="bg-blue-100 dark:bg-blue-900 p-1 rounded text-blue-600 dark:text-blue-400">
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                              </span>
-                              Recent Activity
-                          </h2>
-                          <button onClick={() => navigate('/test')} className="text-xs font-bold text-indigo-600 hover:underline">View Full History</button>
-                      </div>
-
-                      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-                          {loading ? (
-                              <div className="p-8 text-center text-slate-400 text-sm">Loading activity...</div>
-                          ) : recentTests.length === 0 ? (
-                              <div className="p-12 text-center">
-                                  <p className="text-slate-500 dark:text-slate-400 mb-4">No recent activity recorded.</p>
-                                  <button onClick={() => navigate('/test')} className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-100 transition">Take a Test</button>
-                              </div>
-                          ) : (
-                              <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                                  {recentTests.map(test => (
-                                      <div key={test.id} className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                                          <div className="flex items-center gap-4">
-                                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm border-2 ${test.score >= 50 ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-600' : 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800 text-rose-600'}`}>
-                                                  {test.score}%
-                                              </div>
-                                              <div>
-                                                  <h4 className="text-sm font-bold text-slate-800 dark:text-white">CBT Practice Session</h4>
-                                                  <p className="text-xs text-slate-500 dark:text-slate-400">{new Date(test.date).toLocaleDateString()} • {test.totalQuestions} Questions</p>
-                                              </div>
-                                          </div>
-                                          <span className="text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded">
-                                              {test.level}L
-                                          </span>
-                                      </div>
-                                  ))}
-                              </div>
-                          )}
-                      </div>
-                  </section>
-              </div>
-
-              {/* RIGHT COLUMN - NEWS & UPDATES */}
-              <div className="space-y-8">
-                  <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden border border-slate-700">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-xl"></div>
-                      <h3 className="font-bold text-lg mb-4 flex items-center gap-2 border-b border-white/10 pb-2">
-                          <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
-                          Department Announcements
-                      </h3>
-                      
-                      <div className="space-y-4">
-                          {recentNews.length > 0 ? recentNews.map(news => (
-                              <div key={news.id} onClick={() => navigate('/announcements')} className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 cursor-pointer hover:bg-white/20 transition-colors">
-                                  <h4 className="font-bold text-sm mb-1 line-clamp-1">{news.title}</h4>
-                                  <p className="text-xs text-indigo-200 line-clamp-2">{news.content}</p>
-                                  <span className="text-[10px] text-indigo-300 mt-2 block opacity-70">{new Date(news.date).toLocaleDateString()}</span>
-                              </div>
-                          )) : (
-                              <p className="text-sm text-indigo-200 italic">No recent announcements.</p>
-                          )}
-                      </div>
-                      
-                      <button onClick={() => navigate('/announcements')} className="w-full mt-6 py-2.5 bg-white text-indigo-900 font-bold text-xs rounded-lg hover:bg-indigo-50 transition-colors uppercase tracking-wider">
-                          View All Updates
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Archives</span>
+                      </button>
+                      <button onClick={() => navigate('/community')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors group">
+                          <div className="w-10 h-10 bg-white dark:bg-rose-900 rounded-full flex items-center justify-center text-rose-600 dark:text-rose-300 shadow-sm mb-3 group-hover:scale-110 transition-transform">
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                          </div>
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Community</span>
+                      </button>
+                      <button onClick={() => navigate('/lecturers')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors group">
+                          <div className="w-10 h-10 bg-white dark:bg-amber-900 rounded-full flex items-center justify-center text-amber-600 dark:text-amber-300 shadow-sm mb-3 group-hover:scale-110 transition-transform">
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                          </div>
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Directory</span>
                       </button>
                   </div>
+              </div>
 
-                  <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
-                      <h3 className="font-bold text-slate-800 dark:text-white mb-4 text-sm uppercase tracking-wide border-b border-slate-100 dark:border-slate-700 pb-2">Profile Status</h3>
-                      <div className="space-y-3">
-                          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
-                              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Account Type</span>
-                              {user.isVerified ? (
-                                  <span className="text-xs font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded border border-emerald-200 dark:border-emerald-800">Verified</span>
-                              ) : (
-                                  <span className="text-xs font-bold text-slate-500 bg-slate-200 dark:bg-slate-600 px-2 py-1 rounded">Unverified</span>
-                              )}
+              {/* Performance Widget (Span 1) */}
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-center items-center">
+                  <h3 className="font-bold text-slate-800 dark:text-white mb-4 text-sm w-full text-left">Performance</h3>
+                  <div className="relative w-24 h-24 flex items-center justify-center mb-2">
+                      <svg className="w-full h-full transform -rotate-90">
+                          <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100 dark:text-slate-800" />
+                          <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray={251.2} strokeDashoffset={251.2 - (251.2 * avgScore) / 100} className={`text-indigo-600 dark:text-indigo-500 transition-all duration-1000 ease-out`} />
+                      </svg>
+                      <span className="absolute text-xl font-black text-slate-800 dark:text-white">{avgScore}%</span>
+                  </div>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Average Score</p>
+              </div>
+
+              {/* Recommended (Span 1) */}
+              <div className="md:col-span-3 lg:col-span-1 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-6 shadow-lg flex flex-col">
+                  <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                      <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                      For You
+                  </h3>
+                  <div className="flex-1 space-y-3">
+                      {recommendedQuestions.length > 0 ? recommendedQuestions.map(q => (
+                          <div key={q.id} onClick={() => navigate('/questions')} className="bg-white/10 p-3 rounded-xl cursor-pointer hover:bg-white/20 transition-colors">
+                              <p className="font-bold text-xs line-clamp-1">{q.courseTitle}</p>
+                              <p className="text-[10px] text-slate-400">{q.courseCode}</p>
                           </div>
-                          <div className="flex items-center justify-center pt-2">
-                              <button onClick={() => navigate('/profile')} className="text-indigo-600 dark:text-indigo-400 text-xs font-bold hover:underline flex items-center gap-1">
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                                Edit Profile Details
-                              </button>
-                          </div>
+                      )) : (
+                          <div className="text-center py-4 opacity-50 text-xs">No specific recommendations yet.</div>
+                      )}
+                  </div>
+                  <button onClick={() => navigate('/questions')} className="mt-4 w-full py-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold transition-colors">Browse Archive</button>
+              </div>
+
+              {/* Recent Activity Timeline (Span 2) */}
+              <div className="md:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm min-h-[300px]">
+                  <div className="flex justify-between items-center mb-6">
+                      <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                          <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          Timeline
+                      </h3>
+                      <button onClick={() => navigate('/test')} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">View History</button>
+                  </div>
+                  
+                  {loading ? <div className="text-center text-xs text-slate-400 py-10">Loading...</div> : recentTests.length === 0 ? (
+                      <div className="text-center py-12 text-slate-400 text-sm">No activity recorded yet. Start practicing!</div>
+                  ) : (
+                      <div className="relative pl-4 space-y-6 before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100 dark:before:bg-slate-800">
+                          {recentTests.map((test, i) => (
+                              <div key={test.id} className="relative pl-8 group">
+                                  <div className={`absolute left-[13px] top-1.5 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${test.score >= 50 ? 'bg-emerald-500' : 'bg-rose-500'} z-10`}></div>
+                                  <div className="flex justify-between items-start">
+                                      <div>
+                                          <h4 className="text-sm font-bold text-slate-800 dark:text-white">CBT Practice Session</h4>
+                                          <p className="text-xs text-slate-500 dark:text-slate-400">{test.totalQuestions} Questions • {test.level}L</p>
+                                      </div>
+                                      <div className="text-right">
+                                          <span className={`block font-black text-sm ${test.score >= 50 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{test.score}%</span>
+                                          <span className="text-[10px] text-slate-400">{new Date(test.date).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>
+                                      </div>
+                                  </div>
+                              </div>
+                          ))}
                       </div>
+                  )}
+              </div>
+
+              {/* News Feed (Span 1 or 2) */}
+              <div className="md:col-span-1 lg:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <h3 className="font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+                      <svg className="w-5 h-5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
+                      Latest Updates
+                  </h3>
+                  <div className="space-y-4">
+                      {recentNews.length > 0 ? recentNews.map(news => (
+                          <div key={news.id} onClick={() => navigate('/announcements')} className="flex gap-4 group cursor-pointer">
+                              <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-xl flex flex-col items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
+                                  <span className="text-lg font-bold leading-none">{new Date(news.date).getDate()}</span>
+                                  <span className="text-[9px] uppercase font-bold">{new Date(news.date).toLocaleDateString(undefined, {month:'short'})}</span>
+                              </div>
+                              <div className="flex-1">
+                                  <h4 className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">{news.title}</h4>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1">{news.content}</p>
+                              </div>
+                          </div>
+                      )) : <p className="text-xs text-slate-400 italic">No news updates available.</p>}
                   </div>
               </div>
+
           </div>
       </div>
     </div>

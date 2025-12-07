@@ -9,7 +9,7 @@ import { uploadToImgBB } from '../utils/api';
 import { updateProfile, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { auth as firebaseAuth, db } from '../firebase';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const getFriendlyErrorMessage = (error: any): string => {
     const code = error.code || '';
@@ -110,7 +110,7 @@ export const LoginPage: React.FC = () => {
           const isIncomplete = await auth.loginWithGoogle();
           if (isIncomplete) { setViewState('google_setup'); setIsLoading(false); } 
       } catch (err: any) {
-          showNotification(getFriendlyErrorMessage(err), 'error');
+          // Error notification handled in context
           setIsLoading(false);
       }
   };
@@ -148,14 +148,14 @@ export const LoginPage: React.FC = () => {
       setIsResetting(true);
       try {
           await sendPasswordResetEmail(firebaseAuth, resetEmail);
-          showNotification("Reset link sent to your email!", "success");
+          showNotification("Reset link sent! Please check your email inbox and spam folder.", "success");
           setShowForgot(false); setResetEmail('');
       } catch (err: any) {
           showNotification(getFriendlyErrorMessage(err), "error");
       } finally { setIsResetting(false); }
   };
 
-  // Upload/Setup UI (Simplified for brevity but consistent style)
+  // Upload/Setup UI
   if (viewState !== 'auth') {
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
