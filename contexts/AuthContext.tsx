@@ -52,6 +52,16 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
 
             if (userDoc.exists()) {
                 const userData = userDoc.data();
+                
+                // CHECK IF BANNED
+                if (userData.isBanned) {
+                    await signOut(auth);
+                    showNotification("Account suspended. Contact Admin.", "error");
+                    setUser(null);
+                    setLoading(false);
+                    return;
+                }
+
                 setUser({
                     id: firebaseUser.uid,
                     email: firebaseUser.email || '',
@@ -64,7 +74,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     contributionPoints: userData.contributionPoints || 0,
                     savedQuestions: userData.savedQuestions || [],
                     lastActive: userData.lastActive,
-                    isVerified: userData.isVerified
+                    isVerified: userData.isVerified,
+                    isBanned: userData.isBanned
                 });
             } else {
                 const newUser = {
@@ -110,7 +121,15 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       const handleHeartbeat = async () => {
           if (!auth.currentUser) return;
           try {
-              await updateDoc(doc(db, 'users', auth.currentUser.uid), { lastActive: new Date().toISOString() });
+              // Also check banned status during heartbeat to ensure quick logout
+              const userRef = doc(db, 'users', auth.currentUser.uid);
+              const snap = await getDoc(userRef);
+              if (snap.exists() && snap.data().isBanned) {
+                  logout();
+                  showNotification("Session terminated by administrator.", "error");
+                  return;
+              }
+              await updateDoc(userRef, { lastActive: new Date().toISOString() });
           } catch (e) { console.warn("Heartbeat failed", e); }
       };
 
@@ -143,7 +162,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const login = async (email: string, pass: string) => {
     try {
         await signInWithEmailAndPassword(auth, email, pass);
-        showNotification("Login successful!", "success");
+        // Auth state listener handles the rest
     } catch (error: any) {
         throw error;
     }
@@ -159,10 +178,13 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         const firebaseUser = result.user;
         let isIncompleteProfile = false;
 
-        // Optimistically set user state if creating new? No, safer to wait for DB check.
-        // But we can streamline the check.
         const userRef = doc(db, 'users', firebaseUser.uid);
         const userDoc = await getDoc(userRef);
+        
+        if (userDoc.exists() && userDoc.data().isBanned) {
+            await signOut(auth);
+            throw new Error("Account suspended.");
+        }
         
         if (!userDoc.exists()) {
            const cleanData = sanitizeData({
@@ -195,7 +217,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         if (error.code === 'auth/unauthorized-domain') {
             showNotification(`Domain unauthorized in Firebase console.`, 'error');
         } else if (error.code !== 'auth/popup-closed-by-user') {
-            showNotification("Sign-in failed.", "error");
+            showNotification(error.message || "Sign-in failed.", "error");
         }
         throw error;
     }

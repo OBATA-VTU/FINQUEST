@@ -3,7 +3,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { TestResult, Announcement, PastQuestion } from '../types';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { QuestionCard } from '../components/QuestionCard';
@@ -44,37 +44,64 @@ export const UserDashboardPage: React.FC = () => {
   useEffect(() => {
       const fetchData = async () => {
           if (!user?.id) return;
+          setLoading(true);
           try {
+              // 1. Fetch Tests
+              // Removed orderBy to avoid missing index error if compound index not created
+              // We fetch recent results by filtering in JS
               const testQuery = query(
                   collection(db, 'test_results'), 
-                  where('userId', '==', user.id),
-                  orderBy('date', 'desc'),
-                  limit(5)
+                  where('userId', '==', user.id)
               );
               
               const testSnap = await getDocs(testQuery);
               const tests = testSnap.docs.map(d => ({ id: d.id, ...d.data() } as TestResult));
               
-              setRecentTests(tests);
-              setTestCount(tests.length); // Approximate
+              // Sort by date desc (newest first)
+              tests.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+              
+              setRecentTests(tests.slice(0, 5));
+              setTestCount(tests.length);
               
               if (tests.length > 0) {
                   const total = tests.reduce((acc, curr) => acc + curr.score, 0);
                   setAvgScore(Math.round(total / tests.length));
               }
 
-              const newsQ = query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(3));
-              const newsSnap = await getDocs(newsQ);
-              setRecentNews(newsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement)));
+              // 2. Fetch News
+              // Fetching recent news
+              // Simple ordering usually works, but if fails, fallback to client sort
+              let news: Announcement[] = [];
+              try {
+                  const newsQ = query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(3));
+                  const newsSnap = await getDocs(newsQ);
+                  news = newsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement));
+              } catch (e) {
+                  // Fallback without orderBy if index missing
+                  const newsQ = query(collection(db, 'announcements'), limit(10));
+                  const newsSnap = await getDocs(newsQ);
+                  news = newsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement));
+                  news.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                  news = news.slice(0, 3);
+              }
+              setRecentNews(news);
 
+              // 3. Recommended Questions
+              // Fetch approved questions and filter by level in JS to avoid composite index error
               const recQ = query(
                   collection(db, 'questions'),
-                  where('level', '==', user.level),
-                  where('status', '==', 'approved'),
-                  limit(2)
+                  where('status', '==', 'approved')
               );
               const recSnap = await getDocs(recQ);
-              setRecommendedQuestions(recSnap.docs.map(d => ({ id: d.id, ...d.data() } as PastQuestion)));
+              let allQuestions = recSnap.docs.map(d => ({ id: d.id, ...d.data() } as PastQuestion));
+              
+              // Filter for user level
+              const levelQuestions = allQuestions.filter(q => q.level === user.level);
+              // Fallback to any level if none found for specific level
+              const displayQuestions = levelQuestions.length > 0 ? levelQuestions : allQuestions;
+              
+              // Randomize or take latest
+              setRecommendedQuestions(displayQuestions.slice(0, 2));
 
           } catch (e) {
               console.error("Failed to fetch dashboard data", e);

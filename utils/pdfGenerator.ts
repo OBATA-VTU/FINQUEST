@@ -57,9 +57,18 @@ export const downloadPDF = (title: string, content: string, courseCode: string, 
 export const generateTestReviewPDF = (questions: any[], userAnswers: Record<number, number>, score: number, user: any) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 20;
     const maxLineWidth = pageWidth - margin * 2;
     let yPos = 20;
+
+    // Helper to add new page if needed
+    const checkPageBreak = (spaceNeeded: number) => {
+        if (yPos + spaceNeeded > pageHeight - margin) {
+            doc.addPage();
+            yPos = 20;
+        }
+    };
 
     // Header
     doc.setFontSize(18);
@@ -78,23 +87,21 @@ export const generateTestReviewPDF = (questions: any[], userAnswers: Record<numb
 
     doc.setLineWidth(0.5);
     doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 10;
+    yPos += 15;
 
     // Questions
     doc.setFontSize(11);
     
     questions.forEach((q, idx) => {
-        // Check page break
-        if (yPos > 250) {
-            doc.addPage();
-            yPos = 20;
-        }
-
-        doc.setFont("helvetica", "bold");
         const qTitle = `Q${idx + 1}: ${q.text}`;
         const splitTitle = doc.splitTextToSize(qTitle, maxLineWidth);
+        const titleHeight = splitTitle.length * 6; // Approx 6mm per line
+
+        checkPageBreak(titleHeight + 10); // Check for title space
+
+        doc.setFont("helvetica", "bold");
         doc.text(splitTitle, margin, yPos);
-        yPos += (splitTitle.length * 7);
+        yPos += titleHeight + 4; // Add extra padding after question
 
         doc.setFont("helvetica", "normal");
         q.options.forEach((opt: string, optIdx: number) => {
@@ -102,24 +109,36 @@ export const generateTestReviewPDF = (questions: any[], userAnswers: Record<numb
             const isSelected = userAnswers[idx] === optIdx;
             
             let prefix = "   ";
-            if (isCorrect) prefix = " (Correct) ";
-            if (isSelected) prefix = " (Your Answer) ";
-            if (isCorrect && isSelected) prefix = " (Correct & Your Answer) ";
+            let suffix = "";
+            if (isCorrect) suffix += " (Correct)";
+            if (isSelected) suffix += " (Your Answer)";
 
-            const optText = `${String.fromCharCode(65+optIdx)}. ${opt} ${prefix}`;
-            const splitOpt = doc.splitTextToSize(optText, maxLineWidth);
-            
+            const optText = `${String.fromCharCode(65+optIdx)}. ${opt}${suffix}`;
+            const splitOpt = doc.splitTextToSize(optText, maxLineWidth - 10); // Indent slightly
+            const optHeight = splitOpt.length * 6;
+
+            checkPageBreak(optHeight + 2);
+
             if (isCorrect) doc.setTextColor(0, 150, 0); // Green
             else if (isSelected && !isCorrect) doc.setTextColor(200, 0, 0); // Red
             else doc.setTextColor(100, 100, 100); // Grey
 
             doc.text(splitOpt, margin + 5, yPos);
             doc.setTextColor(0, 0, 0); // Reset
-            yPos += (splitOpt.length * 6);
+            yPos += optHeight + 2;
         });
         
-        yPos += 8; // Spacing between questions
+        yPos += 10; // Spacing between questions
     });
+
+    // Add footer page numbers
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for(let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(10);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: "center" });
+    }
 
     doc.save(`FINQUEST_Test_Result_${new Date().toISOString().split('T')[0]}.pdf`);
 };

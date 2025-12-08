@@ -70,6 +70,7 @@ export interface User {
   createdAt?: string;
   lastActive?: string; 
   isVerified?: boolean; // Added for blue tick
+  isBanned?: boolean; // Added for suspension
 }
 
 export interface CommunityGroup {

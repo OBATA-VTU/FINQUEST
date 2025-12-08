@@ -5,70 +5,49 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="/logo.svg" type="image/svg+xml" />
     
-    <!-- Optimized Viewport for Mobile Responsiveness -->
+    <!-- Optimized Viewport -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     
-    <!-- Primary SEO - Specific to User's Department -->
-    <title>FINSA-OBA | Department of Finance - Adekunle Ajasin University (AAUA)</title>
-    
-    <!-- Google Site Verification -->
-    <meta name="google-site-verification" content="yDXyjVaDaTFYAkLlsg3of6cYAjvTUwM0YFdPGH4vzP8" />
-
-    <!-- SEO Meta Tags -->
-    <meta name="description" content="Join FINSA, the official digital community for Finance students at Adekunle Ajasin University, Akungba-Akoko (AAUA). Access verified past questions, AI-powered CBT practice exams, department news, lecture notes, and connect with lecturers. The ultimate resource for academic excellence in finance.">
-    <meta name="keywords" content="FINSA AAUA, Department of Finance AAUA, FINSA Akungba, Adekunle Ajasin University Finance, AAUA Past Questions Finance, CBT Practice AAUA, Finance Students Association, AAUA Lecture Notes, Nigerian University Finance Portal, Akungba Finance Department, Financial Studies AAUA">
-    <meta name="author" content="FINSA AAUA Chapter">
+    <!-- SEO & Search Engine Visibility -->
+    <title>FINSA Portal | Finance Department AAUA - Past Questions & CBT</title>
+    <meta name="description" content="The official academic portal for Finance students at Adekunle Ajasin University (AAUA). Access verified past questions, take AI-powered CBT practice tests, view lecture notes, check the leaderboard, and stay updated with department news.">
+    <meta name="keywords" content="FINSA AAUA, Adekunle Ajasin University Finance, AAUA Past Questions, Finance CBT Practice, AAUA Portal, Finance Students Association, Akungba Finance, Nigerian University Finance Resources, Lecture Notes AAUA">
+    <meta name="author" content="FINSA AAUA Tech Team">
     <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#311b92">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://finsa.vercel.app/">
-    <meta property="og:title" content="FINSA | Department of Finance - AAUA Portal">
-    <meta property="og:description" content="The ultimate academic hub for AAUA Finance students. Practice for exams with AI-generated CBT, download past questions, and stay updated with FINSA news.">
+    <meta property="og:title" content="FINSA Portal | AAUA Finance Department">
+    <meta property="og:description" content="Master your finance degree with FINSA. Access past questions, CBT practice, and connect with the community.">
     <meta property="og:image" content="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:title" content="FINSA | Department of Finance - AAUA Portal">
-    <meta property="twitter:description" content="The ultimate academic hub for AAUA Finance students. Practice for exams with AI-generated CBT, download past questions, and stay updated with FINSA news.">
+    <meta property="twitter:title" content="FINSA Portal | AAUA Finance Department">
+    <meta property="twitter:description" content="The ultimate academic hub for AAUA Finance students. Practice for exams and download resources.">
     <meta property="twitter:image" content="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80">
 
-    <!-- Structured Data (JSON-LD) -->
+    <!-- Structured Data (JSON-LD) for Google -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "EducationalOrganization",
-          "name": "Department of Finance, Adekunle Ajasin University",
-          "alternateName": ["FINSA AAUA", "Finance Department AAUA"],
-          "url": "https://finsa.vercel.app/",
-          "address": {
-            "@type": "PostalAddress",
-            "addressLocality": "Akungba-Akoko",
-            "addressRegion": "Ondo State",
-            "addressCountry": "NG"
-          },
-          "sameAs": [
-            "https://www.facebook.com/finsaaaua",
-            "https://twitter.com/finsaaaua"
-          ]
-        },
-        {
-          "@type": "WebSite",
-          "name": "FINSA - AAUA Finance Portal",
-          "url": "https://finsa.vercel.app/",
-          "description": "The official digital portal for the Finance Department of Adekunle Ajasin University.",
-          "publisher": {
-            "@type": "Organization",
-            "name": "FINSA AAUA Chapter"
-          }
-        }
-      ]
+      "@type": "EducationalOrganization",
+      "name": "FINSA - Department of Finance AAUA",
+      "url": "https://finsa.vercel.app/",
+      "logo": "https://finsa.vercel.app/logo.svg",
+      "description": "Academic resource portal for Finance students providing past questions and CBT practice.",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Akungba-Akoko",
+        "addressRegion": "Ondo State",
+        "addressCountry": "NG"
+      }
     }
     </script>
 
-    <!-- CRITICAL: Inline Theme Script to prevent White Flash -->
+    <!-- Theme Script -->
     <script>
       (function() {
         try {
@@ -91,11 +70,17 @@
           extend: {
             animation: {
               'kenburns': 'kenburns 20s ease-out infinite alternate',
+              'float': 'float 6s ease-in-out infinite',
+              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             },
             keyframes: {
               kenburns: {
                 '0%': { transform: 'scale(1) translate(0, 0)' },
                 '100%': { transform: 'scale(1.15) translate(-1%, -1%)' },
+              },
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-10px)' },
               }
             }
           },
@@ -106,71 +91,21 @@
     <style>
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #0f172a; /* Default to dark slate to prevent white flash */
+        background-color: #0f172a;
       }
       h1, h2, h3, .font-serif {
         font-family: 'Playfair Display', serif;
       }
-      .animate-fade-in-down {
-        animation: fadeInDown 0.6s ease-out;
-      }
-      @keyframes fadeInDown {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-      }
-      .animate-fade-in {
-        animation: fadeIn 0.8s ease-out;
-      }
-      @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-      .animate-fade-in-up {
-        animation: fadeInUp 0.5s ease-out;
-      }
-      @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      /* Scroll Reveal Classes */
-      .reveal {
-        opacity: 0;
-        transform: translateY(30px);
-        transition: all 0.8s ease-out;
-      }
-      .reveal.active {
-        opacity: 1;
-        transform: translateY(0);
-      }
-      
-      .animate-blob {
-        animation: blob 20s infinite alternate;
-      }
-      @keyframes blob {
-        0% { transform: scale(1); }
-        100% { transform: scale(1.1); }
-      }
-      .animation-delay-2000 {
-        animation-delay: 2s;
-      }
-      .animation-delay-4000 {
-        animation-delay: 4s;
-      }
-      /* Hide scrollbar for Chrome, Safari and Opera */
-      .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-      }
-      /* Hide scrollbar for IE, Edge and Firefox */
-      .scrollbar-hide {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
-      }
+      .animate-fade-in-down { animation: fadeInDown 0.6s ease-out; }
+      @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+      .animate-fade-in { animation: fadeIn 0.8s ease-out; }
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+      @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+      .reveal { opacity: 0; transform: translateY(30px); transition: all 0.8s ease-out; }
+      .reveal.active { opacity: 1; transform: translateY(0); }
+      .scrollbar-hide::-webkit-scrollbar { display: none; }
+      .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
   <script type="importmap">
 {
@@ -192,7 +127,5 @@
   <body class="bg-slate-50 dark:bg-slate-900 antialiased transition-colors">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
-    
-    <!-- Service Worker Registration REMOVED for APK cleanup -->
   </body>
 </html>

@@ -1,3 +1,4 @@
+
 import React, { useContext } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
@@ -7,8 +8,8 @@ import { ExecutivesPage } from './pages/ExecutivesPage';
 import { LecturersPage } from './pages/LecturersPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
 import { LoginPage } from './pages/LoginPage';
-import { AdminLayout } from './components/AdminLayout'; // New Layout
-import { AdminPage } from './pages/AdminPage'; // Dashboard
+import { AdminLayout } from './components/AdminLayout';
+import { AdminPage } from './pages/AdminPage';
 import { AdminApprovalsPage } from './pages/AdminApprovalsPage';
 import { AdminContentPage } from './pages/AdminContentPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
@@ -19,20 +20,20 @@ import { GalleryPage } from './pages/GalleryPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { TermsPage } from './pages/TermsPage';
 import { TestPage } from './pages/TestPage'; 
-import { LostFoundPage } from './pages/LostFoundPage'; // New Page
-import { FAQPage } from './pages/FAQPage'; // New Page
+import { LostFoundPage } from './pages/LostFoundPage';
+import { FAQPage } from './pages/FAQPage';
+import { NotesPage } from './pages/NotesPage'; // New
+import { LeaderboardPage } from './pages/LeaderboardPage'; // New
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Layout } from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
 
-// Protected Route Wrapper
 const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNode, adminOnly?: boolean }) => {
     const auth = useContext(AuthContext);
     
     if (auth?.loading) {
-        // Minimal fallback while checking auth state, no full splash
         return null; 
     }
 
@@ -40,7 +41,6 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
         return <Navigate to="/login" replace />;
     }
 
-    // Updated to include 'supplement'
     if (adminOnly && !['admin', 'librarian', 'vice_president', 'supplement'].includes(auth.user.role)) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[80vh] text-center px-4 bg-slate-50 dark:bg-slate-900">
@@ -75,19 +75,21 @@ const AppContent: React.FC = () => {
                 <Route path="/faq" element={<FAQPage />} />
                 <Route path="/lost-and-found" element={<LostFoundPage />} />
                 
-                {/* Protected Routes (Authenticated Users Only) */}
+                {/* Protected Routes */}
                 <Route path="/dashboard" element={<RequireAuth><UserDashboardPage /></RequireAuth>} />
                 <Route path="/questions" element={<RequireAuth><PastQuestionsPage /></RequireAuth>} />
                 <Route path="/community" element={<RequireAuth><CommunityPage /></RequireAuth>} />
                 <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
                 <Route path="/test" element={<RequireAuth><TestPage /></RequireAuth>} />
+                <Route path="/notes" element={<RequireAuth><NotesPage /></RequireAuth>} />
+                <Route path="/leaderboard" element={<RequireAuth><LeaderboardPage /></RequireAuth>} />
                 
-                {/* Gated Public-ish Pages (Hidden from Guests) */}
+                {/* Gated Public-ish Pages */}
                 <Route path="/executives" element={<RequireAuth><ExecutivesPage /></RequireAuth>} />
                 <Route path="/lecturers" element={<RequireAuth><LecturersPage /></RequireAuth>} />
             </Route>
 
-            {/* Admin Routes - Nested Layout */}
+            {/* Admin Routes */}
             <Route path="/admin" element={<RequireAuth adminOnly><AdminLayout /></RequireAuth>}>
                 <Route index element={<Navigate to="/admin/dashboard" replace />} />
                 <Route path="dashboard" element={<AdminPage />} />

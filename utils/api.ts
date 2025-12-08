@@ -1,8 +1,26 @@
 
 import { Dropbox } from 'dropbox';
+import { db } from '../firebase';
+import { doc, setDoc, increment } from 'firebase/firestore';
 
 const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || "a4aa97ad337019899bb59b4e94b149e0";
 const DROPBOX_ACCESS_TOKEN = import.meta.env.VITE_DROPBOX_ACCESS_TOKEN;
+
+// Helper to track AI Usage for Admin Dashboard
+export const trackAiUsage = async () => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const statsRef = doc(db, 'system_stats', 'ai_usage');
+        // Increment global counter and daily counter
+        await setDoc(statsRef, { 
+            total_calls: increment(1),
+            [`daily_${today}`]: increment(1),
+            last_updated: new Date().toISOString()
+        }, { merge: true });
+    } catch (e) {
+        console.warn("Failed to track AI usage", e);
+    }
+};
 
 export const getDropboxDownloadUrl = (url: string | undefined): string => {
     if (!url) return '';

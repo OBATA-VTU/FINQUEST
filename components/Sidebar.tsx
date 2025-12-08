@@ -55,7 +55,7 @@ const NavSection: React.FC<NavSectionProps> = ({ title, children, isExpanded, on
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
-            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
                 <div className="space-y-1">
                     {children}
                 </div>
@@ -73,14 +73,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const auth = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // State for collapsible sections
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
       main: true,
       resources: true,
       department: true
   });
 
-  // Check if user has any administrative role
   const isAdminUser = ['admin', 'librarian', 'vice_president'].includes(auth?.user?.role || '');
 
   const toggleSection = (section: string) => {
@@ -97,13 +95,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   return (
     <>
-        {/* Mobile Overlay */}
         <div 
             className={`fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 transition-opacity duration-300 xl:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             onClick={onClose}
         ></div>
 
-        {/* Sidebar Container */}
         <aside 
             className={`
                 fixed xl:sticky top-0 left-0 h-[100dvh] w-72 bg-gradient-to-b from-indigo-950 to-slate-950 z-50 
@@ -111,7 +107,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'}
             `}
         >
-          {/* Header (Fixed) */}
           <div className="p-6 flex items-center justify-between border-b border-indigo-800/30 shrink-0 bg-indigo-950/50 backdrop-blur-sm">
             <div className="flex items-center gap-3">
                 <div className="bg-white rounded-full p-1 shadow-lg ring-2 ring-indigo-500/50">
@@ -142,12 +137,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 />
                 
                 {auth?.user && (
-                    <NavItem 
-                        to="/dashboard" 
-                        label="Dashboard" 
-                        icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>}
-                        onClose={onClose}
-                    />
+                    <>
+                        <NavItem 
+                            to="/dashboard" 
+                            label="Dashboard" 
+                            icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>}
+                            onClose={onClose}
+                        />
+                        <NavItem 
+                            to="/leaderboard" 
+                            label="Leaderboard" 
+                            icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>}
+                            onClose={onClose}
+                        />
+                    </>
                 )}
             </NavSection>
             
@@ -165,8 +168,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     />
                     <NavItem 
                         to="/test" 
-                        label="Quick Test" 
+                        label="CBT Practice" 
                         icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>}
+                        onClose={onClose}
+                    />
+                    <NavItem 
+                        to="/notes" 
+                        label="My Notes" 
+                        icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>}
                         onClose={onClose}
                     />
                      <NavItem 
@@ -195,7 +204,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>}
                     onClose={onClose}
                 />
-                
                 <NavItem 
                     to="/gallery" 
                     label="Gallery" 

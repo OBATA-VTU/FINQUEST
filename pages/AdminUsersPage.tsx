@@ -131,8 +131,17 @@ export const AdminUsersPage: React.FC = () => {
           showNotification("You can only suspend students.", "error");
           return;
       }
-      if (!window.confirm("Suspend this user account?")) return;
-      showNotification("User suspension requires backend function (not implemented)", "info");
+      
+      const isBanned = user.isBanned || false;
+      if (!window.confirm(isBanned ? "Un-suspend this user? They will be able to log in again." : "Suspend this user? They will be logged out immediately.")) return;
+
+      try {
+          await updateDoc(doc(db, 'users', user.id), { isBanned: !isBanned });
+          setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isBanned: !isBanned } : u));
+          showNotification(isBanned ? "User account activated" : "User suspended successfully", "success");
+      } catch(e) {
+          showNotification("Failed to update suspension status", "error");
+      }
   };
 
   const handleDelete = async (user: any) => {
@@ -141,11 +150,11 @@ export const AdminUsersPage: React.FC = () => {
           showNotification("You can only delete students.", "error");
           return;
       }
-      if (!window.confirm("Permanently delete this user database record?")) return;
+      if (!window.confirm("Permanently delete this user's data from the portal? NOTE: This removes their profile data. To remove login access completely, they must also be suspended.")) return;
       try {
           await deleteDoc(doc(db, 'users', user.id));
           setUsers(prev => prev.filter(u => u.id !== user.id));
-          showNotification("User record deleted", "success");
+          showNotification("User profile deleted. If they login again, a new profile will be created unless suspended.", "success");
       } catch (e) { showNotification("Delete failed", "error"); }
   };
 
@@ -188,13 +197,16 @@ export const AdminUsersPage: React.FC = () => {
         {loading ? <div className="text-center py-20">Loading...</div> : (
             <div className="grid gap-4">
                 {filteredUsers.length === 0 ? <div className="text-center py-10 text-slate-500">No users found matching "{searchTerm}"</div> : filteredUsers.map(u => (
-                    <div key={u.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div key={u.id} className={`bg-white p-4 rounded-xl border ${u.isBanned ? 'border-rose-300 bg-rose-50' : 'border-slate-200'} shadow-sm flex flex-col md:flex-row items-center justify-between gap-4`}>
                         <div className="flex items-center gap-3 w-full md:w-auto">
                             <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500 overflow-hidden">
                                 {u.avatarUrl ? <img src={u.avatarUrl} className="w-full h-full object-cover" /> : u.name?.[0]}
                             </div>
                             <div>
-                                <p className="font-bold text-slate-900">{u.name}</p>
+                                <p className="font-bold text-slate-900 flex items-center gap-2">
+                                    {u.name}
+                                    {u.isBanned && <span className="text-[10px] bg-rose-600 text-white px-2 py-0.5 rounded uppercase font-bold">Suspended</span>}
+                                </p>
                                 <div className="flex items-center gap-1 text-xs text-slate-500">
                                     <span>@{u.username || '---'}</span>
                                     <VerificationBadge role={u.role} isVerified={u.isVerified} className="w-3 h-3" />
@@ -235,10 +247,10 @@ export const AdminUsersPage: React.FC = () => {
                                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
                                     </button>
 
-                                    <button onClick={() => handleBan(u)} className="p-2 text-amber-500 hover:bg-amber-50 rounded" title="Suspend" disabled={isSupplement && u.role !== 'student'}>
+                                    <button onClick={() => handleBan(u)} className={`p-2 rounded ${u.isBanned ? 'text-white bg-amber-500 hover:bg-amber-600' : 'text-amber-500 hover:bg-amber-50'}`} title={u.isBanned ? "Activate Account" : "Suspend Account"} disabled={isSupplement && u.role !== 'student'}>
                                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                     </button>
-                                    <button onClick={() => handleDelete(u)} className="p-2 text-rose-500 hover:bg-rose-50 rounded" title="Delete" disabled={isSupplement && u.role !== 'student'}>
+                                    <button onClick={() => handleDelete(u)} className="p-2 text-rose-500 hover:bg-rose-50 rounded" title="Delete Profile Data" disabled={isSupplement && u.role !== 'student'}>
                                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                     </button>
                                 </>
