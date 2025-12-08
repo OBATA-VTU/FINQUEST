@@ -3,10 +3,9 @@ import React, { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { TestResult, Announcement, PastQuestion } from '../types';
 import { VerificationBadge } from '../components/VerificationBadge';
-import { QuestionCard } from '../components/QuestionCard';
 
 const QUOTES = [
     "The stock market is filled with individuals who know the price of everything, but the value of nothing. - Philip Fisher",
@@ -47,8 +46,7 @@ export const UserDashboardPage: React.FC = () => {
           setLoading(true);
           try {
               // 1. Fetch Tests
-              // Removed orderBy to avoid missing index error if compound index not created
-              // We fetch recent results by filtering in JS
+              // Simple query without orderBy to avoid index errors
               const testQuery = query(
                   collection(db, 'test_results'), 
                   where('userId', '==', user.id)
@@ -57,7 +55,7 @@ export const UserDashboardPage: React.FC = () => {
               const testSnap = await getDocs(testQuery);
               const tests = testSnap.docs.map(d => ({ id: d.id, ...d.data() } as TestResult));
               
-              // Sort by date desc (newest first)
+              // Client-side sort: Newest first
               tests.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
               
               setRecentTests(tests.slice(0, 5));
@@ -69,25 +67,17 @@ export const UserDashboardPage: React.FC = () => {
               }
 
               // 2. Fetch News
-              // Fetching recent news
-              // Simple ordering usually works, but if fails, fallback to client sort
-              let news: Announcement[] = [];
-              try {
-                  const newsQ = query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(3));
-                  const newsSnap = await getDocs(newsQ);
-                  news = newsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement));
-              } catch (e) {
-                  // Fallback without orderBy if index missing
-                  const newsQ = query(collection(db, 'announcements'), limit(10));
-                  const newsSnap = await getDocs(newsQ);
-                  news = newsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement));
-                  news.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                  news = news.slice(0, 3);
-              }
-              setRecentNews(news);
+              // Simple query for recent news without complex sorting in query
+              const newsQ = query(collection(db, 'announcements'), limit(10));
+              const newsSnap = await getDocs(newsQ);
+              let news = newsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement));
+              
+              // Client-side sort: Newest first
+              news.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+              setRecentNews(news.slice(0, 3));
 
               // 3. Recommended Questions
-              // Fetch approved questions and filter by level in JS to avoid composite index error
+              // Fetch only approved questions, filter level in JS
               const recQ = query(
                   collection(db, 'questions'),
                   where('status', '==', 'approved')
@@ -95,13 +85,16 @@ export const UserDashboardPage: React.FC = () => {
               const recSnap = await getDocs(recQ);
               let allQuestions = recSnap.docs.map(d => ({ id: d.id, ...d.data() } as PastQuestion));
               
-              // Filter for user level
-              const levelQuestions = allQuestions.filter(q => q.level === user.level);
-              // Fallback to any level if none found for specific level
-              const displayQuestions = levelQuestions.length > 0 ? levelQuestions : allQuestions;
+              // Client-side filter for user level
+              let levelQuestions = allQuestions;
+              if (user.level) {
+                  const specific = allQuestions.filter(q => q.level === user.level);
+                  if (specific.length > 0) levelQuestions = specific;
+              }
               
-              // Randomize or take latest
-              setRecommendedQuestions(displayQuestions.slice(0, 2));
+              // Sort by year desc
+              levelQuestions.sort((a, b) => b.year - a.year);
+              setRecommendedQuestions(levelQuestions.slice(0, 3));
 
           } catch (e) {
               console.error("Failed to fetch dashboard data", e);
@@ -249,7 +242,7 @@ export const UserDashboardPage: React.FC = () => {
                                   <div className="flex justify-between items-start">
                                       <div>
                                           <h4 className="text-sm font-bold text-slate-800 dark:text-white">CBT Practice Session</h4>
-                                          <p className="text-xs text-slate-500 dark:text-slate-400">{test.totalQuestions} Questions • {test.level}L</p>
+                                          <p className="text-xs text-slate-500 dark:text-slate-400">{test.totalQuestions || 20} Questions • {test.level}L</p>
                                       </div>
                                       <div className="text-right">
                                           <span className={`block font-black text-sm ${test.score >= 50 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{test.score}%</span>

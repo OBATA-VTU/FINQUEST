@@ -1,13 +1,12 @@
 
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
-import { Calculator } from '../components/Calculator';
 import { GoogleGenAI, Type } from "@google/genai";
 import { useNotification } from '../contexts/NotificationContext';
 import { db } from '../firebase';
-import { collection, addDoc, query, orderBy, limit, getDocs, doc, updateDoc, increment, getDoc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, getDoc, setDoc, updateDoc, increment, doc } from 'firebase/firestore';
 import { LEVELS } from '../constants';
-import { Level, TestResult } from '../types';
+import { Level } from '../types';
 import { generateTestReviewPDF } from '../utils/pdfGenerator';
 import { trackAiUsage } from '../utils/api';
 
@@ -16,6 +15,12 @@ interface Question {
   text: string;
   options: string[];
   correctAnswer: number;
+}
+
+// In-Game Feedback State for non-blocking notifications
+interface GameFeedback {
+    status: 'correct' | 'wrong';
+    correctIndex: number;
 }
 
 const FALLBACK_QUESTIONS: Question[] = [
@@ -35,7 +40,6 @@ export const TestPage: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
-  const [showCalculator, setShowCalculator] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('Initializing Session...');
   
@@ -43,6 +47,7 @@ export const TestPage: React.FC = () => {
   const [gameScore, setGameScore] = useState(0);
   const [gameLives, setGameLives] = useState(3);
   const [isGameOver, setIsGameOver] = useState(false);
+  const [gameFeedback, setGameFeedback] = useState<GameFeedback | null>(null);
   
   const [topic, setTopic] = useState('');
   const [selectedLevel, setSelectedLevel] = useState<Level>(auth?.user?.level || 100);
@@ -54,7 +59,7 @@ export const TestPage: React.FC = () => {
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
-      if (stage === 'exam') {
+      if (stage === 'exam' && !isGameOver) {
           // Start Timer
           timerRef.current = window.setInterval(() => {
               setTimeLeft((prev) => {
@@ -71,7 +76,7 @@ export const TestPage: React.FC = () => {
           if (timerRef.current) clearInterval(timerRef.current);
       }
       return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [stage]);
+  }, [stage, isGameOver]);
 
   const formatTime = (seconds: number) => {
       const mins = Math.floor(seconds / 60);
@@ -97,7 +102,6 @@ export const TestPage: React.FC = () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         
         let prompt = "";
-        let qCount = 20;
         
         if (mode === 'topic') {
             prompt = `Generate a JSON Array of 20 challenging multiple-choice questions for ${selectedLevel} Level Finance students specifically on the topic: "${topic}". 
@@ -107,19 +111,16 @@ export const TestPage: React.FC = () => {
             prompt = `Generate a JSON Array of 30 standard exam questions for ${selectedLevel} Level Finance students covering various finance topics. 
             Format: [{"id": 1, "text": "Question?", "options": ["A", "B", "C", "D"], "correctAnswer": 0}]. 
             Strictly JSON. No Markdown. Ensure exactly 30 questions.`;
-            qCount = 30;
         } else if (mode === 'game') {
             prompt = `Generate a JSON Array of 50 rapid-fire finance trivia questions. Short and punchy.
             Format: [{"id": 1, "text": "Question?", "options": ["A", "B", "C", "D"], "correctAnswer": 0}]. 
             Strictly JSON.`;
-            qCount = 50;
         }
 
         const aiPromise = ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
-                // Ensure strict JSON Schema to avoid the "1 question" bug
                 responseMimeType: "application/json",
                 responseSchema: {
                     type: Type.ARRAY,
@@ -149,7 +150,6 @@ export const TestPage: React.FC = () => {
         trackAiUsage();
 
         const jsonText = response.text;
-        // Clean markdown if present (though schema should prevent it)
         const cleanJson = jsonText.replace(/```json|```/g, '').trim();
         const data = JSON.parse(cleanJson);
 
@@ -164,7 +164,7 @@ export const TestPage: React.FC = () => {
             // Set Timer based on mode
             if (mode === 'topic') setTimeLeft(20 * 60); // 20 mins
             else if (mode === 'mock') setTimeLeft(40 * 60); // 40 mins
-            else if (mode === 'game') setTimeLeft(30); // 30s per question (reset per question)
+            else if (mode === 'game') setTimeLeft(30); // 30s per question
 
             setTimeout(() => {
                 setStage('exam');
@@ -174,6 +174,7 @@ export const TestPage: React.FC = () => {
                     setGameLives(3);
                     setGameScore(0);
                     setIsGameOver(false);
+                    setGameFeedback(null);
                 }
             }, 500);
         } else { throw new Error("Invalid question format received"); }
@@ -183,7 +184,6 @@ export const TestPage: React.FC = () => {
         console.warn("AI Generation failed:", e);
         setLoadingMessage('AI Busy. Loading Offline Pack...');
         setTimeout(() => {
-            // Duplicate fallback questions to make a reasonable set if AI fails
             const expandedFallback = [...FALLBACK_QUESTIONS, ...FALLBACK_QUESTIONS, ...FALLBACK_QUESTIONS].map((q, i) => ({...q, id: i}));
             setQuestions(expandedFallback);
             setTimeLeft(600);
@@ -195,43 +195,45 @@ export const TestPage: React.FC = () => {
   };
 
   const handleGameAnswer = (answerIndex: number) => {
+      // Prevent multiple clicks while feedback is showing
+      if (gameFeedback) return;
+
       const currentQ = questions[currentQuestionIndex];
       const isCorrect = answerIndex === currentQ.correctAnswer;
       
       setUserAnswers(prev => ({...prev, [currentQuestionIndex]: answerIndex}));
 
+      // Show temporary visual feedback inside the game
+      setGameFeedback({
+          status: isCorrect ? 'correct' : 'wrong',
+          correctIndex: currentQ.correctAnswer
+      });
+
       if (isCorrect) {
           setGameScore(prev => prev + 10);
-          showNotification("Correct! +10 Pts", "success");
+      } else {
+          setGameLives(prev => prev - 1);
+      }
+
+      // Auto-advance after delay
+      setTimeout(() => {
+          setGameFeedback(null);
           
-          if (currentQuestionIndex < questions.length - 1) {
-              setTimeout(() => {
-                  setCurrentQuestionIndex(prev => prev + 1);
-                  setTimeLeft(30); // Reset timer for next question
-              }, 500);
+          if (!isCorrect && gameLives <= 1) {
+              handleGameOver();
+          } else if (currentQuestionIndex < questions.length - 1) {
+              setCurrentQuestionIndex(prev => prev + 1);
+              setTimeLeft(30); // Reset timer for next question
           } else {
               handleGameOver(true);
           }
-      } else {
-          setGameLives(prev => prev - 1);
-          showNotification("Wrong!", "error");
-          if (gameLives <= 1) {
-              handleGameOver();
-          } else {
-              if (currentQuestionIndex < questions.length - 1) {
-                  setTimeout(() => {
-                      setCurrentQuestionIndex(prev => prev + 1);
-                      setTimeLeft(30);
-                  }, 500);
-              }
-          }
-      }
+      }, 1000); // 1 second delay
   };
 
   const handleGameOver = (win: boolean = false) => {
       setIsGameOver(true);
+      if (timerRef.current) clearInterval(timerRef.current);
       setStage('result');
-      // Save game score logic here if needed
   };
 
   const finishTest = async () => {
@@ -245,19 +247,28 @@ export const TestPage: React.FC = () => {
 
       if (auth?.user && mode !== 'game') {
           try {
+              // 1. Add to Test History (Always)
               await addDoc(collection(db, 'test_results'), {
                   userId: auth.user.id,
                   username: auth.user.username,
                   score: finalPercentage,
+                  totalQuestions: questions.length,
                   level: selectedLevel,
                   mode: mode,
                   date: new Date().toISOString()
               });
 
-              // Update Leaderboard only if higher
+              // 2. Update High Score Leaderboard (Only if better)
               const lbRef = doc(db, 'leaderboard', auth.user.id);
               const lbDoc = await getDoc(lbRef);
-              if (!lbDoc.exists() || finalPercentage > lbDoc.data().score) {
+              
+              let currentBest = 0;
+              if (lbDoc.exists()) {
+                  currentBest = lbDoc.data().score || 0;
+              }
+
+              // Overwrite only if new score is higher
+              if (finalPercentage > currentBest) {
                   await setDoc(lbRef, {
                       userId: auth.user.id,
                       username: auth.user.username,
@@ -266,9 +277,10 @@ export const TestPage: React.FC = () => {
                       level: selectedLevel,
                       date: new Date().toISOString()
                   }, { merge: true });
+                  showNotification("New High Score saved to Leaderboard!", "success");
               }
 
-              // Contribution Points
+              // 3. Contribution Points (Additive)
               let points = finalPercentage >= 80 ? 5 : finalPercentage >= 50 ? 2 : 0;
               if (points > 0) {
                   await updateDoc(doc(db, 'users', auth.user.id), { contributionPoints: increment(points) });
@@ -282,38 +294,61 @@ export const TestPage: React.FC = () => {
 
   if (stage === 'menu') {
       return (
-          <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 flex flex-col items-center animate-fade-in transition-colors">
-              <div className="max-w-5xl w-full">
-                  <h1 className="text-3xl font-serif font-bold text-slate-900 dark:text-white text-center mb-2">Practice Center</h1>
-                  <p className="text-slate-500 dark:text-slate-400 text-center mb-12">Choose your preferred mode of study.</p>
+          <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-16 px-4 flex flex-col items-center animate-fade-in transition-colors">
+              <div className="max-w-6xl w-full">
+                  <div className="text-center mb-16">
+                      <span className="text-indigo-600 dark:text-indigo-400 font-bold tracking-widest text-xs uppercase mb-3 block">Finance Department CBT</span>
+                      <h1 className="text-4xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white mb-4">Practice Center</h1>
+                      <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto text-lg leading-relaxed">
+                          Sharpen your financial acumen with AI-powered assessments. Choose your preferred mode to begin.
+                      </p>
+                  </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                      <div onClick={() => { setMode('topic'); setStage('setup'); }} className="cursor-pointer bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 hover:border-indigo-500 hover:shadow-xl transition-all group relative overflow-hidden">
-                          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><svg className="w-32 h-32 text-indigo-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg></div>
-                          <div className="w-14 h-14 bg-indigo-100 dark:bg-indigo-900/50 rounded-2xl flex items-center justify-center mb-6 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform relative z-10">
-                              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                      {/* Mode 1: Topic */}
+                      <button 
+                        onClick={() => { setMode('topic'); setStage('setup'); }} 
+                        className="group relative bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-100 dark:border-slate-700 hover:-translate-y-2 overflow-hidden text-left"
+                      >
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-bl-[100px] transition-transform group-hover:scale-110"></div>
+                          <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-6 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors relative z-10">
+                              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                           </div>
-                          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 relative z-10">Topic Focused</h3>
-                          <p className="text-slate-500 dark:text-slate-400 text-sm relative z-10">Master a specific subject. AI generates tailored questions.</p>
-                      </div>
+                          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 relative z-10">Topic Mastery</h3>
+                          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed relative z-10">
+                              Generate specific questions on any finance topic using AI. Perfect for focused revision.
+                          </p>
+                      </button>
 
-                      <div onClick={() => { setMode('mock'); setStage('setup'); }} className="cursor-pointer bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 hover:border-emerald-500 hover:shadow-xl transition-all group relative overflow-hidden">
-                          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><svg className="w-32 h-32 text-emerald-500" fill="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg></div>
-                          <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/50 rounded-2xl flex items-center justify-center mb-6 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform relative z-10">
-                              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      {/* Mode 2: Mock */}
+                      <button 
+                        onClick={() => { setMode('mock'); setStage('setup'); }} 
+                        className="group relative bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-100 dark:border-slate-700 hover:-translate-y-2 overflow-hidden text-left"
+                      >
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-bl-[100px] transition-transform group-hover:scale-110"></div>
+                          <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mb-6 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors relative z-10">
+                              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                           </div>
-                          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 relative z-10">Standard Mock</h3>
-                          <p className="text-slate-500 dark:text-slate-400 text-sm relative z-10">30 Questions. 40 Minutes. Simulates real exam conditions.</p>
-                      </div>
+                          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 relative z-10">Standard Mock</h3>
+                          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed relative z-10">
+                              Simulate real exam conditions. 30 questions, 40 minutes. Test your overall readiness.
+                          </p>
+                      </button>
 
-                      <div onClick={() => { setMode('game'); setStage('setup'); }} className="cursor-pointer bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 hover:border-amber-500 hover:shadow-xl transition-all group relative overflow-hidden">
-                          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><svg className="w-32 h-32 text-amber-500" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
-                          <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/50 rounded-2xl flex items-center justify-center mb-6 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform relative z-10">
-                              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      {/* Mode 3: Game */}
+                      <button 
+                        onClick={() => { setMode('game'); setStage('setup'); }} 
+                        className="group relative bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-100 dark:border-slate-700 hover:-translate-y-2 overflow-hidden text-left"
+                      >
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-bl-[100px] transition-transform group-hover:scale-110"></div>
+                          <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mb-6 text-amber-600 dark:text-amber-400 group-hover:bg-amber-600 group-hover:text-white transition-colors relative z-10">
+                              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                           </div>
-                          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 relative z-10">Trivia Challenge</h3>
-                          <p className="text-slate-500 dark:text-slate-400 text-sm relative z-10">Rapid fire questions. 3 lives. High score wins.</p>
-                      </div>
+                          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 relative z-10">Trivia Challenge</h3>
+                          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed relative z-10">
+                              Rapid-fire questions with a timer. 3 lives. Compete for the high score on the leaderboard.
+                          </p>
+                      </button>
                   </div>
               </div>
           </div>
@@ -324,34 +359,38 @@ export const TestPage: React.FC = () => {
       return (
           <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
               <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl max-w-md w-full animate-fade-in-up border border-slate-100 dark:border-slate-700">
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Setup Session</h2>
-                  <div className="space-y-5">
+                  <div className="flex items-center gap-3 mb-6">
+                      <button onClick={() => setStage('menu')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 transition-colors">
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                      </button>
+                      <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Configure {mode === 'game' ? 'Game' : 'Exam'}</h2>
+                  </div>
+                  
+                  <div className="space-y-6">
                       <div>
-                          <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Select Level</label>
-                          <select value={selectedLevel} onChange={e => setSelectedLevel(Number(e.target.value) as Level)} className="w-full p-4 bg-slate-50 dark:bg-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 border border-slate-200 dark:border-slate-600 font-bold">
+                          <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Academic Level</label>
+                          <select value={selectedLevel} onChange={e => setSelectedLevel(Number(e.target.value) as Level)} className="w-full p-4 bg-slate-50 dark:bg-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 border border-slate-200 dark:border-slate-600 font-bold text-lg">
                               {LEVELS.map(l => <option key={l} value={l}>{l} Level</option>)}
                           </select>
                       </div>
                       
                       {mode === 'topic' && (
                           <div>
-                              <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Focus Topic</label>
+                              <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Focus Topic</label>
                               <input 
                                 autoFocus 
                                 value={topic} 
                                 onChange={e => setTopic(e.target.value)} 
-                                className="w-full p-4 bg-slate-50 dark:bg-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 border border-slate-200 dark:border-slate-600" 
-                                placeholder="e.g. Capital Budgeting, Bonds..." 
+                                className="w-full p-4 bg-slate-50 dark:bg-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 border border-slate-200 dark:border-slate-600 text-lg" 
+                                placeholder="e.g. Capital Budgeting..." 
                               />
                           </div>
                       )}
 
-                      <div className="pt-4 flex gap-3">
-                          <button onClick={() => setStage('menu')} className="flex-1 py-3.5 font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">Back</button>
-                          <button onClick={startExam} className="flex-1 py-3.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all hover:scale-[1.02]">
-                              Start {mode === 'game' ? 'Game' : 'Exam'}
-                          </button>
-                      </div>
+                      <button onClick={startExam} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 mt-4">
+                          <span>Start Session</span>
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                      </button>
                   </div>
               </div>
           </div>
@@ -361,14 +400,196 @@ export const TestPage: React.FC = () => {
   if (stage === 'loading') {
       return (
           <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-8 text-white text-center">
-              <div className="relative w-24 h-24 mb-8">
-                  <div className="absolute inset-0 border-4 border-slate-700 rounded-full"></div>
-                  <div className="absolute inset-0 border-4 border-indigo-500 rounded-full border-t-transparent animate-spin"></div>
+              <div className="relative w-32 h-32 mb-8">
+                  <svg className="w-full h-full animate-spin text-indigo-600" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
                   <div className="absolute inset-0 flex items-center justify-center font-bold text-xl">{loadingProgress}%</div>
               </div>
-              <h2 className="text-xl font-bold animate-pulse mb-2">{loadingMessage}</h2>
-              <p className="text-slate-400 text-sm max-w-xs mx-auto">Our AI is crafting a unique set of questions for you. This ensures no two tests are the same.</p>
-              <button onClick={() => setStage('setup')} className="mt-8 px-6 py-2 border border-slate-700 rounded-full text-xs font-bold hover:bg-slate-800 transition-colors">Cancel</button>
+              <h2 className="text-2xl font-bold animate-pulse mb-3">{loadingMessage}</h2>
+              <p className="text-slate-400 text-sm max-w-sm mx-auto leading-relaxed">Our AI is generating a unique question set tailored to your level. Please wait...</p>
+              <button onClick={() => setStage('setup')} className="mt-10 px-6 py-2 border border-slate-700 rounded-full text-xs font-bold hover:bg-slate-800 transition-colors">Cancel</button>
+          </div>
+      );
+  }
+
+  if (stage === 'exam') {
+      const currentQ = questions[currentQuestionIndex];
+      const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+
+      if (mode === 'game') {
+          return (
+              <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4">
+                  <div className="w-full max-w-lg">
+                      <div className="flex justify-between items-center mb-6">
+                          <div className="flex items-center gap-2 text-white">
+                              <span className="text-xl">❤️</span>
+                              <span className="font-bold text-xl">{gameLives}</span>
+                          </div>
+                          <div className="text-center">
+                              <p className="text-xs text-slate-400 uppercase font-bold tracking-widest">Score</p>
+                              <p className="text-2xl font-black text-amber-400">{gameScore}</p>
+                          </div>
+                          <div className="bg-slate-800 px-4 py-2 rounded-full border border-slate-700 text-indigo-400 font-mono font-bold">
+                              {formatTime(timeLeft)}
+                          </div>
+                      </div>
+
+                      <div className="relative bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-2xl border-4 border-slate-100 dark:border-slate-700">
+                          {/* Feedback Overlay */}
+                          {gameFeedback && (
+                              <div className={`absolute inset-0 z-20 flex items-center justify-center backdrop-blur-sm rounded-2xl ${gameFeedback.status === 'correct' ? 'bg-emerald-500/20' : 'bg-rose-500/20'}`}>
+                                  <div className={`transform scale-125 transition-transform font-black text-4xl ${gameFeedback.status === 'correct' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                      {gameFeedback.status === 'correct' ? 'CORRECT!' : 'WRONG!'}
+                                  </div>
+                              </div>
+                          )}
+
+                          <div className="mb-6">
+                              <h2 className="text-lg font-serif font-bold text-slate-900 dark:text-white leading-relaxed">{currentQ.text}</h2>
+                          </div>
+
+                          <div className="space-y-3">
+                              {currentQ.options.map((opt, idx) => {
+                                  let btnClass = "w-full p-4 text-left rounded-xl border-2 font-bold transition-all transform hover:scale-[1.02] ";
+                                  
+                                  if (gameFeedback) {
+                                      if (idx === gameFeedback.correctIndex) btnClass += "bg-emerald-500 border-emerald-600 text-white";
+                                      else if (idx === userAnswers[currentQuestionIndex] && idx !== gameFeedback.correctIndex) btnClass += "bg-rose-500 border-rose-600 text-white";
+                                      else btnClass += "bg-slate-100 dark:bg-slate-700 border-transparent opacity-50";
+                                  } else {
+                                      btnClass += "bg-slate-100 dark:bg-slate-700 border-transparent hover:bg-indigo-100 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200";
+                                  }
+
+                                  return (
+                                      <button 
+                                          key={idx} 
+                                          onClick={() => handleGameAnswer(idx)} 
+                                          className={btnClass}
+                                          disabled={!!gameFeedback}
+                                      >
+                                          {opt}
+                                      </button>
+                                  );
+                              })}
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          );
+      }
+
+      // Standard Exam Mode
+      return (
+          <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col md:flex-row transition-colors">
+              {/* Left Sidebar (Question Nav) */}
+              <div className="w-full md:w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex-shrink-0 flex flex-col h-auto md:h-screen">
+                  <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+                      <h1 className="font-bold text-slate-900 dark:text-white text-lg">CBT Session</h1>
+                      <div className="mt-4 flex items-center justify-between bg-slate-100 dark:bg-slate-700 p-3 rounded-lg">
+                          <span className="text-xs font-bold text-slate-500 dark:text-slate-400">TIME LEFT</span>
+                          <span className={`font-mono font-bold text-xl ${timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-slate-800 dark:text-white'}`}>{formatTime(timeLeft)}</span>
+                      </div>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto p-4">
+                      <div className="grid grid-cols-5 gap-2">
+                          {questions.map((_, i) => (
+                              <button
+                                  key={i}
+                                  onClick={() => setCurrentQuestionIndex(i)}
+                                  className={`aspect-square rounded-lg text-xs font-bold flex items-center justify-center transition-all ${
+                                      currentQuestionIndex === i ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-800' : ''
+                                  } ${
+                                      userAnswers[i] !== undefined ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                  }`}
+                              >
+                                  {i + 1}
+                              </button>
+                          ))}
+                      </div>
+                  </div>
+
+                  <div className="p-4 border-t border-slate-200 dark:border-slate-700 space-y-3">
+                      <button onClick={() => setShowCalculator(!showCalculator)} className="w-full py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded hover:bg-slate-200 dark:hover:bg-slate-600">
+                          {showCalculator ? 'Hide Calculator' : 'Show Calculator'}
+                      </button>
+                      <button onClick={finishTest} className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg transition-colors">
+                          Submit Exam
+                      </button>
+                  </div>
+              </div>
+
+              {/* Main Area */}
+              <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
+                  {showCalculator && (
+                      <div className="absolute top-4 right-4 z-50">
+                          <Calculator />
+                      </div>
+                  )}
+
+                  <div className="h-1 bg-slate-200 dark:bg-slate-700">
+                      <div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${progress}%` }}></div>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-6 md:p-12 pb-32">
+                      <div className="max-w-3xl mx-auto">
+                          <div className="mb-8">
+                              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Question {currentQuestionIndex + 1} of {questions.length}</span>
+                              <h2 className="text-2xl md:text-3xl font-serif font-bold text-slate-900 dark:text-white mt-4 leading-relaxed">
+                                  {currentQ.text}
+                              </h2>
+                          </div>
+
+                          <div className="space-y-4">
+                              {currentQ.options.map((opt, idx) => (
+                                  <label 
+                                      key={idx} 
+                                      className={`flex items-center p-5 rounded-2xl border-2 cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-800 ${
+                                          userAnswers[currentQuestionIndex] === idx 
+                                              ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' 
+                                              : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+                                      }`}
+                                  >
+                                      <input 
+                                          type="radio" 
+                                          name={`q-${currentQuestionIndex}`} 
+                                          className="hidden" 
+                                          checked={userAnswers[currentQuestionIndex] === idx} 
+                                          onChange={() => setUserAnswers({...userAnswers, [currentQuestionIndex]: idx})} 
+                                      />
+                                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mr-4 ${
+                                          userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600' : 'border-slate-400'
+                                      }`}>
+                                          {userAnswers[currentQuestionIndex] === idx && <div className="w-3 h-3 rounded-full bg-indigo-600"></div>}
+                                      </div>
+                                      <span className={`text-lg ${userAnswers[currentQuestionIndex] === idx ? 'font-bold text-indigo-900 dark:text-indigo-200' : 'text-slate-700 dark:text-slate-300'}`}>{opt}</span>
+                                  </label>
+                              ))}
+                          </div>
+                      </div>
+                  </div>
+
+                  <div className="p-6 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex justify-between items-center max-w-full">
+                      <button 
+                          onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+                          disabled={currentQuestionIndex === 0}
+                          className="px-6 py-3 rounded-xl font-bold text-slate-600 dark:text-slate-300 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                      >
+                          Previous
+                      </button>
+                      <button 
+                          onClick={() => {
+                              if (currentQuestionIndex === questions.length - 1) finishTest();
+                              else setCurrentQuestionIndex(prev => prev + 1);
+                          }}
+                          className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg"
+                      >
+                          {currentQuestionIndex === questions.length - 1 ? 'Finish' : 'Next Question'}
+                      </button>
+                  </div>
+              </div>
           </div>
       );
   }
@@ -376,51 +597,57 @@ export const TestPage: React.FC = () => {
   if (stage === 'result' || stage === 'review') {
       return (
           <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 animate-fade-in transition-colors">
-              <div className="max-w-2xl mx-auto bg-white dark:bg-slate-800 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
-                  <div className={`p-10 text-center ${mode === 'game' ? 'bg-amber-600' : score >= 50 ? 'bg-emerald-600' : 'bg-rose-600'} text-white relative overflow-hidden`}>
+              <div className="max-w-3xl mx-auto bg-white dark:bg-slate-800 rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
+                  <div className={`p-12 text-center ${mode === 'game' ? 'bg-gradient-to-br from-amber-500 to-orange-600' : score >= 50 ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-rose-500 to-red-600'} text-white relative overflow-hidden`}>
                       <div className="relative z-10">
-                          <p className="text-sm font-bold uppercase tracking-widest opacity-80 mb-2">{mode === 'game' ? 'Game Over' : 'Test Complete'}</p>
-                          <h2 className="text-7xl font-black mb-2 tracking-tighter">{mode === 'game' ? gameScore : `${score}%`}</h2>
-                          <p className="text-xl font-medium opacity-90">
+                          <p className="text-sm font-bold uppercase tracking-widest opacity-80 mb-4">{mode === 'game' ? 'Game Over' : 'Test Complete'}</p>
+                          <h2 className="text-8xl font-black mb-4 tracking-tighter drop-shadow-md">{mode === 'game' ? gameScore : `${score}%`}</h2>
+                          <p className="text-2xl font-medium opacity-95">
                               {mode === 'game' 
                                   ? `You reached Question ${currentQuestionIndex + 1}` 
                                   : score >= 80 ? 'Outstanding Performance!' : score >= 50 ? 'Good Effort, Keep Pushing!' : 'Don\'t give up, try again!'}
                           </p>
                       </div>
-                      {/* Background Pattern */}
                       <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
                   </div>
                   
-                  <div className="p-8">
+                  <div className="p-8 md:p-12 bg-slate-50 dark:bg-slate-800/50">
                       {stage === 'result' ? (
-                          <div className="grid gap-4">
-                              {mode !== 'game' && <button onClick={() => setStage('review')} className="w-full py-4 bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-2">Review Answers</button>}
-                              {mode !== 'game' && <button onClick={() => generateTestReviewPDF(questions, userAnswers, score, auth?.user)} className="w-full py-4 border-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 font-bold rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">Download Report PDF</button>}
-                              <button onClick={() => setStage('menu')} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all hover:scale-[1.02] flex items-center justify-center gap-2">
+                          <div className="grid gap-4 max-w-sm mx-auto">
+                              {mode !== 'game' && <button onClick={() => setStage('review')} className="w-full py-4 bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-bold rounded-xl border border-slate-200 dark:border-slate-600 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all shadow-sm">Review Answers</button>}
+                              {mode !== 'game' && <button onClick={() => generateTestReviewPDF(questions, userAnswers, score, auth?.user)} className="w-full py-4 bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 font-bold rounded-xl border border-slate-200 dark:border-slate-600 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all shadow-sm">Download PDF Report</button>}
+                              <button onClick={() => setStage('menu')} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 mt-4">
                                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                                   Play Again
                               </button>
                           </div>
                       ) : (
-                          <div className="space-y-6">
-                              <h3 className="font-bold text-xl mb-4 text-slate-800 dark:text-white border-b pb-2 dark:border-slate-700">Answer Review</h3>
+                          <div className="space-y-8">
+                              <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-4">
+                                  <h3 className="font-bold text-2xl text-slate-800 dark:text-white">Answer Review</h3>
+                                  <button onClick={() => setStage('result')} className="text-sm font-bold text-slate-500 hover:text-indigo-600">Back to Score</button>
+                              </div>
+                              
                               {questions.map((q, i) => (
-                                  <div key={i} className={`p-5 rounded-2xl border-2 ${userAnswers[i] === q.correctAnswer ? 'border-emerald-100 bg-emerald-50 dark:bg-emerald-900/10 dark:border-emerald-900/50' : 'border-rose-100 bg-rose-50 dark:bg-rose-900/10 dark:border-rose-900/50'}`}>
-                                      <div className="flex gap-3 mb-3">
-                                          <span className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-xs font-bold text-white ${userAnswers[i] === q.correctAnswer ? 'bg-emerald-500' : 'bg-rose-500'}`}>{i + 1}</span>
-                                          <p className="font-bold text-slate-800 dark:text-white text-sm">{q.text}</p>
+                                  <div key={i} className={`p-6 rounded-2xl border-2 ${userAnswers[i] === q.correctAnswer ? 'border-emerald-100 bg-emerald-50/50 dark:bg-emerald-900/10 dark:border-emerald-900/50' : 'border-rose-100 bg-rose-50/50 dark:bg-rose-900/10 dark:border-rose-900/50'}`}>
+                                      <div className="flex gap-4 mb-4">
+                                          <span className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-sm font-bold text-white shadow-sm ${userAnswers[i] === q.correctAnswer ? 'bg-emerald-500' : 'bg-rose-500'}`}>{i + 1}</span>
+                                          <p className="font-serif text-lg text-slate-800 dark:text-white leading-relaxed">{q.text}</p>
                                       </div>
-                                      <div className="pl-9 text-xs space-y-2">
+                                      <div className="pl-12 space-y-2">
                                           {q.options.map((opt, oid) => (
-                                              <div key={oid} className={`p-2 rounded-lg flex items-center gap-2 ${oid === q.correctAnswer ? 'bg-emerald-200 dark:bg-emerald-900/40 text-emerald-900 dark:text-emerald-300 font-bold' : userAnswers[i] === oid ? 'bg-rose-200 dark:bg-rose-900/40 text-rose-900 dark:text-rose-300' : 'text-slate-500 dark:text-slate-400'}`}>
-                                                  <span>{oid === q.correctAnswer ? '✓' : userAnswers[i] === oid ? '✗' : '○'}</span> 
-                                                  <span>{opt}</span>
+                                              <div key={oid} className={`p-3 rounded-xl flex items-center gap-3 text-sm ${oid === q.correctAnswer ? 'bg-emerald-100 text-emerald-800 font-bold dark:bg-emerald-900/40 dark:text-emerald-300' : userAnswers[i] === oid ? 'bg-rose-100 text-rose-800 font-bold dark:bg-rose-900/40 dark:text-rose-300' : 'bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
+                                                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${oid === q.correctAnswer ? 'border-emerald-500 bg-emerald-500 text-white' : userAnswers[i] === oid ? 'border-rose-500 bg-rose-500 text-white' : 'border-slate-300'}`}>
+                                                      {(oid === q.correctAnswer || userAnswers[i] === oid) && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                                                  </div>
+                                                  {opt}
+                                                  {oid === q.correctAnswer && <span className="ml-auto text-xs font-bold text-emerald-600 uppercase tracking-wider">Correct Answer</span>}
+                                                  {userAnswers[i] === oid && oid !== q.correctAnswer && <span className="ml-auto text-xs font-bold text-rose-600 uppercase tracking-wider">Your Answer</span>}
                                               </div>
                                           ))}
                                       </div>
                                   </div>
                               ))}
-                              <button onClick={() => setStage('result')} className="w-full py-3 bg-slate-200 dark:bg-slate-700 font-bold rounded-xl mt-6 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Back to Score</button>
                           </div>
                       )}
                   </div>
@@ -429,161 +656,5 @@ export const TestPage: React.FC = () => {
       );
   }
 
-  // GAME MODE RENDER
-  if (mode === 'game' && stage === 'exam') {
-      const currentQ = questions[currentQuestionIndex];
-      return (
-          <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-4 relative overflow-hidden">
-              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
-              
-              <div className="relative z-10 w-full max-w-2xl">
-                  {/* Game Stats Bar */}
-                  <div className="flex justify-between items-center mb-8 bg-slate-800/50 backdrop-blur-md p-4 rounded-2xl border border-white/10">
-                      <div className="flex gap-1">
-                          {[...Array(3)].map((_, i) => (
-                              <svg key={i} className={`w-6 h-6 ${i < gameLives ? 'text-rose-500' : 'text-slate-700'}`} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" /></svg>
-                          ))}
-                      </div>
-                      <div className="text-2xl font-black text-amber-400 tracking-wider">{gameScore} PTS</div>
-                      <div className={`text-xl font-mono font-bold ${timeLeft < 10 ? 'text-rose-500 animate-pulse' : 'text-white'}`}>{timeLeft}s</div>
-                  </div>
-
-                  {/* Question Card */}
-                  <div className="bg-slate-800 rounded-3xl p-8 shadow-2xl border-b-8 border-slate-950 mb-6 relative animate-fade-in-up">
-                      <div className="absolute -top-4 -left-4 bg-indigo-600 text-white w-10 h-10 rounded-xl flex items-center justify-center font-bold shadow-lg rotate-3">{currentQuestionIndex + 1}</div>
-                      <h2 className="text-xl md:text-2xl font-bold leading-relaxed mb-2">{currentQ.text}</h2>
-                  </div>
-
-                  {/* Options Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {currentQ.options.map((opt, idx) => (
-                          <button 
-                              key={idx} 
-                              onClick={() => handleGameAnswer(idx)}
-                              className="bg-white text-slate-900 p-4 rounded-xl font-bold text-left hover:bg-indigo-50 hover:scale-[1.02] active:scale-95 transition-all shadow-lg border-b-4 border-slate-300"
-                          >
-                              <span className="text-indigo-600 mr-2">{String.fromCharCode(65+idx)}.</span> {opt}
-                          </button>
-                      ))}
-                  </div>
-              </div>
-          </div>
-      );
-  }
-
-  // STANDARD EXAM RENDER
-  const currentQ = questions[currentQuestionIndex];
-  return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 flex flex-col transition-colors">
-        <header className="bg-white dark:bg-slate-800 px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center sticky top-0 z-20 shadow-sm">
-            <div className="flex items-center gap-4">
-                <div className="hidden md:block">
-                    <h1 className="font-bold text-slate-800 dark:text-white text-sm uppercase tracking-wider">{mode === 'topic' ? 'Topic Practice' : 'Mock Exam'}</h1>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Level {selectedLevel}</p>
-                </div>
-                <div className={`font-mono font-bold text-xl px-4 py-1 rounded-lg border-2 ${timeLeft < 60 ? 'bg-rose-50 border-rose-200 text-rose-600 animate-pulse' : 'bg-slate-100 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300'}`}>
-                    {formatTime(timeLeft)}
-                </div>
-            </div>
-            <div className="flex gap-3">
-                <button onClick={() => setShowCalculator(!showCalculator)} className="p-2.5 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 transition-colors" title="Calculator">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                </button>
-                <button onClick={() => window.confirm("Are you sure you want to submit your exam?") && finishTest()} className="px-5 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 text-sm shadow-md transition-transform hover:-translate-y-0.5">Submit</button>
-            </div>
-        </header>
-
-        <div className="flex-1 container mx-auto max-w-7xl p-4 flex flex-col lg:flex-row gap-6 h-[calc(100vh-80px)]">
-            {/* Question Area */}
-            <div className="flex-1 bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col h-full">
-                <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800">
-                    <span className="font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-widest">Question {currentQuestionIndex + 1} of {questions.length}</span>
-                    <span className="text-xs font-bold px-2 py-1 bg-slate-200 dark:bg-slate-700 rounded text-slate-600 dark:text-slate-300">Single Choice</span>
-                </div>
-                
-                <div className="p-8 md:p-12 flex-grow overflow-y-auto">
-                    <h2 className="text-xl md:text-2xl font-medium text-slate-900 dark:text-white leading-relaxed mb-8">{currentQ.text}</h2>
-                    <div className="space-y-4 max-w-3xl">
-                        {currentQ.options.map((opt, idx) => (
-                            <button 
-                                key={idx} 
-                                onClick={() => setUserAnswers(prev => ({ ...prev, [currentQuestionIndex]: idx }))} 
-                                className={`w-full text-left p-5 rounded-2xl border-2 transition-all duration-200 flex items-center gap-5 group ${userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 shadow-md ring-1 ring-indigo-600' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
-                            >
-                                <span className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-sm font-bold border transition-colors ${userAnswers[currentQuestionIndex] === idx ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-500 group-hover:border-indigo-400'}`}>
-                                    {String.fromCharCode(65+idx)}
-                                </span>
-                                <span className={`font-medium text-base ${userAnswers[currentQuestionIndex] === idx ? 'text-indigo-900 dark:text-indigo-100' : 'text-slate-700 dark:text-slate-300'}`}>{opt}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="p-6 border-t border-slate-100 dark:border-slate-700 flex justify-between bg-slate-50 dark:bg-slate-900/50">
-                    <button 
-                        disabled={currentQuestionIndex === 0} 
-                        onClick={() => setCurrentQuestionIndex(p => p - 1)} 
-                        className="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold hover:bg-white dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                        Previous
-                    </button>
-                    {currentQuestionIndex < questions.length - 1 ? (
-                        <button 
-                            onClick={() => setCurrentQuestionIndex(p => p + 1)} 
-                            className="px-8 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 transition-all hover:-translate-y-0.5"
-                        >
-                            Next Question
-                        </button>
-                    ) : (
-                        <button 
-                            onClick={() => window.confirm("Finish Exam?") && finishTest()} 
-                            className="px-8 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5"
-                        >
-                            Finish Exam
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* Sidebar Navigation */}
-            <div className="w-full lg:w-80 shrink-0 flex flex-col gap-4 h-full">
-                <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 flex-grow overflow-y-auto">
-                    <h3 className="font-bold text-slate-800 dark:text-white mb-4 text-sm uppercase tracking-wide">Question Navigator</h3>
-                    <div className="grid grid-cols-5 gap-3">
-                        {questions.map((_, idx) => {
-                            const isAnswered = userAnswers[idx] !== undefined;
-                            const isCurrent = currentQuestionIndex === idx;
-                            return (
-                                <button 
-                                    key={idx} 
-                                    onClick={() => setCurrentQuestionIndex(idx)} 
-                                    className={`aspect-square rounded-xl font-bold text-xs flex items-center justify-center transition-all shadow-sm
-                                        ${isCurrent ? 'bg-indigo-600 text-white ring-2 ring-indigo-300 dark:ring-indigo-700 scale-110 z-10' : 
-                                          isAnswered ? 'bg-emerald-100 text-emerald-700 border border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-400 dark:border-emerald-800' : 
-                                          'bg-slate-50 text-slate-500 border border-slate-200 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-400 hover:bg-slate-100'}`}
-                                >
-                                    {idx + 1}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-                
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 p-4 rounded-2xl">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        </div>
-                        <div>
-                            <p className="text-xs font-bold text-blue-800 dark:text-blue-200">Pro Tip</p>
-                            <p className="text-[10px] text-blue-600 dark:text-blue-300 leading-tight">Flag difficult questions and come back to them later.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        {showCalculator && <div className="fixed bottom-24 right-6 z-50 animate-fade-in-up origin-bottom-right"><Calculator /></div>}
-    </div>
-  );
+  return null;
 };
