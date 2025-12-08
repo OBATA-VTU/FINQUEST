@@ -1,4 +1,3 @@
-
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -9,6 +8,7 @@ import { LEVELS } from '../constants';
 import { Level } from '../types';
 import { generateTestReviewPDF } from '../utils/pdfGenerator';
 import { trackAiUsage } from '../utils/api';
+import { Calculator } from '../components/Calculator';
 
 interface Question {
   id: number;
@@ -43,6 +43,9 @@ export const TestPage: React.FC = () => {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('Initializing Session...');
   
+  // Calculator State
+  const [showCalculator, setShowCalculator] = useState(false);
+
   // Game Mode State
   const [gameScore, setGameScore] = useState(0);
   const [gameLives, setGameLives] = useState(3);
