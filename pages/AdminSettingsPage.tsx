@@ -244,8 +244,18 @@ export const AdminSettingsPage: React.FC = () => {
     {isWipeModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsWipeModalOpen(false)}>
             <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-fade-in-up" onClick={e => e.stopPropagation()}>
-                <h3 className="text-xl font-bold text-rose-700 mb-2">Confirm Record Deletion</h3>
-                <p className="text-sm text-slate-600 mb-4">This will permanently delete all content from the database except for past questions and user accounts. This action is irreversible.</p>
+                <h3 className="text-xl font-bold text-rose-700 mb-2">Irreversible Data Deletion</h3>
+                <p className="text-sm text-slate-600 mb-4">You are about to permanently delete all of the following records from the database. This action <strong className="text-rose-600">CANNOT BE UNDONE</strong> from the app.</p>
+                <ul className="list-disc pl-5 text-sm space-y-1 mb-4 bg-rose-50 p-4 rounded-lg border border-rose-200 text-rose-700">
+                    <li>All Gallery Photos</li>
+                    <li>All Executive Profiles</li>
+                    <li>All Lecturer Profiles</li>
+                    <li>All Announcements</li>
+                    <li>All Leaderboard & Test Results</li>
+                    <li>All Community Messages & Notes</li>
+                    <li>All Lost & Found Items</li>
+                </ul>
+                <p className="text-xs text-slate-500 mb-4">User accounts and uploaded past questions will <strong className="font-bold">NOT</strong> be deleted. Recovery is only possible if you have enabled Firestore backups in your Google Cloud project.</p>
                 <p className="text-sm font-bold text-slate-700 mb-2">Type <strong className="text-rose-600 font-mono">CONFIRM WIPE</strong> below to proceed.</p>
                 <input 
                     className="w-full border-2 border-slate-300 p-3 rounded-lg font-mono tracking-widest text-center focus:border-rose-500 outline-none" 
