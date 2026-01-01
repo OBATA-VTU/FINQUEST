@@ -7,7 +7,8 @@ import { NavLink, useNavigate } from 'react-router-dom';
 interface NavItemProps {
     to: string;
     label: string;
-    icon: React.ReactNode;
+    // FIX: Changed icon type to React.ReactElement for type safety with React.cloneElement
+    icon: React.ReactElement;
     onClose: () => void;
 }
 
@@ -24,7 +25,8 @@ const NavItem: React.FC<NavItemProps> = ({ to, label, icon, onClose }) => (
         {({ isActive }) => (
             <>
                 <div className={`${isActive ? 'text-indigo-400' : 'text-indigo-300 group-hover:text-white'} transition-colors`}>
-                    {React.cloneElement(icon as React.ReactElement, { className: "w-4 h-4" })}
+                    {/* FIX: Removed the unsafe 'as React.ReactElement' cast as the prop type is now correct. */}
+                    {React.cloneElement(icon, { className: "w-4 h-4" })}
                 </div>
                 <span className={`font-semibold text-xs tracking-wide ${isActive ? 'font-bold' : ''}`}>{label}</span>
                 {isActive && <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-transparent rounded-lg pointer-events-none"></div>}
