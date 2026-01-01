@@ -1,4 +1,3 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -31,9 +30,9 @@ service cloud.firestore {
       allow create: if isOwner(userId) && request.resource.data.role == 'student';
       
       // Update: 
-      // 1. Owner can update their profile (avatar, name) BUT CANNOT change their 'role' or 'isBanned' status.
-      // 2. Admin can update anything (including roles and bans).
-      allow update: if (isOwner(userId) && request.resource.data.role == resource.data.role && request.resource.data.isBanned == resource.data.isBanned) || isAdmin();
+      // 1. Owner can update a limited set of their profile fields.
+      // 2. Admin can update anything.
+      allow update: if (isOwner(userId) && request.writeFields.hasOnly(['name', 'level', 'matricNumber', 'avatarUrl', 'username', 'savedQuestions', 'lastActive'])) || isAdmin();
       
       // Delete: Only admins can delete users
       allow delete: if isAdmin();

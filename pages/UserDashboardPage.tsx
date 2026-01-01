@@ -1,4 +1,3 @@
-
 import React, { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -29,6 +28,7 @@ export const UserDashboardPage: React.FC = () => {
   const [quote, setQuote] = useState('');
   const [recentNews, setRecentNews] = useState<Announcement[]>([]);
   const [recommendedQuestions, setRecommendedQuestions] = useState<PastQuestion[]>([]);
+  const [showLinkBanner, setShowLinkBanner] = useState(true);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -108,12 +108,31 @@ export const UserDashboardPage: React.FC = () => {
       }
   }, [user?.id, user?.level]);
 
-  if (!user) return null;
+  if (!user || !auth) return null;
+  const { isPasswordAccount, isGoogleAccount, linkGoogleAccount } = auth;
+
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 font-sans transition-colors p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
           
+          {/* ACCOUNT LINK BANNER */}
+          {isPasswordAccount && !isGoogleAccount && showLinkBanner && (
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 relative">
+                  <button onClick={() => setShowLinkBanner(false)} className="absolute top-2 right-2 p-1 text-green-700/50 hover:text-green-700 dark:text-green-300/50 dark:hover:text-green-300 transition-colors">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                  <div className="flex items-center gap-3">
+                      <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-6 h-6" alt="Google" />
+                      <div>
+                          <h4 className="font-bold text-green-800 dark:text-green-300">One-Click Sign-In</h4>
+                          <p className="text-xs text-green-600 dark:text-green-400">Link your Google account for faster, more secure access.</p>
+                      </div>
+                  </div>
+                  <button onClick={linkGoogleAccount} className="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap">Link Google Account</button>
+              </div>
+          )}
+
           {/* 1. HERO - COMMAND CENTER STYLE */}
           <div className="rounded-3xl overflow-hidden relative shadow-xl bg-indigo-900 text-white min-h-[220px] flex flex-col justify-center p-8 md:p-12">
               <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&q=80')] bg-cover opacity-20 mix-blend-overlay"></div>

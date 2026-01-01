@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { User, Level } from '../types';
 import { auth, db } from '../firebase';
@@ -9,7 +8,10 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
-  updateProfile
+  updateProfile,
+  linkWithPopup,
+  EmailAuthProvider,
+  linkWithCredential
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { useNotification } from './NotificationContext';
@@ -23,12 +25,25 @@ interface AuthContextType {
   logout: () => Promise<void>;
   checkUsernameAvailability: (username: string) => Promise<boolean>;
   toggleBookmark: (questionId: string) => Promise<void>;
+  linkGoogleAccount: () => Promise<void>;
+  addPassword: (password: string) => Promise<void>;
+  isPasswordAccount: boolean;
+  isGoogleAccount: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 const sanitizeData = (data: any) => {
   return JSON.parse(JSON.stringify(data));
+};
+
+const getFriendlyErrorMessage = (error: any): string => {
+    const code = error.code || '';
+    const msg = error.message || '';
+    if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') return 'Incorrect email or password.';
+    if (code === 'auth/email-already-in-use') return 'Email already registered. Please log in.';
+    if (code === 'auth/weak-password') return 'Password should be at least 6 characters.';
+    return msg.replace('Firebase:', '').trim() || 'An unexpected error occurred.';
 };
 
 const INACTIVITY_LIMIT = 30 * 60 * 1000; 
@@ -38,6 +53,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { showNotification } = useNotification();
+  const [isPasswordAccount, setIsPasswordAccount] = useState(false);
+  const [isGoogleAccount, setIsGoogleAccount] = useState(false);
   
   const idleTimerRef = useRef<any>(null);
   const heartbeatTimerRef = useRef<any>(null);
@@ -46,6 +63,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        setIsPasswordAccount(firebaseUser.providerData.some(p => p.providerId === 'password'));
+        setIsGoogleAccount(firebaseUser.providerData.some(p => p.providerId === 'google.com'));
         try {
             const userDocRef = doc(db, 'users', firebaseUser.uid);
             const userDoc = await getDoc(userDocRef);
@@ -104,6 +123,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         }
       } else {
         setUser(null);
+        setIsPasswordAccount(false);
+        setIsGoogleAccount(false);
       }
       setLoading(false);
     });
@@ -217,7 +238,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         if (error.code === 'auth/unauthorized-domain') {
             showNotification(`Domain unauthorized in Firebase console.`, 'error');
         } else if (error.code !== 'auth/popup-closed-by-user') {
-            showNotification(error.message || "Sign-in failed.", "error");
+            showNotification(getFriendlyErrorMessage(error), "error");
         }
         throw error;
     }
@@ -306,6 +327,40 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       }
   };
 
+  const linkGoogleAccount = async () => {
+    if (!auth.currentUser) throw new Error("No user is logged in.");
+    try {
+        const provider = new GoogleAuthProvider();
+        await linkWithPopup(auth.currentUser, provider);
+        showNotification("Google account linked successfully!", "success");
+        setIsGoogleAccount(true); // Force UI update
+    } catch (error: any) {
+        if (error.code === 'auth/credential-already-in-use') {
+            showNotification("This Google account is already linked to another user.", "error");
+        } else {
+            showNotification(getFriendlyErrorMessage(error), "error");
+        }
+        throw error;
+    }
+  };
+
+  const addPassword = async (password: string) => {
+    if (!auth.currentUser || !auth.currentUser.email) {
+        throw new Error("No user is logged in or user has no email.");
+    }
+    if (password.length < 6) throw new Error("Password must be at least 6 characters.");
+
+    try {
+        const credential = EmailAuthProvider.credential(auth.currentUser.email, password);
+        await linkWithCredential(auth.currentUser, credential);
+        showNotification("Password added successfully!", "success");
+        setIsPasswordAccount(true); // Force UI update
+    } catch (error: any) {
+        showNotification(getFriendlyErrorMessage(error), "error");
+        throw error;
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -314,7 +369,11 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     signup,
     logout,
     checkUsernameAvailability,
-    toggleBookmark
+    toggleBookmark,
+    linkGoogleAccount,
+    addPassword,
+    isPasswordAccount,
+    isGoogleAccount,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

@@ -1,4 +1,3 @@
-
 import React, { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { QuestionGrid } from '../components/QuestionGrid';
@@ -7,10 +6,12 @@ import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { PastQuestion } from '../types';
 import { VerificationBadge } from '../components/VerificationBadge';
+import { AddPasswordModal } from '../components/AddPasswordModal';
 
 export const ProfilePage: React.FC = () => {
   const auth = useContext(AuthContext);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddPasswordModalOpen, setIsAddPasswordModalOpen] = useState(false);
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<PastQuestion[]>([]);
   const [loadingBookmarks, setLoadingBookmarks] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'saved'>('overview');
@@ -42,6 +43,7 @@ export const ProfilePage: React.FC = () => {
       return <div className="p-8 text-center text-red-500">Please log in to view your profile.</div>;
   }
 
+  const { isGoogleAccount, isPasswordAccount } = auth;
   const points = auth.user.contributionPoints || 0;
 
   const getBadges = (pts: number) => {
@@ -68,6 +70,20 @@ export const ProfilePage: React.FC = () => {
       <div className="container mx-auto px-4 -mt-32 relative z-10">
           <div className="max-w-5xl mx-auto">
               
+              {/* ACCOUNT SECURITY BANNER */}
+              {isGoogleAccount && !isPasswordAccount && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/50 rounded-xl p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in">
+                      <div className="flex items-center gap-3">
+                          <svg className="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                          <div>
+                              <h4 className="font-bold text-blue-800 dark:text-blue-300">Enhance Account Security</h4>
+                              <p className="text-xs text-blue-600 dark:text-blue-400">Add a password for more sign-in options.</p>
+                          </div>
+                      </div>
+                      <button onClick={() => setIsAddPasswordModalOpen(true)} className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">Add Password</button>
+                  </div>
+              )}
+
               {/* 2. PROFILE HEADER */}
               <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-slate-700/50 overflow-hidden mb-8 p-8 relative">
                   <div className="absolute top-4 right-4">
@@ -215,6 +231,7 @@ export const ProfilePage: React.FC = () => {
       </div>
 
       <EditProfileModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} />
+      <AddPasswordModal isOpen={isAddPasswordModalOpen} onClose={() => setIsAddPasswordModalOpen(false)} />
     </div>
   );
 };
