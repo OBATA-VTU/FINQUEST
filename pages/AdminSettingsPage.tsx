@@ -88,11 +88,33 @@ export const AdminSettingsPage: React.FC = () => {
             }
         };
 
+        const resetUserPoints = async () => {
+            const usersQuery = query(collection(db, 'users'));
+            const usersSnapshot = await getDocs(usersQuery);
+            if (usersSnapshot.empty) return;
+
+            const chunks = [];
+            for (let i = 0; i < usersSnapshot.docs.length; i += 500) {
+                chunks.push(usersSnapshot.docs.slice(i, i + 500));
+            }
+
+            for (const chunk of chunks) {
+                const batch = writeBatch(db);
+                chunk.forEach(userDoc => {
+                    batch.update(userDoc.ref, { contributionPoints: 0 });
+                });
+                await batch.commit();
+            }
+        };
+
         for (const col of collectionsToDelete) {
             await deleteCollection(col);
         }
+        
+        // Also reset all user contribution points to fully clear leaderboard
+        await resetUserPoints();
 
-        showNotification("All records (except past questions) have been wiped.", "success");
+        showNotification("All records (except past questions) and leaderboard points have been wiped.", "success");
     } catch (e: any) {
         console.error("Wipe failed:", e);
         showNotification("An error occurred during wipe: " + e.message, "error");
