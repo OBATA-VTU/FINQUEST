@@ -59,8 +59,7 @@ export const AdminSettingsPage: React.FC = () => {
     showNotification("Wiping records... This may take a moment.", "info");
     try {
         const collectionsToDelete = [
-            'leaderboard', 'test_results', 'community_messages',
-            'notes', 'lost_items', 'announcements', 'gallery', 'executives', 'lecturers'
+            'leaderboard', 'test_results', 'community_messages'
         ];
         
         const deleteCollection = async (collectionName: string) => {
@@ -114,7 +113,7 @@ export const AdminSettingsPage: React.FC = () => {
         // Also reset all user contribution points to fully clear leaderboard
         await resetUserPoints();
 
-        showNotification("All records (except past questions) and leaderboard points have been wiped.", "success");
+        showNotification("Session records (leaderboard, test results, chat) and user points have been wiped.", "success");
     } catch (e: any) {
         console.error("Wipe failed:", e);
         showNotification("An error occurred during wipe: " + e.message, "error");
@@ -232,9 +231,9 @@ export const AdminSettingsPage: React.FC = () => {
                     <button onClick={() => setIsAdvanceModalOpen(true)} className="px-5 py-2 bg-rose-500 text-white font-bold rounded-lg shadow hover:bg-rose-600">Advance Levels</button>
                 </div>
                 <div className="pt-6 border-t border-rose-200">
-                    <h4 className="font-bold text-rose-700">Wipe All Records</h4>
-                    <p className="text-sm text-rose-600 mb-3">Permanently delete all content including leaderboard, test results, etc. Past questions and user accounts will NOT be deleted. This is irreversible.</p>
-                    <button onClick={() => setIsWipeModalOpen(true)} className="px-5 py-2 bg-rose-700 text-white font-bold rounded-lg shadow hover:bg-rose-800">Wipe Site Records</button>
+                    <h4 className="font-bold text-rose-700">Wipe Session Records</h4>
+                    <p className="text-sm text-rose-600 mb-3">Permanently delete all session-based records, including the Leaderboard, test results, and community chat. User accounts and permanent content like past questions, announcements, and notes will NOT be deleted. This is irreversible.</p>
+                    <button onClick={() => setIsWipeModalOpen(true)} className="px-5 py-2 bg-rose-700 text-white font-bold rounded-lg shadow hover:bg-rose-800">Wipe Session Data</button>
                 </div>
             </div>
         </div>
@@ -245,17 +244,13 @@ export const AdminSettingsPage: React.FC = () => {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsWipeModalOpen(false)}>
             <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-fade-in-up" onClick={e => e.stopPropagation()}>
                 <h3 className="text-xl font-bold text-rose-700 mb-2">Irreversible Data Deletion</h3>
-                <p className="text-sm text-slate-600 mb-4">You are about to permanently delete all of the following records from the database. This action <strong className="text-rose-600">CANNOT BE UNDONE</strong> from the app.</p>
+                <p className="text-sm text-slate-600 mb-4">You are about to permanently delete the following session records. This action <strong className="text-rose-600">CANNOT BE UNDONE</strong> from the app.</p>
                 <ul className="list-disc pl-5 text-sm space-y-1 mb-4 bg-rose-50 p-4 rounded-lg border border-rose-200 text-rose-700">
-                    <li>All Gallery Photos</li>
-                    <li>All Executive Profiles</li>
-                    <li>All Lecturer Profiles</li>
-                    <li>All Announcements</li>
                     <li>All Leaderboard & Test Results</li>
-                    <li>All Community Messages & Notes</li>
-                    <li>All Lost & Found Items</li>
+                    <li>All Community Chat Messages</li>
                 </ul>
-                <p className="text-xs text-slate-500 mb-4">User accounts and uploaded past questions will <strong className="font-bold">NOT</strong> be deleted. Recovery is only possible if you have enabled Firestore backups in your Google Cloud project.</p>
+                <p className="text-xs text-slate-500 mb-4">This action will also reset all user <strong className="font-bold">Contribution Points</strong> to zero.</p>
+                <p className="text-xs text-slate-500 mb-4">User accounts, past questions, announcements, gallery, notes, and other permanent content will <strong className="font-bold">NOT</strong> be deleted. Recovery is only possible if you have enabled Firestore backups.</p>
                 <p className="text-sm font-bold text-slate-700 mb-2">Type <strong className="text-rose-600 font-mono">CONFIRM WIPE</strong> below to proceed.</p>
                 <input 
                     className="w-full border-2 border-slate-300 p-3 rounded-lg font-mono tracking-widest text-center focus:border-rose-500 outline-none" 
