@@ -1,4 +1,5 @@
 
+
 import React, { useContext, useState } from 'react';
 import { Logo } from './Logo';
 import { AuthContext } from '../contexts/AuthContext';
@@ -7,8 +8,8 @@ import { NavLink, useNavigate } from 'react-router-dom';
 interface NavItemProps {
     to: string;
     label: string;
-    // FIX: Changed icon type to React.ReactElement for type safety with React.cloneElement
-    icon: React.ReactElement;
+    // FIX: Explicitly typed the icon prop to accept a className, resolving a TypeScript error with React.cloneElement where the props were being inferred as 'unknown'.
+    icon: React.ReactElement<{ className?: string }>;
     onClose: () => void;
 }
 
@@ -255,7 +256,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                         <div className="flex-1 min-w-0">
                             <p className="text-xs font-bold text-white truncate">{auth.user.name}</p>
                             <p className="text-[10px] text-indigo-300 truncate uppercase font-semibold tracking-wide">
-                                {isAdminUser ? auth.user.role.replace('_', ' ') : `${auth.user.level}L Student`}
+                                {isAdminUser ? auth.user.role.replace('_', ' ') : auth.user.role === 'alumni' ? 'Alumnus' : `${auth.user.level}L Student`}
                             </p>
                         </div>
                     </div>

@@ -24,12 +24,12 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     const id = Date.now();
     setNotifications((prev) => [...prev, { id, message, type }]);
     
-    // Only auto-remove info/success messages after 8 seconds (longer than before).
+    // Auto-remove info/success messages after 2 seconds.
     // Errors and warnings persist until clicked or navigated away.
     if (type === 'info' || type === 'success') {
         setTimeout(() => {
             removeNotification(id);
-        }, 8000);
+        }, 2000);
     }
   };
 
