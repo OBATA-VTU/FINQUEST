@@ -85,15 +85,15 @@ service cloud.firestore {
     // --- LEADERBOARD (Best Scores) ---
     match /leaderboard/{userId} {
       allow read: if true;
-      // Users can create/update their own entry in leaderboard to update best score
-      allow write: if isOwner(userId);
+      // Users can update their score, Admins can manage records.
+      allow write: if isOwner(userId) || isAdmin();
     }
     
     // --- PRIVATE NOTES (New) ---
     match /notes/{noteId} {
-      // Only the creator can read, update, or delete their notes
+      // Admins need full access for moderation/wipe, owners have full control of their own.
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow read, update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read, update, delete: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
     }
 
     // --- SYSTEM STATS (New - For Admin Health) ---
