@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { db } from '../firebase';
+import { db, functions } from '../firebase';
 import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { useNotification } from '../contexts/NotificationContext';
 import { deleteFile } from '../utils/api';
 import { AuthContext } from '../contexts/AuthContext';
@@ -76,16 +77,18 @@ export const AdminSettingsPage: React.FC = () => {
       if (!window.confirm("This will create the secure Mailjet configuration document in your database. This action is safe to perform. Proceed?")) return;
       setIsProcessing(true);
       try {
-          const mailjetConfig = {
-              apiKey: '31d3ecd69263132b58b84ef36fe6185a',
-              apiSecret: '60749b12fcdb4fb1081ce3066e7d3aa1',
-              sender: 'finsa.aaua@gmail.com'
-          };
-          await setDoc(doc(db, 'config', 'mailjet'), mailjetConfig);
-          showNotification("Mailjet configuration created successfully!", "success");
-          setIsMailjetConfigured(true);
-      } catch (e) {
-          showNotification("Failed to create configuration.", "error");
+          const createConfig = httpsCallable(functions, 'createMailjetConfig');
+          const result = await createConfig();
+          const data = result.data as { status: string, message: string };
+
+          if (data.status === 'success') {
+              showNotification(data.message, "success");
+              setIsMailjetConfigured(true);
+          } else {
+              throw new Error(data.message || 'Unknown function error');
+          }
+      } catch (e: any) {
+          showNotification(e.message || "Failed to create configuration.", "error");
       } finally {
           setIsProcessing(false);
       }

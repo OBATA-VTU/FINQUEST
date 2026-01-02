@@ -172,3 +172,42 @@ exports.sendAnnouncementEmail = functions.firestore
       .then(() => console.log("Announcement email sent successfully."))
       .catch((err) => console.error("Error sending announcement email:", err.statusCode, err.message));
   });
+
+/**
+ * Creates the Mailjet configuration document in Firestore.
+ * This is a callable function that can only be executed by an authenticated admin.
+ */
+exports.createMailjetConfig = functions.https.onCall(async (data, context) => {
+  // 1. Check for authentication
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to call this function.');
+  }
+
+  // 2. Check for admin role
+  const userDoc = await admin.firestore().doc(`users/${context.auth.uid}`).get();
+  if (!userDoc.exists || userDoc.data().role !== 'admin') {
+    throw new functions.https.HttpsError('permission-denied', 'You must be an admin to perform this action.');
+  }
+
+  // 3. Check if config already exists
+  const configRef = admin.firestore().doc("config/mailjet");
+  const configDoc = await configRef.get();
+  if (configDoc.exists) {
+      return { status: 'success', message: 'Configuration already exists. No action taken.' };
+  }
+  
+  // 4. Create the config document with hardcoded keys
+  const mailjetConfig = {
+      apiKey: '31d3ecd69263132b58b84ef36fe6185a',
+      apiSecret: '60749b12fcdb4fb1081ce3066e7d3aa1',
+      sender: 'finsa.aaua@gmail.com'
+  };
+
+  try {
+    await configRef.set(mailjetConfig);
+    return { status: 'success', message: 'Mailjet configuration created successfully!' };
+  } catch (error) {
+    console.error("Error in createMailjetConfig function:", error);
+    throw new functions.https.HttpsError('internal', 'An internal error occurred while creating the configuration.');
+  }
+});
