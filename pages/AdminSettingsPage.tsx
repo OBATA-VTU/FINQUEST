@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { db, functions } from '../firebase';
 import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch } from 'firebase/firestore';
@@ -21,10 +22,6 @@ export const AdminSettingsPage: React.FC = () => {
   const [siteSettings, setSiteSettings] = useState({ session: '2025/2026', showExecutives: true });
   const { showNotification } = useNotification();
 
-  // State for new setup button
-  const [isMailjetConfigured, setIsMailjetConfigured] = useState(false);
-  const [isCheckingConfig, setIsCheckingConfig] = useState(true);
-
   // Modal States
   const [isWipeModalOpen, setIsWipeModalOpen] = useState(false);
   const [wipeConfirmText, setWipeConfirmText] = useState('');
@@ -33,9 +30,7 @@ export const AdminSettingsPage: React.FC = () => {
 
   useEffect(() => {
     const fetchSettings = async () => {
-        setIsCheckingConfig(true);
         try {
-            // Fetch non-critical settings first
             const sDoc = await getDoc(doc(db, 'content', 'social_links'));
             if (sDoc.exists()) setSocialLinks(sDoc.data() as any);
             
@@ -47,25 +42,13 @@ export const AdminSettingsPage: React.FC = () => {
                     showExecutives: data.showExecutives !== undefined ? data.showExecutives : true
                 });
             }
-
-            // Perform critical setup check if the user is a super admin
-            if (isSuperAdmin) {
-                const mailjetDoc = await getDoc(doc(db, 'config', 'mailjet'));
-                setIsMailjetConfigured(mailjetDoc.exists());
-            }
         } catch (e: any) { 
             console.error("Failed to fetch settings:", e);
-            if (isSuperAdmin) {
-                 showNotification("Error checking config status.", "warning");
-            }
-        }
-        finally {
-            setIsCheckingConfig(false);
         }
     };
 
     fetchSettings();
-  }, [isSuperAdmin]);
+  }, []);
 
 
   const handleSaveSettings = async () => {
@@ -80,31 +63,6 @@ export const AdminSettingsPage: React.FC = () => {
           showNotification("Settings saved successfully", "success");
       } catch (e) { showNotification("Failed to save settings", "error"); }
   };
-
-  const handleCreateMailjetConfig = async () => {
-      if (!window.confirm("This will create the secure Mailjet configuration document in your database. This action is safe to perform. Proceed?")) return;
-      
-      setIsProcessing(true);
-      try {
-          const createConfig = httpsCallable(functions, 'createMailjetConfig');
-          const result = await createConfig();
-          const data = result.data as { status: string, message: string };
-
-          if (data.status === 'success') {
-              showNotification(data.message, "success");
-              setIsMailjetConfigured(true);
-          } else {
-              throw new Error(data.message || 'Unknown function error');
-          }
-      } catch (e: any) {
-          const errorMessage = e.message || "Failed to create configuration.";
-          showNotification(errorMessage, "error");
-          setIsMailjetConfigured(false); // Ensure button remains available on failure
-      } finally {
-          setIsProcessing(false);
-      }
-  };
-
 
   const handleWipeRecords = async () => {
     setIsProcessing(true);
@@ -222,24 +180,6 @@ export const AdminSettingsPage: React.FC = () => {
     <>
     <div className="animate-fade-in max-w-3xl pb-20">
         <h1 className="text-2xl font-bold text-slate-900 mb-6">Platform Settings</h1>
-        
-        {isSuperAdmin && (
-             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
-                 <h3 className="text-xl font-bold text-slate-800 mb-6">One-Time Setup</h3>
-                 <div>
-                     <h4 className="font-bold text-slate-700">Mailjet API Configuration</h4>
-                     <p className="text-sm text-slate-500 mb-3">Creates the secure document required for sending system emails.</p>
-                     <button
-                         onClick={handleCreateMailjetConfig}
-                         disabled={isMailjetConfigured || isCheckingConfig || isProcessing}
-                         className="px-5 py-2 bg-indigo-600 text-white font-bold rounded-lg shadow hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                     >
-                         {isProcessing ? 'Processing...' : isMailjetConfigured ? '✓ Configured' : 'Create Mailjet Config'}
-                     </button>
-                     {isCheckingConfig && <p className="text-xs text-slate-400 mt-2">Checking status...</p>}
-                 </div>
-             </div>
-        )}
 
         {/* General Site Config */}
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
@@ -288,25 +228,27 @@ export const AdminSettingsPage: React.FC = () => {
 
         <button onClick={handleSaveSettings} className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow hover:bg-indigo-700">Save All Settings</button>
 
-        {/* DANGER ZONE */}
-        <div className="bg-rose-50 p-8 rounded-2xl border-2 border-dashed border-rose-200 mt-12">
-            <h3 className="text-xl font-bold text-rose-800 mb-4 flex items-center gap-2">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                Danger Zone
-            </h3>
-            <div className="space-y-6">
-                <div>
-                    <h4 className="font-bold text-rose-700">Advance Academic Session</h4>
-                    <p className="text-sm text-rose-600 mb-3">Promote all students to the next level (100L → 200L, etc.). 400L students will be promoted to Alumni status. This cannot be undone.</p>
-                    <button onClick={() => setIsAdvanceModalOpen(true)} className="px-5 py-2 bg-rose-500 text-white font-bold rounded-lg shadow hover:bg-rose-600">Advance Levels</button>
-                </div>
-                <div className="pt-6 border-t border-rose-200">
-                    <h4 className="font-bold text-rose-700">Wipe Session Records</h4>
-                    <p className="text-sm text-rose-600 mb-3">Permanently delete all session-based records, including the Leaderboard, test results, and community chat. User accounts and permanent content like past questions, announcements, and notes will NOT be deleted. This is irreversible.</p>
-                    <button onClick={() => setIsWipeModalOpen(true)} className="px-5 py-2 bg-rose-700 text-white font-bold rounded-lg shadow hover:bg-rose-800">Wipe Session Data</button>
+        {/* DANGER ZONE - Only for Super Admin */}
+        {isSuperAdmin && (
+            <div className="bg-rose-50 p-8 rounded-2xl border-2 border-dashed border-rose-200 mt-12">
+                <h3 className="text-xl font-bold text-rose-800 mb-4 flex items-center gap-2">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    Danger Zone
+                </h3>
+                <div className="space-y-6">
+                    <div>
+                        <h4 className="font-bold text-rose-700">Advance Academic Session</h4>
+                        <p className="text-sm text-rose-600 mb-3">Promote all students to the next level (100L → 200L, etc.). 400L students will be promoted to Alumni status. This cannot be undone.</p>
+                        <button onClick={() => setIsAdvanceModalOpen(true)} className="px-5 py-2 bg-rose-500 text-white font-bold rounded-lg shadow hover:bg-rose-600">Advance Levels</button>
+                    </div>
+                    <div className="pt-6 border-t border-rose-200">
+                        <h4 className="font-bold text-rose-700">Wipe Session Records</h4>
+                        <p className="text-sm text-rose-600 mb-3">Permanently delete all session-based records, including the Leaderboard, test results, and community chat. User accounts and permanent content like past questions, announcements, and notes will NOT be deleted. This is irreversible.</p>
+                        <button onClick={() => setIsWipeModalOpen(true)} className="px-5 py-2 bg-rose-700 text-white font-bold rounded-lg shadow hover:bg-rose-800">Wipe Session Data</button>
+                    </div>
                 </div>
             </div>
-        </div>
+        )}
     </div>
 
     {/* Wipe Modal */}

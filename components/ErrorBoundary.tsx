@@ -1,7 +1,8 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+// FIX: Changed React import to fix type resolution issue for class components.
+import * as React from 'react';
 
 interface ErrorBoundaryProps {
-  children?: ReactNode;
+  children?: React.ReactNode;
 }
 
 interface ErrorBoundaryState {
@@ -9,9 +10,8 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-// FIX: Changed 'extends Component' to 'extends React.Component' and updated imports to resolve a potential type resolution issue where component properties like 'props' were not being recognized.
+// FIX: Corrected import statement and qualified React-specific types to resolve a type error where component 'props' were not being recognized.
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // FIX: Switched to class property syntax for state initialization. This is a more modern approach and resolves type errors where `this.state` and `this.props` were not being recognized on the component instance.
   state: ErrorBoundaryState = {
     hasError: false,
     error: null,
@@ -21,11 +21,11 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
   }
 
-  render(): ReactNode {
+  render(): React.ReactNode {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">

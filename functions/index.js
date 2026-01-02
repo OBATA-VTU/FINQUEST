@@ -4,33 +4,27 @@ const admin = require("firebase-admin");
 
 admin.initializeApp();
 
-// Helper to get mail configuration securely from Firestore
-async function getMailConfig() {
-    const configDoc = await admin.firestore().doc("config/mailjet").get();
-    if (!configDoc.exists) {
-        console.error("CRITICAL: Mailjet configuration not found in Firestore at /config/mailjet. Email functions are disabled.");
-        return null;
-    }
-    return configDoc.data();
-}
-
+// Configuration is now sourced from Firebase environment variables.
+// To set them, use the Firebase CLI or your hosting provider's (e.g., Vercel) interface:
+// - mailjet.apikey="YOUR_API_KEY"
+// - mailjet.apisecret="YOUR_API_SECRET"
+// - mailjet.sender="your@sender.email"
 
 /**
  * Sends a welcome email to a new user.
  */
 exports.sendWelcomeEmail = functions.auth.user().onCreate(async (user) => {
-  const mailConfig = await getMailConfig();
-  if (!mailConfig?.apiKey || !mailConfig?.apiSecret || !mailConfig?.sender) {
-    console.error("Aborting welcome email: Mailjet config is incomplete.");
+  const mailjetConfig = functions.config().mailjet;
+  if (!mailjetConfig?.apikey || !mailjetConfig?.apisecret || !mailjetConfig?.sender) {
+    console.error("CRITICAL: Mailjet configuration is missing. Set mailjet.apikey, mailjet.apisecret, and mailjet.sender in your environment config.");
     return;
   }
   
-  console.log("Mailjet config loaded, preparing to send welcome email.");
-  const mailjet = require('@mailjet/node').connect(
-    mailConfig.apiKey,
-    mailConfig.apiSecret
+  const mailjet = require('node-mailjet').connect(
+    mailjetConfig.apikey,
+    mailjetConfig.apisecret
   );
-  const senderEmail = mailConfig.sender;
+  const senderEmail = mailjetConfig.sender;
   
   const recipientEmail = user.email;
   const recipientName = user.displayName || "Student";
@@ -72,18 +66,17 @@ exports.sendBroadcastEmail = functions.firestore
     const notification = snap.data();
     if (notification.userId !== "all") return null;
 
-    const mailConfig = await getMailConfig();
-    if (!mailConfig?.apiKey || !mailConfig?.apiSecret || !mailConfig?.sender) {
-        console.error("Aborting broadcast email: Mailjet config is incomplete.");
+    const mailjetConfig = functions.config().mailjet;
+    if (!mailjetConfig?.apikey || !mailjetConfig?.apisecret || !mailjetConfig?.sender) {
+        console.error("CRITICAL: Mailjet configuration is missing. Set mailjet.apikey, mailjet.apisecret, and mailjet.sender in your environment config.");
         return;
     }
 
-    console.log("Mailjet config loaded, preparing to send broadcast email.");
-    const mailjet = require("@mailjet/node").connect(
-        mailConfig.apiKey,
-        mailConfig.apiSecret
+    const mailjet = require("node-mailjet").connect(
+        mailjetConfig.apikey,
+        mailjetConfig.apisecret
     );
-    const senderEmail = mailConfig.sender;
+    const senderEmail = mailjetConfig.sender;
 
     const usersSnap = await admin.firestore().collection("users").get();
     const recipients = usersSnap.docs.map((doc) => ({
@@ -134,9 +127,9 @@ exports.sendDirectNotificationEmail = functions.firestore
       return null;
     }
 
-    const mailConfig = await getMailConfig();
-    if (!mailConfig?.apiKey || !mailConfig?.apiSecret || !mailConfig?.sender) {
-        console.error(`Aborting direct notification email for user ${notification.userId}: Mailjet config is incomplete.`);
+    const mailjetConfig = functions.config().mailjet;
+    if (!mailjetConfig?.apikey || !mailjetConfig?.apisecret || !mailjetConfig?.sender) {
+        console.error("CRITICAL: Mailjet configuration is missing. Set mailjet.apikey, mailjet.apisecret, and mailjet.sender in your environment config.");
         return;
     }
 
@@ -154,12 +147,11 @@ exports.sendDirectNotificationEmail = functions.firestore
         return;
     }
     
-    console.log(`Mailjet config loaded for direct email to user ${user.name} (${recipientEmail}).`);
-    const mailjet = require("@mailjet/node").connect(
-        mailConfig.apiKey,
-        mailConfig.apiSecret
+    const mailjet = require("node-mailjet").connect(
+        mailjetConfig.apikey,
+        mailjetConfig.apisecret
     );
-    const senderEmail = mailConfig.sender;
+    const senderEmail = mailjetConfig.sender;
     
     console.log(`Attempting to send direct email to ${recipientEmail}...`);
     const request = mailjet.post("send", { version: "v3.1" }).request({
@@ -197,18 +189,17 @@ exports.sendAnnouncementEmail = functions.firestore
   .onCreate(async (snap) => {
     const announcement = snap.data();
 
-    const mailConfig = await getMailConfig();
-    if (!mailConfig?.apiKey || !mailConfig?.apiSecret || !mailConfig?.sender) {
-        console.error("Aborting announcement email: Mailjet config is incomplete.");
+    const mailjetConfig = functions.config().mailjet;
+    if (!mailjetConfig?.apikey || !mailjetConfig?.apisecret || !mailjetConfig?.sender) {
+        console.error("CRITICAL: Mailjet configuration is missing. Set mailjet.apikey, mailjet.apisecret, and mailjet.sender in your environment config.");
         return;
     }
 
-    console.log("Mailjet config loaded, preparing to send announcement email.");
-    const mailjet = require("@mailjet/node").connect(
-        mailConfig.apiKey,
-        mailConfig.apiSecret
+    const mailjet = require("node-mailjet").connect(
+        mailjetConfig.apikey,
+        mailjetConfig.apisecret
     );
-    const senderEmail = mailConfig.sender;
+    const senderEmail = mailjetConfig.sender;
 
     const usersSnap = await admin.firestore().collection("users").get();
     const recipients = usersSnap.docs.map((doc) => ({
@@ -245,48 +236,3 @@ exports.sendAnnouncementEmail = functions.firestore
       .then((result) => console.log("Announcement email sent successfully.", JSON.stringify(result.body)))
       .catch((err) => console.error("Error sending announcement email:", err.statusCode, err.message, err.ErrorMessage));
   });
-
-/**
- * Creates the Mailjet configuration document in Firestore.
- * This is a callable function that can only be executed by an authenticated admin.
- */
-exports.createMailjetConfig = functions.https.onCall(async (data, context) => {
-  try {
-    if (!context.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to call this function.');
-    }
-
-    const userDoc = await admin.firestore().doc(`users/${context.auth.uid}`).get();
-    if (!userDoc.exists || userDoc.data().role !== 'admin') {
-      throw new functions.https.HttpsError('permission-denied', 'You must be an admin to perform this action.');
-    }
-
-    const configRef = admin.firestore().doc("config/mailjet");
-    const configDoc = await configRef.get();
-    if (configDoc.exists) {
-        return { status: 'success', message: 'Configuration already exists. No action taken.' };
-    }
-    
-    const mailjetConfig = {
-        apiKey: '31d3ecd69263132b58b84ef36fe6185a',
-        apiSecret: '60749b12fcdb4fb1081ce3066e7d3aa1',
-        sender: 'finsa.aaua@gmail.com'
-    };
-
-    await configRef.set(mailjetConfig);
-    console.log("Successfully created Mailjet config document.");
-    return { status: 'success', message: 'Mailjet configuration created successfully!' };
-  } catch (error) {
-    console.error("[FINSA_SETUP_ERROR] A critical error occurred in createMailjetConfig:", error);
-    
-    let clientMessage = 'An internal error occurred. Please check the Firebase Function logs for tag "[FINSA_SETUP_ERROR]" for details.';
-    
-    if (error instanceof functions.https.HttpsError) {
-      clientMessage = error.message;
-    } else if (error.message) {
-      clientMessage = `Setup Error: ${error.message}`;
-    }
-    
-    throw new functions.https.HttpsError('internal', clientMessage, { originalError: error.message });
-  }
-});
