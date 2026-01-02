@@ -27,10 +27,10 @@ exports.sendWelcomeEmail = functions.auth.user().onCreate(async (user) => {
   }
   
   console.log("Mailjet config loaded, preparing to send welcome email.");
-  const mailjetClient = new Mailjet({
-    apiKey: mailConfig.apiKey,
-    apiSecret: mailConfig.apiSecret,
-  });
+  const mailjetClient = new Mailjet(
+    mailConfig.apiKey,
+    mailConfig.apiSecret
+  );
   const senderEmail = mailConfig.sender;
   
   const recipientEmail = user.email;
@@ -80,10 +80,10 @@ exports.sendBroadcastEmail = functions.firestore
     }
 
     console.log("Mailjet config loaded, preparing to send broadcast email.");
-    const mailjetClient = new Mailjet({
-        apiKey: mailConfig.apiKey,
-        apiSecret: mailConfig.apiSecret,
-    });
+    const mailjetClient = new Mailjet(
+        mailConfig.apiKey,
+        mailConfig.apiSecret
+    );
     const senderEmail = mailConfig.sender;
 
     const usersSnap = await admin.firestore().collection("users").get();
@@ -156,10 +156,10 @@ exports.sendDirectNotificationEmail = functions.firestore
     }
     
     console.log(`Mailjet config loaded for direct email to user ${user.name} (${recipientEmail}).`);
-    const mailjetClient = new Mailjet({
-        apiKey: mailConfig.apiKey,
-        apiSecret: mailConfig.apiSecret,
-    });
+    const mailjetClient = new Mailjet(
+        mailConfig.apiKey,
+        mailConfig.apiSecret
+    );
     const senderEmail = mailConfig.sender;
     
     console.log(`Attempting to send direct email to ${recipientEmail}...`);
@@ -205,10 +205,10 @@ exports.sendAnnouncementEmail = functions.firestore
     }
 
     console.log("Mailjet config loaded, preparing to send announcement email.");
-    const mailjetClient = new Mailjet({
-        apiKey: mailConfig.apiKey,
-        apiSecret: mailConfig.apiSecret,
-    });
+    const mailjetClient = new Mailjet(
+        mailConfig.apiKey,
+        mailConfig.apiSecret
+    );
     const senderEmail = mailConfig.sender;
 
     const usersSnap = await admin.firestore().collection("users").get();
@@ -282,7 +282,7 @@ exports.createMailjetConfig = functions.https.onCall(async (data, context) => {
     
     let clientMessage = 'An internal error occurred. Please check the Firebase Function logs for tag "[FINSA_SETUP_ERROR]" for details.';
     
-    if (error instanceof functions.https.https.HttpsError) {
+    if (error instanceof functions.https.HttpsError) {
       clientMessage = error.message;
     } else if (error.message) {
       clientMessage = `Setup Error: ${error.message}`;
