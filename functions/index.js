@@ -5,39 +5,33 @@ const Mailjet = require("@mailjet/node");
 
 admin.initializeApp();
 
-// ===================================================================================
-// !!! --- CRITICAL SECURITY WARNING --- !!!
-// ===================================================================================
-//
-// The API keys below are hardcoded directly into the source code as you requested.
-// This is EXTREMELY DANGEROUS and is NOT a secure or recommended practice.
-//
-// WHY THIS IS DANGEROUS:
-// 1. PUBLIC EXPOSURE: Anyone with access to this code can see your secret keys.
-// 2. ABUSE: Malicious users can use these keys to send emails from your account,
-//    potentially getting you banned from Mailjet or incurring costs.
-//
-// WHAT YOU MUST DO (URGENTLY):
-// 1. GO TO YOUR MAILJET ACCOUNT and CREATE NEW API KEYS.
-// 2. DELETE the old keys you provided.
-// 3. FOLLOW THE SECURE METHOD we discussed previously (using the Firestore database).
-//
-// This current setup is a temporary measure to make the service work, but you
-// are putting your Mailjet account at high risk by leaving it this way.
-//
-// ===================================================================================
-
-const mailjetClient = new Mailjet({
-    apiKey: "31d3ecd69263132b58b84ef36fe6185a",
-    apiSecret: "60749b12fcdb4fb1081ce3066e7d3aa1",
-});
-const SENDER_EMAIL = "finsa.aaua@gmail.com";
+// Helper to get mail configuration securely from Firestore
+async function getMailConfig() {
+    const configDoc = await admin.firestore().doc("config/mailjet").get();
+    if (!configDoc.exists) {
+        console.error("CRITICAL: Mailjet configuration not found in Firestore at /config/mailjet. Email functions are disabled.");
+        return null;
+    }
+    return configDoc.data();
+}
 
 
 /**
  * Sends a welcome email to a new user.
  */
 exports.sendWelcomeEmail = functions.auth.user().onCreate(async (user) => {
+  const mailConfig = await getMailConfig();
+  if (!mailConfig?.apiKey || !mailConfig?.apiSecret || !mailConfig?.sender) {
+    console.error("Aborting welcome email: Mailjet config is incomplete.");
+    return;
+  }
+  
+  const mailjetClient = new Mailjet({
+    apiKey: mailConfig.apiKey,
+    apiSecret: mailConfig.apiSecret,
+  });
+  const senderEmail = mailConfig.sender;
+  
   const recipientEmail = user.email;
   const recipientName = user.displayName || "Student";
 
@@ -45,7 +39,7 @@ exports.sendWelcomeEmail = functions.auth.user().onCreate(async (user) => {
     Messages: [
       {
         From: {
-          Email: SENDER_EMAIL,
+          Email: senderEmail,
           Name: "FINSA AAUA",
         },
         To: [ { Email: recipientEmail, Name: recipientName } ],
@@ -77,6 +71,18 @@ exports.sendBroadcastEmail = functions.firestore
     const notification = snap.data();
     if (notification.userId !== "all") return null;
 
+    const mailConfig = await getMailConfig();
+    if (!mailConfig?.apiKey || !mailConfig?.apiSecret || !mailConfig?.sender) {
+        console.error("Aborting broadcast email: Mailjet config is incomplete.");
+        return;
+    }
+
+    const mailjetClient = new Mailjet({
+        apiKey: mailConfig.apiKey,
+        apiSecret: mailConfig.apiSecret,
+    });
+    const senderEmail = mailConfig.sender;
+
     const usersSnap = await admin.firestore().collection("users").get();
     const recipients = usersSnap.docs.map((doc) => ({
       Email: doc.data().email,
@@ -88,7 +94,7 @@ exports.sendBroadcastEmail = functions.firestore
     const request = mailjetClient.post("send", { version: "v3.1" }).request({
       Messages: [
         {
-          From: { Email: SENDER_EMAIL, Name: "FINSA Admin" },
+          From: { Email: senderEmail, Name: "FINSA Admin" },
           To: recipients,
           Subject: "Important Alert from FINSA",
           HTMLPart: `
@@ -120,6 +126,18 @@ exports.sendAnnouncementEmail = functions.firestore
   .onCreate(async (snap) => {
     const announcement = snap.data();
 
+    const mailConfig = await getMailConfig();
+    if (!mailConfig?.apiKey || !mailConfig?.apiSecret || !mailConfig?.sender) {
+        console.error("Aborting announcement email: Mailjet config is incomplete.");
+        return;
+    }
+
+    const mailjetClient = new Mailjet({
+        apiKey: mailConfig.apiKey,
+        apiSecret: mailConfig.apiSecret,
+    });
+    const senderEmail = mailConfig.sender;
+
     const usersSnap = await admin.firestore().collection("users").get();
     const recipients = usersSnap.docs.map((doc) => ({
       Email: doc.data().email,
@@ -131,7 +149,7 @@ exports.sendAnnouncementEmail = functions.firestore
     const request = mailjetClient.post("send", { version: "v3.1" }).request({
       Messages: [
         {
-          From: { Email: SENDER_EMAIL, Name: "FINSA Announcements" },
+          From: { Email: senderEmail, Name: "FINSA Announcements" },
           To: recipients,
           Subject: `New Announcement: ${announcement.title}`,
           HTMLPart: `

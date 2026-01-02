@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
 import { deleteFile } from '../utils/api';
+import { AuthContext } from '../contexts/AuthContext';
 
 export const AdminSettingsPage: React.FC = () => {
+  const auth = useContext(AuthContext);
+  const isSuperAdmin = auth?.user?.role === 'admin';
+
   const [socialLinks, setSocialLinks] = useState({ 
       facebook: '', 
       twitter: '', 
@@ -16,6 +20,10 @@ export const AdminSettingsPage: React.FC = () => {
   const [siteSettings, setSiteSettings] = useState({ session: '2025/2026', showExecutives: true });
   const { showNotification } = useNotification();
 
+  // State for new setup button
+  const [isMailjetConfigured, setIsMailjetConfigured] = useState(false);
+  const [isCheckingConfig, setIsCheckingConfig] = useState(true);
+
   // Modal States
   const [isWipeModalOpen, setIsWipeModalOpen] = useState(false);
   const [wipeConfirmText, setWipeConfirmText] = useState('');
@@ -24,7 +32,14 @@ export const AdminSettingsPage: React.FC = () => {
 
   useEffect(() => {
     const fetchSettings = async () => {
+        setIsCheckingConfig(true);
         try {
+            // Check for Mailjet config
+            const mailjetDoc = await getDoc(doc(db, 'config', 'mailjet'));
+            if (mailjetDoc.exists()) {
+                setIsMailjetConfigured(true);
+            }
+
             const sDoc = await getDoc(doc(db, 'content', 'social_links'));
             if (sDoc.exists()) setSocialLinks(sDoc.data() as any);
             
@@ -37,6 +52,9 @@ export const AdminSettingsPage: React.FC = () => {
                 });
             }
         } catch (e) { console.error(e); }
+        finally {
+            setIsCheckingConfig(false);
+        }
     };
     fetchSettings();
   }, []);
@@ -52,6 +70,25 @@ export const AdminSettingsPage: React.FC = () => {
           
           showNotification("Settings saved successfully", "success");
       } catch (e) { showNotification("Failed to save settings", "error"); }
+  };
+
+  const handleCreateMailjetConfig = async () => {
+      if (!window.confirm("This will create the secure Mailjet configuration document in your database. This action is safe to perform. Proceed?")) return;
+      setIsProcessing(true);
+      try {
+          const mailjetConfig = {
+              apiKey: '31d3ecd69263132b58b84ef36fe6185a',
+              apiSecret: '60749b12fcdb4fb1081ce3066e7d3aa1',
+              sender: 'finsa.aaua@gmail.com'
+          };
+          await setDoc(doc(db, 'config', 'mailjet'), mailjetConfig);
+          showNotification("Mailjet configuration created successfully!", "success");
+          setIsMailjetConfigured(true);
+      } catch (e) {
+          showNotification("Failed to create configuration.", "error");
+      } finally {
+          setIsProcessing(false);
+      }
   };
 
   const handleWipeRecords = async () => {
@@ -171,6 +208,24 @@ export const AdminSettingsPage: React.FC = () => {
     <div className="animate-fade-in max-w-3xl pb-20">
         <h1 className="text-2xl font-bold text-slate-900 mb-6">Platform Settings</h1>
         
+        {isSuperAdmin && (
+             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
+                 <h3 className="text-xl font-bold text-slate-800 mb-6">One-Time Setup</h3>
+                 <div>
+                     <h4 className="font-bold text-slate-700">Mailjet API Configuration</h4>
+                     <p className="text-sm text-slate-500 mb-3">Creates the secure document required for sending system emails.</p>
+                     <button
+                         onClick={handleCreateMailjetConfig}
+                         disabled={isMailjetConfigured || isCheckingConfig || isProcessing}
+                         className="px-5 py-2 bg-indigo-600 text-white font-bold rounded-lg shadow hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                     >
+                         {isProcessing ? 'Creating...' : isMailjetConfigured ? '✓ Configured' : 'Create Mailjet Config'}
+                     </button>
+                     {isCheckingConfig && <p className="text-xs text-slate-400 mt-2">Checking status...</p>}
+                 </div>
+             </div>
+        )}
+
         {/* General Site Config */}
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
              <h3 className="text-xl font-bold text-slate-800 mb-6">General Configuration</h3>
