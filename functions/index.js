@@ -1,7 +1,6 @@
 
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-const Mailjet = require("@mailjet/node");
 
 admin.initializeApp();
 
@@ -27,7 +26,7 @@ exports.sendWelcomeEmail = functions.auth.user().onCreate(async (user) => {
   }
   
   console.log("Mailjet config loaded, preparing to send welcome email.");
-  const mailjetClient = new Mailjet(
+  const mailjet = require('@mailjet/node').connect(
     mailConfig.apiKey,
     mailConfig.apiSecret
   );
@@ -37,7 +36,7 @@ exports.sendWelcomeEmail = functions.auth.user().onCreate(async (user) => {
   const recipientName = user.displayName || "Student";
 
   console.log(`Attempting to send welcome email to ${recipientEmail}`);
-  const request = mailjetClient.post("send", { version: "v3.1" }).request({
+  const request = mailjet.post("send", { version: "v3.1" }).request({
     Messages: [
       {
         From: {
@@ -60,7 +59,7 @@ exports.sendWelcomeEmail = functions.auth.user().onCreate(async (user) => {
   });
 
   return request
-    .then(() => console.log("Welcome email sent successfully to:", recipientEmail))
+    .then((result) => console.log("Welcome email sent successfully to:", recipientEmail, JSON.stringify(result.body)))
     .catch((err) => console.error("Error sending welcome email:", err.statusCode, err.message, err.ErrorMessage));
 });
 
@@ -80,7 +79,7 @@ exports.sendBroadcastEmail = functions.firestore
     }
 
     console.log("Mailjet config loaded, preparing to send broadcast email.");
-    const mailjetClient = new Mailjet(
+    const mailjet = require("@mailjet/node").connect(
         mailConfig.apiKey,
         mailConfig.apiSecret
     );
@@ -98,7 +97,7 @@ exports.sendBroadcastEmail = functions.firestore
     }
 
     console.log(`Attempting to send broadcast to ${recipients.length} users.`);
-    const request = mailjetClient.post("send", { version: "v3.1" }).request({
+    const request = mailjet.post("send", { version: "v3.1" }).request({
       Messages: [
         {
           From: { Email: senderEmail, Name: "FINSA Admin" },
@@ -120,7 +119,7 @@ exports.sendBroadcastEmail = functions.firestore
     });
 
     return request
-      .then(() => console.log("Broadcast email sent successfully."))
+      .then((result) => console.log("Broadcast email sent successfully.", JSON.stringify(result.body)))
       .catch((err) => console.error("Error sending broadcast email:", err.statusCode, err.message, err.ErrorMessage));
   });
 
@@ -156,14 +155,14 @@ exports.sendDirectNotificationEmail = functions.firestore
     }
     
     console.log(`Mailjet config loaded for direct email to user ${user.name} (${recipientEmail}).`);
-    const mailjetClient = new Mailjet(
+    const mailjet = require("@mailjet/node").connect(
         mailConfig.apiKey,
         mailConfig.apiSecret
     );
     const senderEmail = mailConfig.sender;
     
     console.log(`Attempting to send direct email to ${recipientEmail}...`);
-    const request = mailjetClient.post("send", { version: "v3.1" }).request({
+    const request = mailjet.post("send", { version: "v3.1" }).request({
       Messages: [
         {
           From: { Email: senderEmail, Name: "FINSA Admin" },
@@ -185,7 +184,7 @@ exports.sendDirectNotificationEmail = functions.firestore
     });
 
     return request
-      .then(() => console.log(`Direct notification email sent successfully to: ${recipientEmail}`))
+      .then((result) => console.log(`Direct notification email sent successfully to: ${recipientEmail}`, JSON.stringify(result.body)))
       .catch((err) => console.error(`Error sending direct notification email to ${recipientEmail}:`, err.statusCode, err.message, err.ErrorMessage));
   });
 
@@ -205,7 +204,7 @@ exports.sendAnnouncementEmail = functions.firestore
     }
 
     console.log("Mailjet config loaded, preparing to send announcement email.");
-    const mailjetClient = new Mailjet(
+    const mailjet = require("@mailjet/node").connect(
         mailConfig.apiKey,
         mailConfig.apiSecret
     );
@@ -220,7 +219,7 @@ exports.sendAnnouncementEmail = functions.firestore
     if (recipients.length === 0) return null;
 
     console.log(`Attempting to send announcement email to ${recipients.length} users.`);
-    const request = mailjetClient.post("send", { version: "v3.1" }).request({
+    const request = mailjet.post("send", { version: "v3.1" }).request({
       Messages: [
         {
           From: { Email: senderEmail, Name: "FINSA Announcements" },
@@ -243,7 +242,7 @@ exports.sendAnnouncementEmail = functions.firestore
     });
 
     return request
-      .then(() => console.log("Announcement email sent successfully."))
+      .then((result) => console.log("Announcement email sent successfully.", JSON.stringify(result.body)))
       .catch((err) => console.error("Error sending announcement email:", err.statusCode, err.message, err.ErrorMessage));
   });
 
