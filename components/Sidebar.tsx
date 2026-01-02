@@ -1,4 +1,5 @@
 
+
 import React, { useContext, useState } from 'react';
 import { Logo } from './Logo';
 import { AuthContext } from '../contexts/AuthContext';
@@ -7,6 +8,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 interface NavItemProps {
     to: string;
     label: string;
+    // FIX: Explicitly typed the icon prop to accept a className, resolving a TypeScript error with React.cloneElement where the props were being inferred as 'unknown'.
     icon: React.ReactElement<{ className?: string }>;
     onClose: () => void;
 }
@@ -24,6 +26,7 @@ const NavItem: React.FC<NavItemProps> = ({ to, label, icon, onClose }) => (
         {({ isActive }) => (
             <>
                 <div className={`${isActive ? 'text-indigo-400' : 'text-indigo-300 group-hover:text-white'} transition-colors`}>
+                    {/* FIX: Removed the unsafe 'as React.ReactElement' cast as the prop type is now correct. */}
                     {React.cloneElement(icon, { className: "w-4 h-4" })}
                 </div>
                 <span className={`font-semibold text-xs tracking-wide ${isActive ? 'font-bold' : ''}`}>{label}</span>
@@ -160,12 +163,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     isExpanded={expandedSections['resources']}
                     onToggle={() => toggleSection('resources')}
                 >
-                    <NavItem 
-                        to="/upload" 
-                        label="Contribute" 
-                        icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>}
-                        onClose={onClose}
-                    />
                     <NavItem 
                         to="/questions" 
                         label="Past Questions" 

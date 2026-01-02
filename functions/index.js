@@ -20,7 +20,7 @@ exports.sendWelcomeEmail = functions.auth.user().onCreate(async (user) => {
     return;
   }
   
-  const mailjet = require('node-mailjet').connect(
+  const mailjet = require('@mailjet/node').connect(
     mailjetConfig.apikey,
     mailjetConfig.apisecret
   );
@@ -72,7 +72,7 @@ exports.sendBroadcastEmail = functions.firestore
         return;
     }
 
-    const mailjet = require("node-mailjet").connect(
+    const mailjet = require("@mailjet/node").connect(
         mailjetConfig.apikey,
         mailjetConfig.apisecret
     );
@@ -147,7 +147,7 @@ exports.sendDirectNotificationEmail = functions.firestore
         return;
     }
     
-    const mailjet = require("node-mailjet").connect(
+    const mailjet = require("@mailjet/node").connect(
         mailjetConfig.apikey,
         mailjetConfig.apisecret
     );
@@ -195,7 +195,7 @@ exports.sendAnnouncementEmail = functions.firestore
         return;
     }
 
-    const mailjet = require("node-mailjet").connect(
+    const mailjet = require("@mailjet/node").connect(
         mailjetConfig.apikey,
         mailjetConfig.apisecret
     );

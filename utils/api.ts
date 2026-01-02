@@ -4,12 +4,14 @@ import { db } from '../firebase';
 import { doc, setDoc, increment } from 'firebase/firestore';
 
 const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || "a4aa97ad337019899bb59b4e94b149e0";
-const DROPBOX_ACCESS_TOKEN = import.meta.env.VITE_DROPBOX_ACCESS_TOKEN || "YOUR_DROPBOX_ACCESS_TOKEN_HERE";
+const DROPBOX_ACCESS_TOKEN = import.meta.env.VITE_DROPBOX_ACCESS_TOKEN;
 
+// Helper to track AI Usage for Admin Dashboard
 export const trackAiUsage = async () => {
     try {
         const today = new Date().toISOString().split('T')[0];
         const statsRef = doc(db, 'system_stats', 'ai_usage');
+        // Increment global counter and daily counter
         await setDoc(statsRef, { 
             total_calls: increment(1),
             [`daily_${today}`]: increment(1),
@@ -51,8 +53,8 @@ export const forceDownload = async (url: string, filename: string) => {
 export const uploadFile = async (file: File, folder: string = 'materials', onProgress?: (progress: number) => void): Promise<{ url: string, path: string }> => {
     return new Promise(async (resolve, reject) => {
         try {
-            if (!DROPBOX_ACCESS_TOKEN || DROPBOX_ACCESS_TOKEN === "YOUR_DROPBOX_ACCESS_TOKEN_HERE") {
-                throw new Error("Dropbox Storage service is not configured. Please add a valid access token.");
+            if (!DROPBOX_ACCESS_TOKEN) {
+                throw new Error("Storage service is unavailable.");
             }
 
             const dbx = new Dropbox({ accessToken: DROPBOX_ACCESS_TOKEN });
@@ -84,7 +86,7 @@ export const uploadFile = async (file: File, folder: string = 'materials', onPro
 
         } catch (error: any) {
             console.error("Storage Upload Error:", error);
-            reject(new Error(error.message || "Failed to upload document to cloud storage."));
+            reject(new Error("Failed to upload document to cloud storage. Please try again or check connection."));
         }
     });
 };
@@ -92,7 +94,7 @@ export const uploadFile = async (file: File, folder: string = 'materials', onPro
 export const deleteFile = async (path: string): Promise<void> => {
     if (!path) return;
     try {
-        if (!DROPBOX_ACCESS_TOKEN || DROPBOX_ACCESS_TOKEN === "YOUR_DROPBOX_ACCESS_TOKEN_HERE") return;
+        if (!DROPBOX_ACCESS_TOKEN) return;
         const dbx = new Dropbox({ accessToken: DROPBOX_ACCESS_TOKEN });
         await dbx.filesDeleteV2({ path });
     } catch (error) {
@@ -114,7 +116,7 @@ export const uploadToImgBB = async (file: File): Promise<string> => {
         if (data && data.data && data.data.url) {
             return data.data.url;
         }
-        throw new Error("Invalid response from image server.");
+        throw new Error("Invalid response");
     } catch (e: any) {
         console.warn("Image Upload failed:", e);
         throw new Error("Failed to upload image. Please try again.");

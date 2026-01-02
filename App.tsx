@@ -1,6 +1,4 @@
 
-
-
 import React, { useContext } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
@@ -24,9 +22,8 @@ import { TermsPage } from './pages/TermsPage';
 import { TestPage } from './pages/TestPage'; 
 import { LostFoundPage } from './pages/LostFoundPage';
 import { FAQPage } from './pages/FAQPage';
-import { NotesPage } from './pages/NotesPage';
-import { UploadPage } from './pages/UploadPage'; // New
-import { LeaderboardPage } from './pages/LeaderboardPage';
+import { NotesPage } from './pages/NotesPage'; // New
+import { LeaderboardPage } from './pages/LeaderboardPage'; // New
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -77,47 +74,48 @@ const AppContent: React.FC = () => {
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="/faq" element={<FAQPage />} />
                 <Route path="/lost-and-found" element={<LostFoundPage />} />
-                <Route path="/executives" element={<ExecutivesPage />} />
-                <Route path="/lecturers" element={<LecturersPage />} />
                 
                 {/* Protected Routes */}
                 <Route path="/dashboard" element={<RequireAuth><UserDashboardPage /></RequireAuth>} />
                 <Route path="/questions" element={<RequireAuth><PastQuestionsPage /></RequireAuth>} />
-                <Route path="/upload" element={<RequireAuth><UploadPage /></RequireAuth>} />
                 <Route path="/community" element={<RequireAuth><CommunityPage /></RequireAuth>} />
                 <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
                 <Route path="/test" element={<RequireAuth><TestPage /></RequireAuth>} />
                 <Route path="/notes" element={<RequireAuth><NotesPage /></RequireAuth>} />
                 <Route path="/leaderboard" element={<RequireAuth><LeaderboardPage /></RequireAuth>} />
-
-                 {/* Admin Routes */}
-                <Route path="/admin" element={<RequireAuth adminOnly><AdminLayout /></RequireAuth>}>
-                    <Route path="dashboard" element={<AdminPage />} />
-                    <Route path="approvals" element={<AdminApprovalsPage />} />
-                    <Route path="content" element={<AdminContentPage />} />
-                    <Route path="users" element={<AdminUsersPage />} />
-                    <Route path="settings" element={<AdminSettingsPage />} />
-                    <Route index element={<Navigate to="dashboard" replace />} />
-                </Route>
+                
+                {/* Gated Public-ish Pages */}
+                <Route path="/executives" element={<RequireAuth><ExecutivesPage /></RequireAuth>} />
+                <Route path="/lecturers" element={<RequireAuth><LecturersPage /></RequireAuth>} />
             </Route>
 
-            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-
+            {/* Admin Routes */}
+            <Route path="/admin" element={<RequireAuth adminOnly><AdminLayout /></RequireAuth>}>
+                <Route index element={<Navigate to="/admin/dashboard" replace />} />
+                <Route path="dashboard" element={<AdminPage />} />
+                <Route path="approvals" element={<AdminApprovalsPage />} />
+                <Route path="content" element={<AdminContentPage />} />
+                <Route path="users" element={<AdminUsersPage />} />
+                <Route path="settings" element={<AdminSettingsPage />} />
+            </Route>
+            
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     </>
   );
 };
 
 const App: React.FC = () => {
-    return (
-        <ThemeProvider>
-            <NotificationProvider>
-                <AuthProvider>
-                    <AppContent />
-                </AuthProvider>
-            </NotificationProvider>
-        </ThemeProvider>
-    );
+  return (
+    <ThemeProvider>
+        <NotificationProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </NotificationProvider>
+    </ThemeProvider>
+  );
 };
 
 export default App;
