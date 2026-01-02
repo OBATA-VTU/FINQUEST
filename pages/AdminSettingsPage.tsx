@@ -32,7 +32,7 @@ export const AdminSettingsPage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    const fetchAndSetupSettings = async () => {
+    const fetchSettings = async () => {
         setIsCheckingConfig(true);
         try {
             // Fetch non-critical settings first
@@ -51,18 +51,12 @@ export const AdminSettingsPage: React.FC = () => {
             // Perform critical setup check if the user is a super admin
             if (isSuperAdmin) {
                 const mailjetDoc = await getDoc(doc(db, 'config', 'mailjet'));
-                if (mailjetDoc.exists()) {
-                    setIsMailjetConfigured(true);
-                } else {
-                    // Automatically trigger creation if it doesn't exist
-                    showNotification("Configuration missing, attempting auto-setup...", "info");
-                    await handleCreateMailjetConfig({ showConfirm: false, isAuto: true });
-                }
+                setIsMailjetConfigured(mailjetDoc.exists());
             }
         } catch (e: any) { 
-            console.error("Failed to fetch or auto-setup settings:", e);
-            if (isSuperAdmin && e.code === 'permission-denied') {
-                 showNotification("Rule error: Can't check config. Try manual create.", "warning");
+            console.error("Failed to fetch settings:", e);
+            if (isSuperAdmin) {
+                 showNotification("Error checking config status.", "warning");
             }
         }
         finally {
@@ -70,7 +64,7 @@ export const AdminSettingsPage: React.FC = () => {
         }
     };
 
-    fetchAndSetupSettings();
+    fetchSettings();
   }, [isSuperAdmin]);
 
 
@@ -87,8 +81,8 @@ export const AdminSettingsPage: React.FC = () => {
       } catch (e) { showNotification("Failed to save settings", "error"); }
   };
 
-  const handleCreateMailjetConfig = async ({ showConfirm = true, isAuto = false } = {}) => {
-      if (showConfirm && !window.confirm("This will create the secure Mailjet configuration document in your database. This action is safe to perform. Proceed?")) return;
+  const handleCreateMailjetConfig = async () => {
+      if (!window.confirm("This will create the secure Mailjet configuration document in your database. This action is safe to perform. Proceed?")) return;
       
       setIsProcessing(true);
       try {
@@ -103,7 +97,7 @@ export const AdminSettingsPage: React.FC = () => {
               throw new Error(data.message || 'Unknown function error');
           }
       } catch (e: any) {
-          const errorMessage = e.message || (isAuto ? "Automatic setup failed. Please use the button." : "Failed to create configuration.");
+          const errorMessage = e.message || "Failed to create configuration.";
           showNotification(errorMessage, "error");
           setIsMailjetConfigured(false); // Ensure button remains available on failure
       } finally {
@@ -236,7 +230,7 @@ export const AdminSettingsPage: React.FC = () => {
                      <h4 className="font-bold text-slate-700">Mailjet API Configuration</h4>
                      <p className="text-sm text-slate-500 mb-3">Creates the secure document required for sending system emails.</p>
                      <button
-                         onClick={() => handleCreateMailjetConfig()}
+                         onClick={handleCreateMailjetConfig}
                          disabled={isMailjetConfigured || isCheckingConfig || isProcessing}
                          className="px-5 py-2 bg-indigo-600 text-white font-bold rounded-lg shadow hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                      >

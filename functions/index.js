@@ -117,6 +117,71 @@ exports.sendBroadcastEmail = functions.firestore
       .catch((err) => console.error("Error sending broadcast email:", err.statusCode, err.message));
   });
 
+/**
+ * Sends a direct email to a user when a specific notification is created for them.
+ */
+exports.sendDirectNotificationEmail = functions.firestore
+  .document("notifications/{notificationId}")
+  .onCreate(async (snap) => {
+    const notification = snap.data();
+    // Exit if it's a broadcast message (handled by another function) or has no user ID
+    if (notification.userId === "all" || !notification.userId) {
+      return null;
+    }
+
+    const mailConfig = await getMailConfig();
+    if (!mailConfig?.apiKey || !mailConfig?.apiSecret || !mailConfig?.sender) {
+        console.error(`Aborting direct notification email for user ${notification.userId}: Mailjet config is incomplete.`);
+        return;
+    }
+
+    // Get user's email
+    const userDoc = await admin.firestore().doc(`users/${notification.userId}`).get();
+    if (!userDoc.exists) {
+        console.error(`Could not find user ${notification.userId} to send direct notification.`);
+        return;
+    }
+    const user = userDoc.data();
+    const recipientEmail = user.email;
+    const recipientName = user.name || "Student";
+
+    if (!recipientEmail) {
+        console.error(`User ${notification.userId} has no email address.`);
+        return;
+    }
+
+    const mailjetClient = new Mailjet({
+        apiKey: mailConfig.apiKey,
+        apiSecret: mailConfig.apiSecret,
+    });
+    const senderEmail = mailConfig.sender;
+
+    const request = mailjetClient.post("send", { version: "v3.1" }).request({
+      Messages: [
+        {
+          From: { Email: senderEmail, Name: "FINSA Admin" },
+          To: [{ Email: recipientEmail, Name: recipientName }],
+          Subject: "New Notification from FINSA",
+          HTMLPart: `
+            <h3>Dear ${recipientName},</h3>
+            <p>You have a new notification from the FINSA administration:</p>
+            <p style="font-size: 16px; padding: 10px; border-left: 4px solid #4F46E5; background-color: #f5f5f5;">
+              <strong>${notification.message}</strong>
+            </p>
+            <p>Please log in to the portal to view more details.</p>
+            <br/>
+            <p>Best regards,</p>
+            <p><strong>The FINSA Team</strong></p>
+          `,
+        },
+      ],
+    });
+
+    return request
+      .then(() => console.log(`Direct notification email sent successfully to: ${recipientEmail}`))
+      .catch((err) => console.error(`Error sending direct notification email to ${recipientEmail}:`, err.statusCode, err.message));
+  });
+
 
 /**
  * Sends an email to all users when a new announcement is posted.
