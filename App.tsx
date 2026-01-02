@@ -1,5 +1,6 @@
 
 
+
 import React, { useContext } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
@@ -110,11 +111,11 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
     return (
         <ThemeProvider>
-            <AuthProvider>
-                <NotificationProvider>
+            <NotificationProvider>
+                <AuthProvider>
                     <AppContent />
-                </NotificationProvider>
-            </AuthProvider>
+                </AuthProvider>
+            </NotificationProvider>
         </ThemeProvider>
     );
 };
