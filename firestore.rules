@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -15,10 +16,18 @@ service cloud.firestore {
     }
 
     // Check if the user has the 'admin' role in their user profile
-    // Note: This costs one extra read operation per request.
     function isAdmin() {
       return isAuthenticated() &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // --- SECURE CONFIGURATION ---
+    // This collection stores sensitive data like API keys.
+    // It should NEVER be readable or writable from the client-side application.
+    // Only backend Cloud Functions (using the Admin SDK) can access this data,
+    // as they bypass these security rules. This is the secure way.
+    match /config/{docId} {
+      allow read, write: if false;
     }
 
     // --- USERS COLLECTION ---
