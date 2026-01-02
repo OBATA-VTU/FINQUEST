@@ -26,15 +26,17 @@ exports.sendWelcomeEmail = functions.auth.user().onCreate(async (user) => {
     return;
   }
   
-  const mailjetClient = new Mailjet({
-    apiKey: mailConfig.apiKey,
-    apiSecret: mailConfig.apiSecret,
-  });
+  console.log("Mailjet config loaded, preparing to send welcome email.");
+  const mailjetClient = new Mailjet(
+    mailConfig.apiKey,
+    mailConfig.apiSecret
+  );
   const senderEmail = mailConfig.sender;
   
   const recipientEmail = user.email;
   const recipientName = user.displayName || "Student";
 
+  console.log(`Attempting to send welcome email to ${recipientEmail}`);
   const request = mailjetClient.post("send", { version: "v3.1" }).request({
     Messages: [
       {
@@ -59,7 +61,7 @@ exports.sendWelcomeEmail = functions.auth.user().onCreate(async (user) => {
 
   return request
     .then(() => console.log("Welcome email sent successfully to:", recipientEmail))
-    .catch((err) => console.error("Error sending welcome email:", err.statusCode, err.message));
+    .catch((err) => console.error("Error sending welcome email:", err.statusCode, err.message, err.ErrorMessage));
 });
 
 /**
@@ -77,10 +79,11 @@ exports.sendBroadcastEmail = functions.firestore
         return;
     }
 
-    const mailjetClient = new Mailjet({
-        apiKey: mailConfig.apiKey,
-        apiSecret: mailConfig.apiSecret,
-    });
+    console.log("Mailjet config loaded, preparing to send broadcast email.");
+    const mailjetClient = new Mailjet(
+        mailConfig.apiKey,
+        mailConfig.apiSecret
+    );
     const senderEmail = mailConfig.sender;
 
     const usersSnap = await admin.firestore().collection("users").get();
@@ -89,8 +92,12 @@ exports.sendBroadcastEmail = functions.firestore
       Name: doc.data().name || "Student",
     }));
 
-    if (recipients.length === 0) return null;
+    if (recipients.length === 0) {
+        console.log("No users found to send broadcast email to. Aborting.");
+        return null;
+    }
 
+    console.log(`Attempting to send broadcast to ${recipients.length} users.`);
     const request = mailjetClient.post("send", { version: "v3.1" }).request({
       Messages: [
         {
@@ -114,7 +121,7 @@ exports.sendBroadcastEmail = functions.firestore
 
     return request
       .then(() => console.log("Broadcast email sent successfully."))
-      .catch((err) => console.error("Error sending broadcast email:", err.statusCode, err.message));
+      .catch((err) => console.error("Error sending broadcast email:", err.statusCode, err.message, err.ErrorMessage));
   });
 
 /**
@@ -124,7 +131,6 @@ exports.sendDirectNotificationEmail = functions.firestore
   .document("notifications/{notificationId}")
   .onCreate(async (snap) => {
     const notification = snap.data();
-    // Exit if it's a broadcast message (handled by another function) or has no user ID
     if (notification.userId === "all" || !notification.userId) {
       return null;
     }
@@ -135,7 +141,6 @@ exports.sendDirectNotificationEmail = functions.firestore
         return;
     }
 
-    // Get user's email
     const userDoc = await admin.firestore().doc(`users/${notification.userId}`).get();
     if (!userDoc.exists) {
         console.error(`Could not find user ${notification.userId} to send direct notification.`);
@@ -149,13 +154,15 @@ exports.sendDirectNotificationEmail = functions.firestore
         console.error(`User ${notification.userId} has no email address.`);
         return;
     }
-
-    const mailjetClient = new Mailjet({
-        apiKey: mailConfig.apiKey,
-        apiSecret: mailConfig.apiSecret,
-    });
+    
+    console.log(`Mailjet config loaded for direct email to user ${user.name} (${recipientEmail}).`);
+    const mailjetClient = new Mailjet(
+        mailConfig.apiKey,
+        mailConfig.apiSecret
+    );
     const senderEmail = mailConfig.sender;
-
+    
+    console.log(`Attempting to send direct email to ${recipientEmail}...`);
     const request = mailjetClient.post("send", { version: "v3.1" }).request({
       Messages: [
         {
@@ -179,7 +186,7 @@ exports.sendDirectNotificationEmail = functions.firestore
 
     return request
       .then(() => console.log(`Direct notification email sent successfully to: ${recipientEmail}`))
-      .catch((err) => console.error(`Error sending direct notification email to ${recipientEmail}:`, err.statusCode, err.message));
+      .catch((err) => console.error(`Error sending direct notification email to ${recipientEmail}:`, err.statusCode, err.message, err.ErrorMessage));
   });
 
 
@@ -197,10 +204,11 @@ exports.sendAnnouncementEmail = functions.firestore
         return;
     }
 
-    const mailjetClient = new Mailjet({
-        apiKey: mailConfig.apiKey,
-        apiSecret: mailConfig.apiSecret,
-    });
+    console.log("Mailjet config loaded, preparing to send announcement email.");
+    const mailjetClient = new Mailjet(
+        mailConfig.apiKey,
+        mailConfig.apiSecret
+    );
     const senderEmail = mailConfig.sender;
 
     const usersSnap = await admin.firestore().collection("users").get();
@@ -211,6 +219,7 @@ exports.sendAnnouncementEmail = functions.firestore
 
     if (recipients.length === 0) return null;
 
+    console.log(`Attempting to send announcement email to ${recipients.length} users.`);
     const request = mailjetClient.post("send", { version: "v3.1" }).request({
       Messages: [
         {
@@ -235,7 +244,7 @@ exports.sendAnnouncementEmail = functions.firestore
 
     return request
       .then(() => console.log("Announcement email sent successfully."))
-      .catch((err) => console.error("Error sending announcement email:", err.statusCode, err.message));
+      .catch((err) => console.error("Error sending announcement email:", err.statusCode, err.message, err.ErrorMessage));
   });
 
 /**
@@ -243,27 +252,22 @@ exports.sendAnnouncementEmail = functions.firestore
  * This is a callable function that can only be executed by an authenticated admin.
  */
 exports.createMailjetConfig = functions.https.onCall(async (data, context) => {
-  // Wrap the entire function body to catch any initialization or permission errors
   try {
-    // 1. Check for authentication
     if (!context.auth) {
       throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to call this function.');
     }
 
-    // 2. Check for admin role
     const userDoc = await admin.firestore().doc(`users/${context.auth.uid}`).get();
     if (!userDoc.exists || userDoc.data().role !== 'admin') {
       throw new functions.https.HttpsError('permission-denied', 'You must be an admin to perform this action.');
     }
 
-    // 3. Check if config already exists
     const configRef = admin.firestore().doc("config/mailjet");
     const configDoc = await configRef.get();
     if (configDoc.exists) {
         return { status: 'success', message: 'Configuration already exists. No action taken.' };
     }
     
-    // 4. Create the config document with hardcoded keys
     const mailjetConfig = {
         apiKey: '31d3ecd69263132b58b84ef36fe6185a',
         apiSecret: '60749b12fcdb4fb1081ce3066e7d3aa1',
@@ -274,17 +278,13 @@ exports.createMailjetConfig = functions.https.onCall(async (data, context) => {
     console.log("Successfully created Mailjet config document.");
     return { status: 'success', message: 'Mailjet configuration created successfully!' };
   } catch (error) {
-    // Log the detailed error to the Firebase console for debugging.
     console.error("[FINSA_SETUP_ERROR] A critical error occurred in createMailjetConfig:", error);
     
-    // Provide a more helpful message to the client.
     let clientMessage = 'An internal error occurred. Please check the Firebase Function logs for tag "[FINSA_SETUP_ERROR]" for details.';
     
-    // If it's a specific HttpsError we threw, use its message.
     if (error instanceof functions.https.HttpsError) {
       clientMessage = error.message;
     } else if (error.message) {
-      // Add details from other error types
       clientMessage = `Setup Error: ${error.message}`;
     }
     
