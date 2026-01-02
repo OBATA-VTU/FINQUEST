@@ -23,11 +23,11 @@ service cloud.firestore {
     
     // --- SECURE CONFIGURATION ---
     // This collection stores sensitive data like API keys.
-    // It should NEVER be readable or writable from the client-side application.
-    // Only backend Cloud Functions (using the Admin SDK) can access this data,
-    // as they bypass these security rules. This is the secure way.
+    // Reading is restricted to admins to allow for existence checks.
+    // Writing is forbidden from the client to protect keys. Only backend functions can write.
     match /config/{docId} {
-      allow read, write: if false;
+      allow read: if isAdmin();
+      allow write: if false;
     }
 
     // --- USERS COLLECTION ---
