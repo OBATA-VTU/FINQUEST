@@ -205,9 +205,10 @@ exports.createMailjetConfig = functions.https.onCall(async (data, context) => {
 
   try {
     await configRef.set(mailjetConfig);
+    console.log("Successfully created Mailjet config document.");
     return { status: 'success', message: 'Mailjet configuration created successfully!' };
   } catch (error) {
     console.error("Error in createMailjetConfig function:", error);
-    throw new functions.https.HttpsError('internal', 'An internal error occurred while creating the configuration.');
+    throw new functions.https.HttpsError('unknown', error.message || 'An unexpected server error occurred.');
   }
 });
