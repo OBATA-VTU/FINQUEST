@@ -1,5 +1,4 @@
 
-
 import React, { useContext, useState } from 'react';
 import { Logo } from './Logo';
 import { AuthContext } from '../contexts/AuthContext';
@@ -8,7 +7,6 @@ import { NavLink, useNavigate } from 'react-router-dom';
 interface NavItemProps {
     to: string;
     label: string;
-    // FIX: Explicitly typed the icon prop to accept a className, resolving a TypeScript error with React.cloneElement where the props were being inferred as 'unknown'.
     icon: React.ReactElement<{ className?: string }>;
     onClose: () => void;
 }
@@ -26,7 +24,6 @@ const NavItem: React.FC<NavItemProps> = ({ to, label, icon, onClose }) => (
         {({ isActive }) => (
             <>
                 <div className={`${isActive ? 'text-indigo-400' : 'text-indigo-300 group-hover:text-white'} transition-colors`}>
-                    {/* FIX: Removed the unsafe 'as React.ReactElement' cast as the prop type is now correct. */}
                     {React.cloneElement(icon, { className: "w-4 h-4" })}
                 </div>
                 <span className={`font-semibold text-xs tracking-wide ${isActive ? 'font-bold' : ''}`}>{label}</span>
@@ -164,6 +161,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     onToggle={() => toggleSection('resources')}
                 >
                     <NavItem 
+                        to="/upload" 
+                        label="Contribute" 
+                        icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>}
+                        onClose={onClose}
+                    />
+                    <NavItem 
                         to="/questions" 
                         label="Past Questions" 
                         icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>}
@@ -293,4 +296,3 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         </aside>
     </>
   );
-};

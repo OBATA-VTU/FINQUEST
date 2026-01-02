@@ -1,5 +1,5 @@
-// FIX: Changed React import to fix type resolution issue for class components.
-import * as React from 'react';
+// FIX: Changed the React import to `import React from 'react'` to be consistent with the rest of the codebase. This resolves a TypeScript type resolution issue where `this.props` was not recognized on the class component.
+import React from 'react';
 
 interface ErrorBoundaryProps {
   children?: React.ReactNode;
@@ -10,7 +10,6 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-// FIX: Corrected import statement and qualified React-specific types to resolve a type error where component 'props' were not being recognized.
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = {
     hasError: false,
