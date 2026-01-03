@@ -1,16 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Logo } from '../components/Logo';
 
 // The target launch date and time (10th Jan 2026, 12:00 PM WAT which is UTC+1)
 const LAUNCH_DATE_ISO = '2026-01-10T12:00:00+01:00';
 
 const features = [
-    { title: "Past Question Archive", description: "Comprehensive library for all levels." },
-    { title: "AI-Powered CBT", description: "Generate custom tests on any topic." },
-    { title: "Community Contributions", description: "Upload materials to earn points." },
-    { title: "Gamified Leaderboard", description: "Climb the ranks with academic activity." },
-    { title: "Private Notes", description: "Securely save your personal study notes." },
-    { title: "Lost & Found", description: "A hub to find misplaced items on campus." }
+    { icon: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>, title: "Past Question Archive", description: "Access a comprehensive, verified library of past questions for all levels and courses." },
+    { icon: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>, title: "AI-Powered CBT", description: "Generate custom tests on any topic or take full mock exams to prepare for success." },
+    { icon: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>, title: "Community Hub", description: "Connect with peers, join official study groups, and engage in the student lounge." },
+    { icon: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>, title: "Gamified Leaderboard", description: "Earn points for academic activities and climb the ranks against your peers." },
+    { icon: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>, title: "Private Notes", description: "Securely save your personal study notes and access them from any device." },
+    { icon: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>, title: "Lost & Found", description: "A digital notice board to help reunite lost items with their owners on campus." }
 ];
 
 const socialLinks = [
@@ -36,7 +35,6 @@ export const CountdownPage: React.FC = () => {
         calculateTimeLeft();
         const timer = setInterval(calculateTimeLeft, 1000);
         
-        // --- Canvas Particle Animation ---
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
@@ -44,8 +42,6 @@ export const CountdownPage: React.FC = () => {
         
         let animationFrameId: number;
         let particles: any[] = [];
-        let mouse = { x: -200, y: -200 };
-
         const resizeCanvas = () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -61,27 +57,18 @@ export const CountdownPage: React.FC = () => {
             }
         };
 
-        const handleMouseMove = (e: MouseEvent) => {
-            mouse.x = e.clientX;
-            mouse.y = e.clientY;
-        };
-
         const animate = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
             particles.forEach(p => {
                 p.x += p.vx;
                 p.y += p.vy;
-
                 if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
                 if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
-                
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(165, 180, 252, 0.7)'; // Indigo-300
+                ctx.fillStyle = 'rgba(165, 180, 252, 0.7)';
                 ctx.fill();
             });
-            
             ctx.beginPath();
             for (let i = 0; i < particles.length; i++) {
                 for (let j = i; j < particles.length; j++) {
@@ -92,42 +79,33 @@ export const CountdownPage: React.FC = () => {
                     }
                 }
             }
-            const distToMouse = (p: any) => Math.sqrt((p.x - mouse.x)**2 + (p.y - mouse.y)**2);
-            for(let p of particles){
-                if(distToMouse(p) < 200){
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineTo(mouse.x, mouse.y);
-                }
-            }
-            ctx.strokeStyle = 'rgba(129, 140, 248, 0.1)'; // Indigo-400
+            ctx.strokeStyle = 'rgba(129, 140, 248, 0.1)';
             ctx.stroke();
-
             animationFrameId = requestAnimationFrame(animate);
         };
-
         resizeCanvas();
         animate();
         window.addEventListener('resize', resizeCanvas);
-        window.addEventListener('mousemove', handleMouseMove);
 
         return () => {
             clearInterval(timer);
             cancelAnimationFrame(animationFrameId);
             window.removeEventListener('resize', resizeCanvas);
-            window.removeEventListener('mousemove', handleMouseMove);
         };
     }, []);
 
     const isLaunched = Object.values(timeLeft).every(val => val === 0);
 
     return (
-        <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden font-sans">
+        <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-start p-4 sm:p-6 relative overflow-hidden font-sans">
             <canvas ref={canvasRef} className="absolute inset-0 z-0 opacity-80" />
             
-            <div className="relative z-10 flex flex-col items-center text-center max-w-7xl w-full h-full justify-between">
+            <div className="relative z-10 flex flex-col items-center text-center max-w-7xl w-full">
                 
-                <header className="w-full flex justify-center items-center gap-3 p-4 animate-fade-in-down">
-                     <Logo className="h-10 w-10" />
+                <header className="w-full flex justify-center items-center gap-3 p-4 mb-10 animate-fade-in-down">
+                     <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-indigo-300 border border-white/20">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                     </div>
                      <div className="text-left">
                          <h2 className="font-serif font-bold text-xl leading-none">FINSA</h2>
                          <p className="text-xs text-indigo-300">Department of Finance</p>
@@ -162,19 +140,24 @@ export const CountdownPage: React.FC = () => {
                     )}
                 </main>
 
-                <footer className="w-full flex flex-col items-center animate-fade-in-up" style={{animationDelay: '800ms'}}>
-                    <div className="w-full max-w-7xl relative mt-10 overflow-hidden before:absolute before:left-0 before:top-0 before:h-full before:w-12 before:bg-gradient-to-r before:from-slate-950 before:to-transparent before:z-10 after:absolute after:right-0 after:top-0 after:h-full after:w-12 after:bg-gradient-to-l after:from-slate-950 after:to-transparent after:z-10">
-                        <div className="flex animate-marquee hover:[animation-play-state:paused]">
-                            {[...features, ...features].map((feature, index) => (
-                                <div key={index} className="flex-shrink-0 w-64 mx-4 p-4 bg-white/5 border border-white/10 rounded-xl backdrop-blur-sm">
-                                    <h3 className="font-bold text-white text-sm">{feature.title}</h3>
-                                    <p className="text-slate-400 text-xs">{feature.description}</p>
+                {/* --- WHAT TO EXPECT SECTION --- */}
+                <section className="w-full max-w-6xl mt-12 animate-fade-in-up" style={{animationDelay: '800ms'}}>
+                    <h2 className="text-3xl font-bold font-serif mb-10 text-indigo-300">What to Expect</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {features.map((feature, index) => (
+                            <div key={index} className="bg-slate-900/50 backdrop-blur-lg p-6 rounded-2xl text-left border border-slate-700/50 hover:border-indigo-500/50 transition-all hover:-translate-y-1">
+                                <div className="flex-shrink-0 w-12 h-12 bg-indigo-500/10 text-indigo-300 rounded-xl flex items-center justify-center border border-indigo-500/20 mb-4">
+                                    {feature.icon}
                                 </div>
-                            ))}
-                        </div>
+                                <h3 className="font-bold text-white text-lg mb-2">{feature.title}</h3>
+                                <p className="text-slate-400 text-sm leading-relaxed">{feature.description}</p>
+                            </div>
+                        ))}
                     </div>
-                    
-                    <div className="flex gap-4 mt-12 mb-4">
+                </section>
+
+                <footer className="w-full flex flex-col items-center mt-20 animate-fade-in-up" style={{animationDelay: '1000ms'}}>
+                    <div className="flex gap-4 mb-4">
                         {socialLinks.map((social, idx) => (
                             <a key={idx} href={social.link} target="_blank" rel="noopener noreferrer" className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-indigo-200 hover:text-white transition-all duration-300 hover:scale-110" aria-label={social.label}>
                                 {social.icon}
