@@ -23,10 +23,15 @@ const socialLinks = [
 export const CountdownPage: React.FC = () => {
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const pollSectionRef = useRef<HTMLElement>(null);
     const [impressedVotes, setImpressedVotes] = useState(0);
     const [notImpressedVotes, setNotImpressedVotes] = useState(0);
     const [hasVoted, setHasVoted] = useState(false);
     const [loadingPoll, setLoadingPoll] = useState(true);
+
+    const handleScrollToVote = () => {
+        pollSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
 
     useEffect(() => {
         const calculateTimeLeft = () => {
@@ -93,7 +98,6 @@ export const CountdownPage: React.FC = () => {
         animate();
         window.addEventListener('resize', resizeCanvas);
         
-        // Load poll data from localStorage
         const userVoted = localStorage.getItem('userHasVoted') === 'true';
         setHasVoted(userVoted);
 
@@ -108,13 +112,11 @@ export const CountdownPage: React.FC = () => {
                     setImpressedVotes(data.impressed || 0);
                     setNotImpressedVotes(data.notImpressed || 0);
                 } else {
-                    // Fallback if doc doesn't exist, and create it on first vote.
                     setImpressedVotes(0);
                     setNotImpressedVotes(0);
                 }
             } catch (error) {
                 console.error("Error fetching poll data:", error);
-                // Fallback on network error
                 setImpressedVotes(0);
                 setNotImpressedVotes(0);
             } finally {
@@ -134,22 +136,21 @@ export const CountdownPage: React.FC = () => {
     const handleVote = async (voteType: 'impressed' | 'notImpressed') => {
         if (hasVoted) return;
 
-        setHasVoted(true); // Optimistically disable buttons
+        setHasVoted(true);
         localStorage.setItem('userHasVoted', 'true');
 
         const pollDocRef = doc(db, 'content', 'impression_poll');
 
         try {
             if (voteType === 'impressed') {
-                setImpressedVotes(prev => prev + 1); // Optimistic UI update
+                setImpressedVotes(prev => prev + 1);
                 await setDoc(pollDocRef, { impressed: increment(1) }, { merge: true });
             } else {
-                setNotImpressedVotes(prev => prev + 1); // Optimistic UI update
+                setNotImpressedVotes(prev => prev + 1);
                 await setDoc(pollDocRef, { notImpressed: increment(1) }, { merge: true });
             }
         } catch (error) {
             console.error("Error saving vote:", error);
-            // Revert state if something goes wrong so user can try again
             setHasVoted(false); 
             localStorage.removeItem('userHasVoted');
             if (voteType === 'impressed') {
@@ -211,7 +212,21 @@ export const CountdownPage: React.FC = () => {
                     )}
                 </main>
 
-                {/* --- WHAT TO EXPECT SECTION --- */}
+                <div className="relative z-10 mt-16 animate-fade-in-up" style={{ animationDelay: '700ms' }}>
+                    <button 
+                        onClick={handleScrollToVote}
+                        className="mx-auto flex flex-col items-center text-indigo-300 hover:text-white transition-colors group"
+                        aria-label="Scroll to voting section"
+                    >
+                        <span className="text-xs font-bold uppercase tracking-widest mb-2">Cast Your Vote</span>
+                        <div className="w-8 h-8 rounded-full border-2 border-indigo-400/50 flex items-center justify-center animate-bounce group-hover:bg-indigo-400/20">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                    </button>
+                </div>
+
                 <section className="w-full max-w-6xl mt-12 animate-fade-in-up" style={{animationDelay: '800ms'}}>
                     <h2 className="text-3xl font-bold font-serif mb-10 text-indigo-300">What to Expect</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -227,8 +242,7 @@ export const CountdownPage: React.FC = () => {
                     </div>
                 </section>
 
-                {/* --- IMPRESSION POLL --- */}
-                <section className="w-full max-w-2xl mt-20 animate-fade-in-up" style={{ animationDelay: '900ms' }}>
+                <section ref={pollSectionRef} className="w-full max-w-2xl mt-20 animate-fade-in-up" style={{ animationDelay: '900ms' }}>
                     <h2 className="text-2xl font-bold font-serif mb-6 text-indigo-300">What's Your First Impression?</h2>
                     
                     {loadingPoll ? (
