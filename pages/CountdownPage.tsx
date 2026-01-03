@@ -109,14 +109,14 @@ export const CountdownPage: React.FC = () => {
                     setNotImpressedVotes(data.notImpressed || 0);
                 } else {
                     // Fallback if doc doesn't exist, and create it on first vote.
-                    setImpressedVotes(15);
-                    setNotImpressedVotes(3);
+                    setImpressedVotes(0);
+                    setNotImpressedVotes(0);
                 }
             } catch (error) {
                 console.error("Error fetching poll data:", error);
                 // Fallback on network error
-                setImpressedVotes(15);
-                setNotImpressedVotes(3);
+                setImpressedVotes(0);
+                setNotImpressedVotes(0);
             } finally {
                 setLoadingPoll(false);
             }
@@ -161,8 +161,8 @@ export const CountdownPage: React.FC = () => {
     };
 
     const totalVotes = impressedVotes + notImpressedVotes;
-    const impressedPercentage = totalVotes > 0 ? (impressedVotes / totalVotes) * 100 : 50;
-    const notImpressedPercentage = totalVotes > 0 ? (notImpressedVotes / totalVotes) * 100 : 50;
+    const impressedPercentage = totalVotes > 0 ? (impressedVotes / totalVotes) * 100 : 0;
+    const notImpressedPercentage = totalVotes > 0 ? (notImpressedVotes / totalVotes) * 100 : 0;
 
     const isLaunched = Object.values(timeLeft).every(val => val === 0);
 
