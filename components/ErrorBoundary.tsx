@@ -1,7 +1,8 @@
-// FIX: Corrected the React import from `import * as React from 'react'` to the default import.
-// This resolves an issue where TypeScript did not correctly recognize the `props` property on the class component
-// due to module interoperability settings, ensuring proper inheritance from `React.Component`.
-import React from 'react';
+// FIX: Corrected the React import to use a namespace import (`import * as React from 'react'`).
+// This is often necessary in TypeScript projects without `esModuleInterop` enabled in tsconfig.json.
+// This change ensures that the `ErrorBoundary` class correctly extends `React.Component` and inherits
+// its properties, such as `props`, resolving the type error.
+import * as React from 'react';
 
 interface ErrorBoundaryProps {
   children?: React.ReactNode;
