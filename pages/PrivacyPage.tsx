@@ -55,7 +55,7 @@ export const PrivacyPage: React.FC = () => {
               </li>
               <li className="flex items-center gap-2">
                   <span className="font-bold text-slate-900">Phone / WhatsApp:</span> 
-                  <a href="tel:081444222147" className="text-indigo-600 hover:underline">081444222147</a>
+                  <a href="https://wa.me/2348142452729" className="text-indigo-600 hover:underline">08142452729</a>
               </li>
             </ul>
           </section>

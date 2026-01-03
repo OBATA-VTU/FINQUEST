@@ -1,5 +1,5 @@
-// FIX: Explicitly import and extend `Component` to resolve typing issue for class components.
-import React, { Component } from 'react';
+// FIX: Explicitly import and extend `React.Component` to resolve typing issue for class components.
+import React from 'react';
 
 interface ErrorBoundaryProps {
   children?: React.ReactNode;
@@ -10,7 +10,7 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = {
     hasError: false,
     error: null,
