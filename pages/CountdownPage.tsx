@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { db } from '../firebase';
+import { doc, getDoc, setDoc, increment } from 'firebase/firestore';
 
 // The target launch date and time (10th Jan 2026, 12:00 PM WAT which is UTC+1)
 const LAUNCH_DATE_ISO = '2026-01-10T12:00:00+01:00';
@@ -21,6 +23,10 @@ const socialLinks = [
 export const CountdownPage: React.FC = () => {
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [impressedVotes, setImpressedVotes] = useState(0);
+    const [notImpressedVotes, setNotImpressedVotes] = useState(0);
+    const [hasVoted, setHasVoted] = useState(false);
+    const [loadingPoll, setLoadingPoll] = useState(true);
 
     useEffect(() => {
         const calculateTimeLeft = () => {
@@ -86,6 +92,37 @@ export const CountdownPage: React.FC = () => {
         resizeCanvas();
         animate();
         window.addEventListener('resize', resizeCanvas);
+        
+        // Load poll data from localStorage
+        const userVoted = localStorage.getItem('userHasVoted') === 'true';
+        setHasVoted(userVoted);
+
+        const fetchPollData = async () => {
+            setLoadingPoll(true);
+            try {
+                const pollDocRef = doc(db, 'content', 'impression_poll');
+                const pollDoc = await getDoc(pollDocRef);
+
+                if (pollDoc.exists()) {
+                    const data = pollDoc.data();
+                    setImpressedVotes(data.impressed || 0);
+                    setNotImpressedVotes(data.notImpressed || 0);
+                } else {
+                    // Fallback if doc doesn't exist, and create it on first vote.
+                    setImpressedVotes(15);
+                    setNotImpressedVotes(3);
+                }
+            } catch (error) {
+                console.error("Error fetching poll data:", error);
+                // Fallback on network error
+                setImpressedVotes(15);
+                setNotImpressedVotes(3);
+            } finally {
+                setLoadingPoll(false);
+            }
+        };
+
+        fetchPollData();
 
         return () => {
             clearInterval(timer);
@@ -93,6 +130,39 @@ export const CountdownPage: React.FC = () => {
             window.removeEventListener('resize', resizeCanvas);
         };
     }, []);
+
+    const handleVote = async (voteType: 'impressed' | 'notImpressed') => {
+        if (hasVoted) return;
+
+        setHasVoted(true); // Optimistically disable buttons
+        localStorage.setItem('userHasVoted', 'true');
+
+        const pollDocRef = doc(db, 'content', 'impression_poll');
+
+        try {
+            if (voteType === 'impressed') {
+                setImpressedVotes(prev => prev + 1); // Optimistic UI update
+                await setDoc(pollDocRef, { impressed: increment(1) }, { merge: true });
+            } else {
+                setNotImpressedVotes(prev => prev + 1); // Optimistic UI update
+                await setDoc(pollDocRef, { notImpressed: increment(1) }, { merge: true });
+            }
+        } catch (error) {
+            console.error("Error saving vote:", error);
+            // Revert state if something goes wrong so user can try again
+            setHasVoted(false); 
+            localStorage.removeItem('userHasVoted');
+            if (voteType === 'impressed') {
+                setImpressedVotes(prev => prev - 1);
+            } else {
+                setNotImpressedVotes(prev => prev - 1);
+            }
+        }
+    };
+
+    const totalVotes = impressedVotes + notImpressedVotes;
+    const impressedPercentage = totalVotes > 0 ? (impressedVotes / totalVotes) * 100 : 50;
+    const notImpressedPercentage = totalVotes > 0 ? (notImpressedVotes / totalVotes) * 100 : 50;
 
     const isLaunched = Object.values(timeLeft).every(val => val === 0);
 
@@ -109,6 +179,7 @@ export const CountdownPage: React.FC = () => {
                      <div className="text-left">
                          <h2 className="font-serif font-bold text-xl leading-none">FINSA</h2>
                          <p className="text-xs text-indigo-300">Department of Finance</p>
+                         <p className="text-[10px] text-indigo-400 uppercase font-bold tracking-[0.1em]">AAUA Chapter</p>
                      </div>
                 </header>
 
@@ -156,7 +227,58 @@ export const CountdownPage: React.FC = () => {
                     </div>
                 </section>
 
-                <footer className="w-full flex flex-col items-center mt-20 animate-fade-in-up" style={{animationDelay: '1000ms'}}>
+                {/* --- IMPRESSION POLL --- */}
+                <section className="w-full max-w-2xl mt-20 animate-fade-in-up" style={{ animationDelay: '900ms' }}>
+                    <h2 className="text-2xl font-bold font-serif mb-6 text-indigo-300">What's Your First Impression?</h2>
+                    
+                    {loadingPoll ? (
+                        <div className="h-40 flex items-center justify-center text-indigo-300">Loading Poll...</div>
+                    ) : (
+                        <>
+                            <div className="w-full bg-slate-800 rounded-full h-8 flex overflow-hidden border border-slate-700 mb-4 text-xs font-bold shadow-inner">
+                                <div 
+                                    className="bg-emerald-500 flex items-center justify-start pl-3 text-white transition-all duration-500" 
+                                    style={{ width: `${impressedPercentage}%` }}
+                                >
+                                    {impressedPercentage > 10 && `${Math.round(impressedPercentage)}%`}
+                                </div>
+                                <div 
+                                    className="bg-rose-500 flex items-center justify-end pr-3 text-white transition-all duration-500" 
+                                    style={{ width: `${notImpressedPercentage}%` }}
+                                >
+                                    {notImpressedPercentage > 10 && `${Math.round(notImpressedPercentage)}%`}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <button 
+                                    onClick={() => handleVote('impressed')}
+                                    disabled={hasVoted}
+                                    className="flex flex-col items-center justify-center p-4 bg-emerald-500/10 border-2 border-emerald-500/20 rounded-xl hover:bg-emerald-500/20 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+                                >
+                                    <span className="text-3xl mb-2">👍</span>
+                                    <span className="font-bold text-emerald-300">Impressed</span>
+                                    <span className="text-xs text-emerald-400 font-mono mt-1">{impressedVotes} votes</span>
+                                </button>
+                                <button 
+                                    onClick={() => handleVote('notImpressed')}
+                                    disabled={hasVoted}
+                                    className="flex flex-col items-center justify-center p-4 bg-rose-500/10 border-2 border-rose-500/20 rounded-xl hover:bg-rose-500/20 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+                                >
+                                    <span className="text-3xl mb-2">👎</span>
+                                    <span className="font-bold text-rose-300">Not Impressed</span>
+                                    <span className="text-xs text-rose-400 font-mono mt-1">{notImpressedVotes} votes</span>
+                                </button>
+                            </div>
+                        </>
+                    )}
+
+                    {hasVoted && (
+                        <p className="text-center text-emerald-400 font-bold mt-6 text-sm animate-fade-in">Thanks for your feedback!</p>
+                    )}
+                </section>
+
+                <footer className="w-full flex flex-col items-center mt-20 animate-fade-in-up" style={{animationDelay: '1100ms'}}>
                     <div className="flex gap-4 mb-4">
                         {socialLinks.map((social, idx) => (
                             <a key={idx} href={social.link} target="_blank" rel="noopener noreferrer" className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-indigo-200 hover:text-white transition-all duration-300 hover:scale-110" aria-label={social.label}>
