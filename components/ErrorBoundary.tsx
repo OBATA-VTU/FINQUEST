@@ -1,3 +1,6 @@
+// FIX: Corrected the React import from `import * as React from 'react'` to the default import.
+// This resolves an issue where TypeScript did not correctly recognize the `props` property on the class component
+// due to module interoperability settings, ensuring proper inheritance from `React.Component`.
 import React from 'react';
 
 interface ErrorBoundaryProps {
@@ -9,7 +12,6 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-// FIX: Corrected import statement and qualified React-specific types to resolve a type error where component 'props' were not being recognized.
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = {
     hasError: false,

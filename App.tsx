@@ -1,4 +1,6 @@
 
+
+
 import React, { useContext } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
@@ -29,6 +31,10 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Layout } from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
+import { CountdownPage } from './pages/CountdownPage';
+
+// Target launch date: Jan 10, 2026, 12:00 PM West Africa Time (UTC+1)
+const LAUNCH_DATE = new Date('2026-01-10T12:00:00+01:00');
 
 const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNode, adminOnly?: boolean }) => {
     const auth = useContext(AuthContext);
@@ -58,10 +64,21 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
 };
 
 const AppContent: React.FC = () => {
+  const isBeforeLaunch = new Date() < LAUNCH_DATE;
+
   return (
     <>
         <ScrollToTop />
         <Routes>
+            {/* Special route to handle the admin bypass URL */}
+            {isBeforeLaunch ? (
+                // BEFORE LAUNCH: /cdq is the admin entry point. Redirect to the admin dashboard.
+                <Route path="/cdq" element={<Navigate to="/admin/dashboard" replace />} />
+            ) : (
+                // AFTER LAUNCH: /cdq is obsolete. Redirect any visits to the homepage.
+                <Route path="/cdq" element={<Navigate to="/" replace />} />
+            )}
+            
             {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
             
@@ -107,6 +124,20 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  const isBeforeLaunch = new Date() < LAUNCH_DATE;
+  const isAdminBypass = window.location.pathname.includes('/cdq');
+
+  // If it's before the launch and NOT an admin trying to bypass, show the countdown page.
+  if (isBeforeLaunch && !isAdminBypass) {
+    return (
+      <ThemeProvider>
+        <CountdownPage />
+      </ThemeProvider>
+    );
+  }
+
+  // Otherwise (after launch OR admin bypass), show the full application.
+  // The full app's routing will handle what to do with the /cdq path itself.
   return (
     <ThemeProvider>
         <NotificationProvider>
