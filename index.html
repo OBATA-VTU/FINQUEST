@@ -22,13 +22,13 @@
     <meta property="og:url" content="https://finsa.vercel.app/">
     <meta property="og:title" content="FINSA Portal | AAUA Finance Department">
     <meta property="og:description" content="Master your finance degree with FINSA. Access past questions, CBT practice, and connect with the community.">
-    <meta property="og:image" content="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib-rb-4.0.3&auto=format&fit=crop&w=1200&q=80">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:title" content="FINSA Portal | AAUA Finance Department">
     <meta property="twitter:description" content="The ultimate academic hub for AAUA Finance students. Practice for exams and download resources.">
-    <meta property="twitter:image" content="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80">
+    <meta property="twitter:image" content="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib-rb-4.0.3&auto=format&fit=crop&w=1200&q=80">
 
     <!-- Structured Data (JSON-LD) for Google -->
     <script type="application/ld+json">
@@ -73,6 +73,7 @@
               'kenburns': 'kenburns 20s ease-out infinite alternate',
               'float': 'float 6s ease-in-out infinite',
               'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'marquee': 'marquee 40s linear infinite',
             },
             keyframes: {
               kenburns: {
@@ -82,6 +83,10 @@
               float: {
                 '0%, 100%': { transform: 'translateY(0)' },
                 '50%': { transform: 'translateY(-10px)' },
+              },
+              marquee: {
+                '0%': { transform: 'translateX(0%)' },
+                '100%': { transform: 'translateX(-50%)' },
               }
             }
           },
@@ -108,7 +113,7 @@
       .scrollbar-hide::-webkit-scrollbar { display: none; }
       .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-      /* New animation for the countdown timer */
+      /* Animation for the countdown timer */
       @keyframes flipDown {
         0% { transform: rotateX(0deg); opacity: 1; }
         50% { transform: rotateX(90deg); opacity: 0; }

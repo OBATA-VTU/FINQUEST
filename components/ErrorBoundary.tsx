@@ -1,5 +1,5 @@
-// FIX: Use namespace import for React to correctly extend React.Component and resolve the 'props' property not existing on the type.
-import * as React from 'react';
+// FIX: Use default import for React to correctly extend React.Component and resolve the 'props' property not existing on the type.
+import React from 'react';
 
 interface ErrorBoundaryProps {
   children?: React.ReactNode;
