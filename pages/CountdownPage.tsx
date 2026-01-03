@@ -67,11 +67,8 @@ export const CountdownPage: React.FC = () => {
             </div>
             
             <div className="relative z-10 flex flex-col items-center text-center max-w-6xl w-full">
-                <div className="bg-white/10 p-3 rounded-2xl backdrop-blur-sm inline-block mb-6 shadow-lg animate-fade-in-down">
-                    <Logo className="h-20 w-20" />
-                </div>
-                <h1 className="text-4xl md:text-6xl font-serif font-black leading-tight mb-4 drop-shadow-2xl tracking-tight animate-fade-in-down" style={{animationDelay: '200ms'}}>
-                    The Future of FINSA is Launching Soon
+                <h1 className="text-4xl md:text-6xl font-serif font-black leading-tight mb-4 drop-shadow-2xl tracking-tight animate-fade-in-down pt-20" style={{animationDelay: '200ms'}}>
+                    A New Digital Chapter for FINSA Begins
                 </h1>
                 <p className="text-lg md:text-xl text-slate-300 max-w-2xl mx-auto font-light leading-relaxed mb-10 drop-shadow-md animate-fade-in-down" style={{animationDelay: '400ms'}}>
                     Get ready for a new era of academic excellence and digital connectivity.

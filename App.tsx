@@ -1,8 +1,6 @@
 
-
-
-import React, { useContext } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useContext, useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
 import { UserDashboardPage } from './pages/UserDashboardPage';
 import { PastQuestionsPage } from './pages/PastQuestionsPage';
@@ -64,20 +62,11 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
 };
 
 const AppContent: React.FC = () => {
-  const isBeforeLaunch = new Date() < LAUNCH_DATE;
-
   return (
     <>
         <ScrollToTop />
         <Routes>
-            {/* Special route to handle the admin bypass URL */}
-            {isBeforeLaunch ? (
-                // BEFORE LAUNCH: /cdq is the admin entry point. Redirect to the admin dashboard.
-                <Route path="/cdq" element={<Navigate to="/admin/dashboard" replace />} />
-            ) : (
-                // AFTER LAUNCH: /cdq is obsolete. Redirect any visits to the homepage.
-                <Route path="/cdq" element={<Navigate to="/" replace />} />
-            )}
+            {/* The special /cdq bypass is now handled by the main App component logic */}
             
             {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
@@ -125,10 +114,24 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   const isBeforeLaunch = new Date() < LAUNCH_DATE;
-  const isAdminBypass = window.location.pathname.includes('/cdq');
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  // If it's before the launch and NOT an admin trying to bypass, show the countdown page.
-  if (isBeforeLaunch && !isAdminBypass) {
+  // This effect detects the bypass key, sets a session flag,
+  // and then cleans the URL to prevent refresh issues and loops.
+  useEffect(() => {
+    if (location.pathname.includes('/cdq')) {
+      sessionStorage.setItem('FINSA_LAUNCH_BYPASS', 'true');
+      // Replace '/cdq' with nothing and redirect. If the path was just '/cdq', it becomes '/'.
+      const newPath = location.pathname.replace(/\/cdq/g, '') || '/';
+      navigate(newPath, { replace: true });
+    }
+  }, [location.pathname, navigate]);
+
+  const isBypassActive = sessionStorage.getItem('FINSA_LAUNCH_BYPASS') === 'true';
+
+  // If it's before launch AND the bypass is NOT active, show the countdown.
+  if (isBeforeLaunch && !isBypassActive) {
     return (
       <ThemeProvider>
         <CountdownPage />
@@ -136,8 +139,7 @@ const App: React.FC = () => {
     );
   }
 
-  // Otherwise (after launch OR admin bypass), show the full application.
-  // The full app's routing will handle what to do with the /cdq path itself.
+  // Otherwise, render the full application.
   return (
     <ThemeProvider>
         <NotificationProvider>
