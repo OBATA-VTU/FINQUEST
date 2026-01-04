@@ -27,6 +27,7 @@ export const AdminApprovalsPage: React.FC = () => {
   const [pendingLostItems, setPendingLostItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { showNotification } = useNotification();
+  const [previewContent, setPreviewContent] = useState<PastQuestion | null>(null);
 
   useEffect(() => {
     fetchPending();
@@ -45,6 +46,16 @@ export const AdminApprovalsPage: React.FC = () => {
               setPendingLostItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
           }
       } finally { setLoading(false); }
+  };
+
+  const handlePreview = (item: PastQuestion) => {
+      if (item.textContent) {
+          setPreviewContent(item); // Open text preview modal
+      } else if (item.fileUrl) {
+          window.open(item.fileUrl, '_blank', 'noreferrer'); // Open link for files/images
+      } else {
+          showNotification("No preview available for this item.", "info");
+      }
   };
 
   const handleMaterialApproval = async (item: PastQuestion, approve: boolean) => {
@@ -102,6 +113,7 @@ export const AdminApprovalsPage: React.FC = () => {
   };
 
   return (
+    <>
     <div className="animate-fade-in max-w-5xl mx-auto">
         <div className="flex justify-between items-center mb-6">
             <div>
@@ -145,7 +157,7 @@ export const AdminApprovalsPage: React.FC = () => {
                         <h3 className="font-bold text-slate-800 dark:text-white mb-1 line-clamp-1">{item.courseTitle}</h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Uploaded by: {item.uploadedByEmail || 'Unknown'}</p>
                         <div className="mt-auto pt-4 border-t border-slate-50 dark:border-slate-700 flex gap-2">
-                            <a href={item.fileUrl} target="_blank" rel="noreferrer" className="flex-1 py-2 text-center text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-600 transition">Preview</a>
+                            <button onClick={() => handlePreview(item)} className="flex-1 py-2 text-center text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-600 transition">Preview</button>
                             <button onClick={() => handleMaterialApproval(item, true)} className="flex-1 py-2 text-center text-xs font-bold text-white bg-emerald-500 rounded hover:bg-emerald-600 transition">Approve (+10 Pts)</button>
                             <button onClick={() => handleMaterialApproval(item, false)} className="px-3 py-2 text-center text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-900/20 rounded hover:bg-rose-100 dark:hover:bg-rose-900/40 transition">Reject</button>
                         </div>
@@ -170,5 +182,26 @@ export const AdminApprovalsPage: React.FC = () => {
             </div>
         )}
     </div>
+
+    {/* Text Content Preview Modal */}
+    {previewContent && (
+        <div className="fixed inset-0 bg-black/70 z-[70] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setPreviewContent(null)}>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col animate-fade-in-up" onClick={e => e.stopPropagation()}>
+                <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                    <h3 className="font-bold text-lg text-slate-800 dark:text-white">{previewContent.courseTitle}</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{previewContent.courseCode} • {previewContent.year}</p>
+                </div>
+                <div className="p-6 overflow-y-auto">
+                    <pre className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-sans">
+                        {previewContent.textContent}
+                    </pre>
+                </div>
+                <div className="p-4 border-t border-slate-200 dark:border-slate-700 text-right bg-slate-50 dark:bg-slate-800/50">
+                    <button onClick={() => setPreviewContent(null)} className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold text-sm hover:bg-indigo-700">Close</button>
+                </div>
+            </div>
+        </div>
+    )}
+    </>
   );
 };

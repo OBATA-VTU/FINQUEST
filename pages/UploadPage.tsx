@@ -33,6 +33,7 @@ export const UploadPage: React.FC = () => {
     const [file, setFile] = useState<File | null>(null);
     const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [textContent, setTextContent] = useState('');
+    const textAreaRef = useRef<HTMLTextAreaElement>(null);
     
     // Processing State
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -134,6 +135,65 @@ export const UploadPage: React.FC = () => {
         }
     };
 
+    const applyFormat = (format: 'bold' | 'italic' | 'strike' | 'h2' | 'ul') => {
+        const textarea = textAreaRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selectedText = textContent.substring(start, end);
+
+        let prefix = '', suffix = '';
+        switch (format) {
+            case 'bold': prefix = '**'; suffix = '**'; break;
+            case 'italic': prefix = '_'; suffix = '_'; break;
+            case 'strike': prefix = '~~'; suffix = '~~'; break;
+            case 'h2': prefix = '\n## '; suffix = '\n'; break;
+            case 'ul': prefix = '\n- '; suffix = ''; break;
+        }
+
+        const newText = 
+            textContent.substring(0, start) + 
+            prefix + 
+            (selectedText || '') + 
+            suffix + 
+            textContent.substring(end);
+
+        setTextContent(newText);
+        
+        setTimeout(() => {
+            textarea.focus();
+            if (selectedText) {
+                textarea.setSelectionRange(start + prefix.length, end + prefix.length);
+            } else {
+                textarea.setSelectionRange(start + prefix.length, start + prefix.length);
+            }
+        }, 0);
+    };
+
+    const renderTextEditor = () => (
+        <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+            <div className="p-2 border-b border-slate-200 dark:border-slate-700 flex items-center gap-1 bg-slate-50 dark:bg-slate-800 flex-wrap">
+                <button type="button" onClick={() => applyFormat('bold')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center font-bold" title="Bold">B</button>
+                <button type="button" onClick={() => applyFormat('italic')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center italic font-serif" title="Italic">I</button>
+                <button type="button" onClick={() => applyFormat('strike')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center line-through" title="Strikethrough">S</button>
+                <div className="w-px h-6 bg-slate-300 dark:bg-slate-600 mx-1"></div>
+                <button type="button" onClick={() => applyFormat('h2')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center font-bold text-sm" title="Heading">H2</button>
+                <button type="button" onClick={() => applyFormat('ul')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center" title="List Item">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" /></svg>
+                </button>
+            </div>
+            <textarea 
+                ref={textAreaRef}
+                className="w-full p-4 h-64 bg-transparent outline-none resize-y text-slate-700 dark:text-slate-200" 
+                placeholder="Type your material here... Use the tools above for formatting." 
+                value={textContent} 
+                onChange={e => setTextContent(e.target.value)} 
+                required 
+            />
+        </div>
+    );
+
     const renderChoice = (type: UploadType, icon: React.ReactNode, title: string, desc: string, enabled = true, special = false) => (
         <button 
             onClick={() => enabled && setUploadType(type)}
@@ -172,7 +232,7 @@ export const UploadPage: React.FC = () => {
                             {/* DYNAMIC UPLOAD AREA */}
                             {uploadType === 'document' && <div className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all ${dragActive ? 'border-indigo-500' : 'border-slate-300'}`} onDragEnter={handleDrag} onDrop={handleDrop} onDragLeave={handleDrag} onDragOver={handleDrag}><input id="f" type="file" className="hidden" onChange={(e) => e.target.files && setFile(e.target.files[0])} accept=".pdf,.doc,.docx" /><label htmlFor="f" className="cursor-pointer">{file ? file.name : "Click or drag document"}</label></div>}
                             {uploadType === 'images' && <div className={`relative border-2 border-dashed rounded-xl p-6 text-center ${dragActive ? 'border-indigo-500' : 'border-slate-300'}`} onDragEnter={handleDrag} onDrop={handleDrop} onDragLeave={handleDrag} onDragOver={handleDrag}><input id="f-img" type="file" className="hidden" multiple onChange={(e) => e.target.files && setImageFiles(Array.from(e.target.files))} accept="image/*" /><label htmlFor="f-img" className="cursor-pointer">{imageFiles.length > 0 ? `${imageFiles.length} images selected` : "Click or drag images"}</label></div>}
-                            {uploadType === 'text' && <textarea className="w-full border p-3 rounded-xl h-48" placeholder="Type your material here..." value={textContent} onChange={e => setTextContent(e.target.value)} />}
+                            {uploadType === 'text' && renderTextEditor()}
                             {uploadType === 'ai' && <div className="bg-amber-50 p-4 rounded-xl text-center text-amber-800 text-sm font-medium">AI will generate content based on the Course Title you provide below.</div>}
 
                             <div className="grid grid-cols-2 gap-4">
