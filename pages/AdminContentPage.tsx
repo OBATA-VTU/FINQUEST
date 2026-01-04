@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
-import { uploadToImgBB, uploadFile, deleteFile } from '../utils/api';
+// FIX: 'uploadToFirebaseStorage' is not an exported member of '../utils/api'. Switched to using 'uploadWithFallback' and aliased it as 'uploadFile'.
+import { uploadToImgBB, uploadWithFallback as uploadFile, deleteFile } from '../utils/api';
 import { LEVELS } from '../constants';
 import { GoogleGenAI } from "@google/genai";
 import { AuthContext } from '../contexts/AuthContext';
@@ -191,7 +191,8 @@ export const AdminContentPage: React.FC = () => {
                   // FILE UPLOAD LOGIC
                   if (!editingItem && !formFile) throw new Error("File is required for new materials");
                   if (formFile) {
-                      const { url, path } = await uploadFile(formFile, 'past_questions');
+                      // FIX: uploadFile (aliased from uploadWithFallback) requires an onProgress callback.
+                      const { url, path } = await uploadFile(formFile, 'past_questions', () => {});
                       payload.fileUrl = url;
                       payload.storagePath = path;
                       payload.status = 'approved'; // Admin uploads are auto-approved

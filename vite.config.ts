@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => {
       // Use fallback to empty string to prevent JSON.stringify(undefined)
       'process.env.API_KEY': JSON.stringify(env.VITE_GOOGLE_GENAI_API_KEY || ""),
       'process.env.DROPBOX_ACCESS_TOKEN': JSON.stringify(env.VITE_DROPBOX_ACCESS_TOKEN || ""),
+      'process.env.ONEDRIVE_ACCESS_TOKEN': JSON.stringify(env.VITE_ONEDRIVE_ACCESS_TOKEN || ""),
     },
     build: {
       outDir: 'dist',

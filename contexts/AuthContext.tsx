@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { User, Level } from '../types';
 import { auth, db } from '../firebase';
@@ -13,7 +14,7 @@ import {
   EmailAuthProvider,
   linkWithCredential
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useNotification } from './NotificationContext';
 
 interface AuthContextType {
@@ -70,9 +71,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             const userDoc = await getDoc(userDocRef);
 
             if (userDoc.exists()) {
-                const userData = userDoc.data();
+                const userData = userDoc.data() as User;
                 
-                // CHECK IF BANNED
                 if (userData.isBanned) {
                     await signOut(auth);
                     showNotification("Account suspended. Contact Admin.", "error");
@@ -81,29 +81,29 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     return;
                 }
 
+                // Award Veteran Badge
+                const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+                const createdAt = userData.createdAt ? new Date(userData.createdAt).getTime() : Date.now();
+                const badges = userData.badges || [];
+                if (Date.now() - createdAt > ONE_YEAR_MS && !badges.includes('veteran')) {
+                    await updateDoc(userDocRef, { badges: arrayUnion('veteran') });
+                    userData.badges = [...badges, 'veteran']; // Update local object
+                }
+
                 setUser({
                     id: firebaseUser.uid,
                     email: firebaseUser.email || '',
                     name: userData.name || firebaseUser.displayName || 'User',
-                    username: userData.username || '',
-                    matricNumber: userData.matricNumber || '',
-                    role: userData.role || 'student',
-                    level: userData.level || 100,
-                    avatarUrl: userData.avatarUrl || firebaseUser.photoURL,
-                    contributionPoints: userData.contributionPoints || 0,
-                    savedQuestions: userData.savedQuestions || [],
-                    lastActive: userData.lastActive,
-                    isVerified: userData.isVerified,
-                    isBanned: userData.isBanned
+                    ...userData
                 });
             } else {
-                const newUser = {
+                const newUser: User = {
                     id: firebaseUser.uid,
                     email: firebaseUser.email || '',
                     name: firebaseUser.displayName || 'User',
                     username: '', 
-                    role: 'student' as const,
-                    level: 100 as Level,
+                    role: 'student',
+                    level: 100,
                     avatarUrl: firebaseUser.photoURL || undefined,
                     savedQuestions: []
                 };
@@ -142,7 +142,6 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       const handleHeartbeat = async () => {
           if (!auth.currentUser) return;
           try {
-              // Also check banned status during heartbeat to ensure quick logout
               const userRef = doc(db, 'users', auth.currentUser.uid);
               const snap = await getDoc(userRef);
               if (snap.exists() && snap.data().isBanned) {
@@ -183,7 +182,6 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const login = async (email: string, pass: string) => {
     try {
         await signInWithEmailAndPassword(auth, email, pass);
-        // Auth state listener handles the rest
     } catch (error: any) {
         throw error;
     }
@@ -192,9 +190,6 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const loginWithGoogle = async (): Promise<boolean> => {
     try {
         const provider = new GoogleAuthProvider();
-        // REMOVED 'select_account' prompt to speed up flow
-        // provider.setCustomParameters({ prompt: 'select_account' });
-
         const result = await signInWithPopup(auth, provider);
         const firebaseUser = result.user;
         let isIncompleteProfile = false;
@@ -214,9 +209,13 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             role: 'student',
             level: 100,
             createdAt: new Date().toISOString(),
-            photoURL: firebaseUser.photoURL,
+            avatarUrl: firebaseUser.photoURL,
             savedQuestions: [],
-            lastActive: new Date().toISOString()
+            lastActive: new Date().toISOString(),
+            uploadCount: 0,
+            testCount: 0,
+            messageCount: 0,
+            badges: []
           });
 
           await setDoc(userRef, cleanData);
@@ -259,7 +258,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const signup = async (data: { name: string; email: string; pass: string; level: Level; username: string; matricNumber: string; avatarUrl?: string }) => {
       try {
           const cleanUsername = data.username.trim().toLowerCase();
-          await checkUsernameAvailability(cleanUsername); // Just to verify, though handled in UI
+          await checkUsernameAvailability(cleanUsername);
           
           const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.pass);
           const firebaseUser = userCredential.user;
@@ -281,7 +280,11 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             matricNumber: data.matricNumber || '',
             avatarUrl: data.avatarUrl,
             savedQuestions: [],
-            lastActive: new Date().toISOString()
+            lastActive: new Date().toISOString(),
+            uploadCount: 0,
+            testCount: 0,
+            messageCount: 0,
+            badges: []
           };
 
           await setDoc(doc(db, 'users', firebaseUser.uid), sanitizeData({...newUser, createdAt: new Date().toISOString()}));
