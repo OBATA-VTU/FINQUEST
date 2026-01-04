@@ -58,31 +58,78 @@ export const uploadFile = async (file: File, folder: string = 'materials', onPro
             }
 
             const dbx = new Dropbox({ accessToken: DROPBOX_ACCESS_TOKEN });
-            if (onProgress) onProgress(10);
-
             const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
             const path = `/${folder}/${Date.now()}_${safeName}`;
 
-            const response = await dbx.filesUpload({
-                path: path,
-                contents: file,
-                mode: { '.tag': 'add' }, 
-                autorename: true,
-                mute: false
-            });
+            const CHUNK_SIZE = 8 * 1024 * 1024; // 8MB chunks
+            const MAX_SIMPLE_UPLOAD_SIZE = 20 * 1024 * 1024; // Use simple upload for files under 20MB
 
-            if (onProgress) onProgress(60);
+            if (file.size < MAX_SIMPLE_UPLOAD_SIZE) {
+                // --- Simple Upload for Small Files ---
+                if (onProgress) onProgress(10);
+                const response = await dbx.filesUpload({
+                    path: path,
+                    contents: file,
+                    mode: { '.tag': 'add' },
+                    autorename: true,
+                    mute: false
+                });
+                if (onProgress) onProgress(60);
+                const linkResponse = await dbx.sharingCreateSharedLinkWithSettings({ path: response.result.path_lower! });
+                if (onProgress) onProgress(100);
+                let previewUrl = linkResponse.result.url.replace('?dl=0', '?raw=1');
+                resolve({ url: previewUrl, path: response.result.path_lower! });
+            } else {
+                // --- Chunked Upload for Large Files ---
+                let offset = 0;
+                let sessionId = '';
+                
+                // 1. Start session with the first chunk
+                const firstChunk = file.slice(offset, offset + CHUNK_SIZE);
+                const startResponse = await dbx.filesUploadSessionStart({
+                    contents: firstChunk,
+                    close: false,
+                });
+                sessionId = startResponse.result.session_id;
+                offset += firstChunk.size;
+                if (onProgress) onProgress(Math.round((offset / file.size) * 80));
 
-            const linkResponse = await dbx.sharingCreateSharedLinkWithSettings({
-                path: response.result.path_lower!
-            });
+                // 2. Append remaining chunks (except the last one)
+                while ((file.size - offset) > CHUNK_SIZE) {
+                    const chunk = file.slice(offset, offset + CHUNK_SIZE);
+                    await dbx.filesUploadSessionAppendV2({
+                        cursor: { session_id: sessionId, offset: offset },
+                        contents: chunk,
+                        close: false,
+                    });
+                    offset += chunk.size;
+                    if (onProgress) onProgress(Math.round((offset / file.size) * 80));
+                }
 
-            if (onProgress) onProgress(100);
+                // 3. Finish session with the last chunk
+                const lastChunk = file.slice(offset);
+                const cursor = { session_id: sessionId, offset: offset };
+                const commit = {
+                    path: path,
+                    mode: { '.tag': 'add' } as any, // Type assertion for SDK
+                    autorename: true,
+                    mute: false,
+                };
 
-            let previewUrl = linkResponse.result.url;
-            previewUrl = previewUrl.replace('?dl=0', '?raw=1');
+                const finishResponse = await dbx.filesUploadSessionFinish({
+                    cursor: cursor,
+                    commit: commit,
+                    contents: lastChunk,
+                });
+                if (onProgress) onProgress(90);
 
-            resolve({ url: previewUrl, path: response.result.path_lower! });
+                // 4. Create shared link
+                const linkResponse = await dbx.sharingCreateSharedLinkWithSettings({ path: finishResponse.result.path_lower! });
+                if (onProgress) onProgress(100);
+
+                let previewUrl = linkResponse.result.url.replace('?dl=0', '?raw=1');
+                resolve({ url: previewUrl, path: finishResponse.result.path_lower! });
+            }
 
         } catch (error: any) {
             console.error("Storage Upload Error:", error);
