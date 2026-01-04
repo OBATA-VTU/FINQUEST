@@ -54,7 +54,7 @@ const renderMarkdownContent = (doc: jsPDF, markdown: string, startX: number, sta
                     checkPageBreak(lineHeight);
                 }
                 
-                doc.text(word, currentX, y, { flags: { 'strikeout': isStrike } });
+                doc.text(word, currentX, y, { flags: { strikeout: isStrike } } as any);
                 currentX += wordWidth;
             }
         }
