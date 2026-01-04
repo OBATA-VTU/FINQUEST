@@ -1,4 +1,3 @@
-
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -10,6 +9,7 @@ import { Level } from '../types';
 import { generateTestReviewPDF } from '../utils/pdfGenerator';
 import { trackAiUsage } from '../utils/api';
 import { Calculator } from '../components/Calculator';
+import { fallbackQuestions } from '../utils/fallbackQuestions';
 
 interface Question {
   id: number;
@@ -24,13 +24,11 @@ interface GameFeedback {
     correctIndex: number;
 }
 
-const FALLBACK_QUESTIONS: Question[] = [
-    { id: 101, text: "Which of the following is NOT a capital budgeting technique?", options: ["Net Present Value (NPV)", "Internal Rate of Return (IRR)", "Depreciation Method", "Payback Period"], correctAnswer: 2 },
-    { id: 102, text: "What is the primary goal of financial management?", options: ["Maximize profits", "Maximize shareholder wealth", "Minimize costs", "Maximize market share"], correctAnswer: 1 },
-    { id: 103, text: "Which market deals with long-term finance?", options: ["Money Market", "Capital Market", "Forex Market", "Commodity Market"], correctAnswer: 1 },
-    { id: 104, text: "The beta of the market portfolio is:", options: ["0", "1", "-1", "Infinite"], correctAnswer: 1 },
-    { id: 105, text: "Which of these is a source of short-term finance?", options: ["Equity Shares", "Debentures", "Trade Credit", "Preference Shares"], correctAnswer: 2 },
-];
+// Utility function to shuffle an array and pick a certain number of items
+const shuffleAndPick = (array: any[], num: number) => {
+    const shuffled = [...array].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, num);
+};
 
 export const TestPage: React.FC = () => {
   const auth = useContext(AuthContext);
@@ -186,14 +184,31 @@ export const TestPage: React.FC = () => {
     } catch (e: any) {
         clearInterval(progressInterval);
         console.warn("AI Generation failed:", e);
-        setLoadingMessage('AI Busy. Loading Offline Pack...');
+        showNotification("AI generation failed. Loading standard question pack instead.", "warning");
+        setLoadingMessage('AI Unavailable. Loading Standard Exam...');
+        
         setTimeout(() => {
-            const expandedFallback = [...FALLBACK_QUESTIONS, ...FALLBACK_QUESTIONS, ...FALLBACK_QUESTIONS].map((q, i) => ({...q, id: i}));
-            setQuestions(expandedFallback);
-            setTimeLeft(600);
+            const numQuestions = mode === 'mock' ? 30 : mode === 'game' ? 50 : 20;
+            const questionsToUse = shuffleAndPick(fallbackQuestions, numQuestions);
+
+            setQuestions(questionsToUse.map((q, i) => ({
+                id: i,
+                text: q.text,
+                options: q.options,
+                correctAnswer: q.correctAnswer
+            })));
+
+            setTimeLeft(mode === 'mock' ? 40 * 60 : 20 * 60); // Standard times for fallback
             setStage('exam');
             setCurrentQuestionIndex(0);
             setUserAnswers({});
+            if (mode === 'game') {
+                setGameLives(3);
+                setGameScore(0);
+                setIsGameOver(false);
+                setGameFeedback(null);
+                setTimeLeft(30);
+            }
         }, 1500);
     }
   };

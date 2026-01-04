@@ -1,5 +1,4 @@
 
-import { Dropbox } from 'dropbox';
 import { db } from '../firebase';
 import { doc, setDoc, increment } from 'firebase/firestore';
 
@@ -50,100 +49,174 @@ export const forceDownload = async (url: string, filename: string) => {
   }
 };
 
-export const uploadFile = async (file: File, folder: string = 'materials', onProgress?: (progress: number) => void): Promise<{ url: string, path: string }> => {
+/**
+ * Re-engineered Dropbox upload function using direct `fetch` calls to bypass SDK issues.
+ * This provides more robust error handling and resilience for both small and large files.
+ */
+export const uploadFile = (file: File, folder: string = 'materials', onProgress?: (progress: number) => void): Promise<{ url: string, path: string }> => {
     return new Promise(async (resolve, reject) => {
         try {
             if (!DROPBOX_ACCESS_TOKEN) {
-                throw new Error("Storage service is unavailable.");
+                return reject(new Error("Storage service is unavailable. Check API keys."));
             }
 
-            const dbx = new Dropbox({ accessToken: DROPBOX_ACCESS_TOKEN });
             const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
             const path = `/${folder}/${Date.now()}_${safeName}`;
 
-            const CHUNK_SIZE = 8 * 1024 * 1024; // 8MB chunks
-            const MAX_SIMPLE_UPLOAD_SIZE = 20 * 1024 * 1024; // Use simple upload for files under 20MB
+            // Helper to create a publicly shareable link for the uploaded file.
+            const createSharedLink = async (filePath: string): Promise<string> => {
+                try {
+                    const response = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${DROPBOX_ACCESS_TOKEN}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ path: filePath, settings: { requested_visibility: 'public' } }),
+                    });
+
+                    if (response.status === 409) { // shared_link_already_exists
+                        const listResponse = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
+                             method: 'POST',
+                             headers: {
+                                 'Authorization': `Bearer ${DROPBOX_ACCESS_TOKEN}`,
+                                 'Content-Type': 'application/json',
+                             },
+                             body: JSON.stringify({ path: filePath, direct_only: true }),
+                        });
+                        const listData = await listResponse.json();
+                        if (listData.links && listData.links.length > 0) {
+                             return listData.links[0].url;
+                        }
+                    }
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`Failed to create shared link: ${errorData?.error_summary || 'Unknown error'}`);
+                    }
+
+                    const data = await response.json();
+                    return data.url;
+
+                } catch (linkError: any) {
+                    console.error("Error creating shared link:", linkError);
+                    throw new Error("File uploaded, but failed to create a shareable link.");
+                }
+            };
+
+            const MAX_SIMPLE_UPLOAD_SIZE = 150 * 1024 * 1024; // Dropbox API limit for single upload call
 
             if (file.size < MAX_SIMPLE_UPLOAD_SIZE) {
-                // --- Simple Upload for Small Files ---
+                // --- Simple Upload for files under 150MB ---
                 if (onProgress) onProgress(10);
-                const response = await dbx.filesUpload({
-                    path: path,
-                    contents: file,
-                    mode: { '.tag': 'add' },
-                    autorename: true,
-                    mute: false
+                const apiArgs = { path, mode: 'add', autorename: true, mute: false };
+                const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${DROPBOX_ACCESS_TOKEN}`,
+                        'Content-Type': 'application/octet-stream',
+                        'Dropbox-API-Arg': JSON.stringify(apiArgs),
+                    },
+                    body: file
                 });
                 if (onProgress) onProgress(60);
-                const linkResponse = await dbx.sharingCreateSharedLinkWithSettings({ path: response.result.path_lower! });
-                if (onProgress) onProgress(100);
-                let previewUrl = linkResponse.result.url.replace('?dl=0', '?raw=1');
-                resolve({ url: previewUrl, path: response.result.path_lower! });
-            } else {
-                // --- Chunked Upload for Large Files ---
-                let offset = 0;
-                let sessionId = '';
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({error_summary: 'Network error or invalid response from Dropbox.'}));
+                    throw new Error(`Upload failed: ${errorData.error_summary}`);
+                }
                 
-                // 1. Start session with the first chunk
+                const result = await response.json();
+                const sharedUrl = await createSharedLink(result.path_lower);
+                if (onProgress) onProgress(100);
+
+                const previewUrl = sharedUrl.replace('?dl=0', '?raw=1');
+                resolve({ url: previewUrl, path: result.path_lower });
+
+            } else {
+                // --- Chunked Upload for files over 150MB ---
+                const CHUNK_SIZE = 8 * 1024 * 1024; // 8MB chunks
+                let offset = 0;
+
+                // 1. Start session
                 const firstChunk = file.slice(offset, offset + CHUNK_SIZE);
-                const startResponse = await dbx.filesUploadSessionStart({
-                    contents: firstChunk,
-                    close: false,
+                const startResponse = await fetch('https://content.dropboxapi.com/2/files/upload_session/start', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${DROPBOX_ACCESS_TOKEN}`,
+                        'Content-Type': 'application/octet-stream',
+                    },
+                    body: firstChunk
                 });
-                sessionId = startResponse.result.session_id;
+                if (!startResponse.ok) throw new Error('Failed to start upload session');
+                const { session_id } = await startResponse.json();
                 offset += firstChunk.size;
                 if (onProgress) onProgress(Math.round((offset / file.size) * 80));
 
-                // 2. Append remaining chunks (except the last one)
+                // 2. Append chunks
                 while ((file.size - offset) > CHUNK_SIZE) {
                     const chunk = file.slice(offset, offset + CHUNK_SIZE);
-                    await dbx.filesUploadSessionAppendV2({
-                        cursor: { session_id: sessionId, offset: offset },
-                        contents: chunk,
-                        close: false,
+                    const appendArgs = { cursor: { session_id, offset }, close: false };
+                    const appendResponse = await fetch('https://content.dropboxapi.com/2/files/upload_session/append_v2', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${DROPBOX_ACCESS_TOKEN}`,
+                            'Content-Type': 'application/octet-stream',
+                            'Dropbox-API-Arg': JSON.stringify(appendArgs),
+                        },
+                        body: chunk
                     });
+                    if (!appendResponse.ok) throw new Error(`Failed to append chunk at offset ${offset}`);
                     offset += chunk.size;
                     if (onProgress) onProgress(Math.round((offset / file.size) * 80));
                 }
 
-                // 3. Finish session with the last chunk
+                // 3. Finish session
                 const lastChunk = file.slice(offset);
-                const cursor = { session_id: sessionId, offset: offset };
-                const commit = {
-                    path: path,
-                    mode: { '.tag': 'add' } as any, // Type assertion for SDK
-                    autorename: true,
-                    mute: false,
-                };
-
-                const finishResponse = await dbx.filesUploadSessionFinish({
-                    cursor: cursor,
-                    commit: commit,
-                    contents: lastChunk,
+                const finishArgs = { cursor: { session_id, offset }, commit: { path, mode: 'add', autorename: true, mute: false }};
+                const finishResponse = await fetch('https://content.dropboxapi.com/2/files/upload_session/finish', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${DROPBOX_ACCESS_TOKEN}`,
+                        'Content-Type': 'application/octet-stream',
+                        'Dropbox-API-Arg': JSON.stringify(finishArgs),
+                    },
+                    body: lastChunk
                 });
+                if (!finishResponse.ok) {
+                     const errorData = await finishResponse.json().catch(() => ({error_summary: 'Network error on finishing upload.'}));
+                     throw new Error(`Failed to finish upload: ${errorData.error_summary}`);
+                }
                 if (onProgress) onProgress(90);
 
-                // 4. Create shared link
-                const linkResponse = await dbx.sharingCreateSharedLinkWithSettings({ path: finishResponse.result.path_lower! });
+                const result = await finishResponse.json();
+                const sharedUrl = await createSharedLink(result.path_lower);
                 if (onProgress) onProgress(100);
 
-                let previewUrl = linkResponse.result.url.replace('?dl=0', '?raw=1');
-                resolve({ url: previewUrl, path: finishResponse.result.path_lower! });
+                const previewUrl = sharedUrl.replace('?dl=0', '?raw=1');
+                resolve({ url: previewUrl, path: result.path_lower });
             }
 
         } catch (error: any) {
-            console.error("Storage Upload Error:", error);
-            reject(new Error("Failed to upload document to cloud storage. Please try again or check connection."));
+            console.error("Dropbox Upload Error:", error);
+            reject(new Error(error.message || "Failed to upload document. Please check connection."));
         }
     });
 };
 
+/**
+ * Deletes a file from Dropbox storage using a direct fetch call.
+ */
 export const deleteFile = async (path: string): Promise<void> => {
-    if (!path) return;
+    if (!path || !DROPBOX_ACCESS_TOKEN) return;
     try {
-        if (!DROPBOX_ACCESS_TOKEN) return;
-        const dbx = new Dropbox({ accessToken: DROPBOX_ACCESS_TOKEN });
-        await dbx.filesDeleteV2({ path });
+        await fetch('https://api.dropboxapi.com/2/files/delete_v2', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${DROPBOX_ACCESS_TOKEN}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ path: path }),
+        });
     } catch (error) {
         console.error("Failed to delete from storage:", error);
     }
@@ -163,7 +236,7 @@ export const uploadToImgBB = async (file: File): Promise<string> => {
         if (data && data.data && data.data.url) {
             return data.data.url;
         }
-        throw new Error("Invalid response");
+        throw new Error("Invalid response from image host.");
     } catch (e: any) {
         console.warn("Image Upload failed:", e);
         throw new Error("Failed to upload image. Please try again.");
