@@ -14,6 +14,7 @@ import { AdminApprovalsPage } from './pages/AdminApprovalsPage';
 import { AdminContentPage } from './pages/AdminContentPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { AdminSettingsPage } from './pages/AdminSettingsPage';
+import { AdminActiveUsersPage } from './pages/AdminActiveUsersPage'; // New
 import { ProfilePage } from './pages/ProfilePage';
 import { CommunityPage } from './pages/CommunityPage';
 import { GalleryPage } from './pages/GalleryPage';
@@ -22,8 +23,9 @@ import { TermsPage } from './pages/TermsPage';
 import { TestPage } from './pages/TestPage'; 
 import { LostFoundPage } from './pages/LostFoundPage';
 import { FAQPage } from './pages/FAQPage';
-import { NotesPage } from './pages/NotesPage'; // New
-import { LeaderboardPage } from './pages/LeaderboardPage'; // New
+import { NotesPage } from './pages/NotesPage';
+import { LeaderboardPage } from './pages/LeaderboardPage';
+import { UploadPage } from './pages/UploadPage'; // New
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -89,6 +91,7 @@ const AppContent: React.FC = () => {
                 <Route path="/test" element={<RequireAuth><TestPage /></RequireAuth>} />
                 <Route path="/notes" element={<RequireAuth><NotesPage /></RequireAuth>} />
                 <Route path="/leaderboard" element={<RequireAuth><LeaderboardPage /></RequireAuth>} />
+                <Route path="/upload" element={<RequireAuth><UploadPage /></RequireAuth>} />
                 
                 {/* Gated Public-ish Pages */}
                 <Route path="/executives" element={<RequireAuth><ExecutivesPage /></RequireAuth>} />
@@ -102,6 +105,7 @@ const AppContent: React.FC = () => {
                 <Route path="approvals" element={<AdminApprovalsPage />} />
                 <Route path="content" element={<AdminContentPage />} />
                 <Route path="users" element={<AdminUsersPage />} />
+                <Route path="active-users" element={<AdminActiveUsersPage />} />
                 <Route path="settings" element={<AdminSettingsPage />} />
             </Route>
             

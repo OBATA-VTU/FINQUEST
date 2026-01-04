@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc, getDoc, setDoc } from 'firebase/firestore';
@@ -174,7 +175,7 @@ export const AdminContentPage: React.FC = () => {
                   Format the output in clean Markdown. Include a summary, key concepts, detailed explanation, and conclusion.`;
                   
                   const result = await ai.models.generateContent({
-                      model: 'gemini-3-pro-preview',
+                      model: 'gemini-3-flash-preview', // Use Flash for better quota
                       contents: prompt,
                   });
                   

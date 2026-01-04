@@ -1,19 +1,17 @@
 
 import React, { useState, useMemo, useCallback, useContext, useEffect } from 'react';
 import { QuestionCard } from '../components/QuestionCard';
-import { UploadButton } from '../components/UploadButton';
-import { UploadModal } from '../components/UploadModal';
 import { AdBanner } from '../components/AdBanner';
 import { PastQuestion } from '../types';
 import { LEVELS } from '../constants';
 import { AuthContext } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 
 export const PastQuestionsPage: React.FC = () => {
   const [questions, setQuestions] = useState<PastQuestion[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Filters
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
@@ -22,6 +20,7 @@ export const PastQuestionsPage: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
 
   const auth = useContext(AuthContext);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -53,10 +52,6 @@ export const PastQuestionsPage: React.FC = () => {
         }
     };
     fetchQuestions();
-  }, [isModalOpen]); 
-
-  const handleUpload = useCallback((newQuestionData: any) => {
-      setIsModalOpen(false);
   }, []);
 
   // "Intelligence" - Get Unique Years for Filter
@@ -170,9 +165,14 @@ export const PastQuestionsPage: React.FC = () => {
             </div>
         )}
 
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/50 rounded-lg p-3 mb-8 flex items-center gap-3 text-xs text-blue-800 dark:text-blue-300 font-medium">
-             <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-             <span>Showing {filteredQuestions.length} materials. Uploads require approval.</span>
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/50 rounded-lg p-3 mb-8 flex items-center justify-between gap-3 text-xs text-blue-800 dark:text-blue-300 font-medium">
+             <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>Showing {filteredQuestions.length} materials. Uploads require approval.</span>
+             </div>
+             <button onClick={() => navigate('/upload')} className="px-3 py-1.5 bg-indigo-600 text-white rounded-md font-bold text-[10px] uppercase hover:bg-indigo-700 transition-colors shadow-sm">
+                Contribute
+             </button>
         </div>
 
         {loading ? (
@@ -198,9 +198,6 @@ export const PastQuestionsPage: React.FC = () => {
         )}
         
         <div className="mt-12"><AdBanner /></div>
-
-        {auth?.user && <UploadButton onClick={() => setIsModalOpen(true)} />}
-        <UploadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onUpload={handleUpload} />
       </div>
     </div>
   );

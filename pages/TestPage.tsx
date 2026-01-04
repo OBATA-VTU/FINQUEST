@@ -1,3 +1,4 @@
+
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -121,7 +122,7 @@ export const TestPage: React.FC = () => {
         }
 
         const aiPromise = ai.models.generateContent({
-            model: 'gemini-3-pro-preview',
+            model: 'gemini-3-flash-preview', // Use Flash for better quota
             contents: prompt,
             config: {
                 responseMimeType: "application/json",

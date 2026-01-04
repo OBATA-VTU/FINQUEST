@@ -170,6 +170,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                         onClose={onClose}
                     />
                     <NavItem 
+                        to="/upload" 
+                        label="Upload Material" 
+                        icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>}
+                        onClose={onClose}
+                    />
+                    <NavItem 
                         to="/test" 
                         label="CBT Practice" 
                         icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>}

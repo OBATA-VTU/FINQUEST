@@ -20,6 +20,7 @@ export interface PastQuestion {
   uploadedByEmail?: string;
   status?: 'pending' | 'approved';
   createdAt?: string;
+  category?: "Past Question" | "Lecture Note" | "Handout" | "Textbook" | "Other";
 }
 
 export interface PendingQuestion extends PastQuestion {
