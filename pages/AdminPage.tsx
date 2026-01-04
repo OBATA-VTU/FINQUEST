@@ -1,34 +1,22 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
-import { collection, getDocs, query, where, addDoc } from 'firebase/firestore';
-import { Link, useNavigate } from 'react-router-dom';
+import { collection, getDocs, query, where, addDoc, doc, getDoc } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../contexts/NotificationContext';
 import { AuthContext } from '../contexts/AuthContext';
-
-const StatCard: React.FC<{ title: string; value: string | number; color: string; onClick: () => void; subtitle?: string; }> = ({ title, value, color, onClick, subtitle }) => (
-    <div onClick={onClick} className={`bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-${color}-300 transition-all cursor-pointer group`}>
-        <h3 className={`text-sm font-bold uppercase text-slate-500`}>{title}</h3>
-        <p className={`text-5xl font-black text-${color}-600 mt-2`}>{value}</p>
-        {subtitle && <p className="text-xs font-bold text-slate-400 mt-1">{subtitle}</p>}
-    </div>
-);
-
-const ActionLink: React.FC<{ to: string; icon: string; label: string; }> = ({ to, icon, label }) => (
-    <Link to={to} className="bg-slate-50 p-4 rounded-lg text-center hover:bg-slate-100 transition-colors">
-        <span className="text-3xl block mb-2">{icon}</span>
-        <span className="font-bold text-sm text-slate-700">{label}</span>
-    </Link>
-);
-
 
 export const AdminPage: React.FC = () => {
   const navigate = useNavigate();
   const auth = useContext(AuthContext);
   const { showNotification } = useNotification();
-  const [stats, setStats] = useState({ users: 0, pendingMaterials: 0, pendingLostFound: 0, active: 0 });
+  const [stats, setStats] = useState({ users: 0, activeUsers: 0, pendingMaterials: 0, materials: 0, pendingLostFound: 0 });
   const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
   const [broadcastMsg, setBroadcastMsg] = useState('');
+
+  const role = auth?.user?.role || 'student';
+  const isSuperAdmin = role === 'admin';
+  const isLibrarian = role === 'librarian';
+  const isVP = role === 'vice_president';
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -36,20 +24,12 @@ export const AdminPage: React.FC = () => {
             const uSnap = await getDocs(collection(db, 'users'));
             const pMatSnap = await getDocs(query(collection(db, 'questions'), where('status', '==', 'pending')));
             const pLostSnap = await getDocs(query(collection(db, 'lost_items'), where('status', '==', 'pending')));
-            
-            const now = Date.now();
-            const tenMinutesAgo = now - (10 * 60 * 1000);
-            const activeUsers = uSnap.docs.filter(d => {
-                const user = d.data();
-                if (!user.lastActive) return false;
-                return new Date(user.lastActive).getTime() > tenMinutesAgo;
-            }).length;
-
             setStats({ 
                 users: uSnap.size, 
+                activeUsers: 0, 
+                materials: 0, 
                 pendingMaterials: pMatSnap.size, 
-                pendingLostFound: pLostSnap.size,
-                active: activeUsers
+                pendingLostFound: pLostSnap.size 
             });
         } catch (e) { console.error(e); }
     };
@@ -62,50 +42,63 @@ export const AdminPage: React.FC = () => {
           await addDoc(collection(db, 'notifications'), {
               userId: 'all', message: broadcastMsg, type: 'info', read: false, createdAt: new Date().toISOString()
           });
-          showNotification("Broadcast sent to all students!", "success");
+          showNotification("Broadcast sent to all users!", "success");
           setIsBroadcastOpen(false);
           setBroadcastMsg('');
       } catch (e) { showNotification("Broadcast failed", "error"); }
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-20 animate-fade-in space-y-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="max-w-6xl mx-auto pb-20 animate-fade-in space-y-10">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-                <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
-                <p className="text-slate-500">Overview of portal activity and management tasks.</p>
+                <h1 className="text-4xl font-serif font-black text-slate-900">PRO Command Center</h1>
+                <p className="text-slate-500 font-medium">Welcome back, {auth?.user?.name.split(' ')[0]}. Here's the state of the portal.</p>
             </div>
-            <button onClick={() => setIsBroadcastOpen(true)} className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow-lg hover:bg-indigo-700 flex items-center gap-2 text-sm">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                Broadcast
-            </button>
+            <div className="flex gap-2">
+                <button onClick={() => setIsBroadcastOpen(true)} className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl hover:bg-indigo-700 transition-all flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+                    Broadcast Alert
+                </button>
+            </div>
+        </header>
+
+        {/* GUIDANCE BOX FOR FUTURE PROS */}
+        <div className="bg-gradient-to-r from-slate-900 to-indigo-950 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden text-white">
+            <div className="absolute top-0 right-0 p-10 opacity-10"><svg className="w-40 h-40" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg></div>
+            <div className="relative z-10 max-w-2xl">
+                <span className="bg-indigo-500 text-[10px] font-black uppercase px-3 py-1 rounded-full mb-4 inline-block">PRO Handbook</span>
+                <h2 className="text-2xl font-bold mb-3">Maintaining the Portal</h2>
+                <p className="text-indigo-200 text-sm leading-relaxed mb-6">Success as a PRO depends on engagement. Every morning, check <b>Pending Approvals</b> to verify student uploads. Use <b>Broadcasts</b> for urgent departmental news, and keep the <b>Gallery</b> fresh with recent event photos.</p>
+                <div className="flex gap-4">
+                    <button onClick={() => navigate('/admin/approvals')} className="bg-white text-indigo-950 px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-indigo-50 transition-all">Review Submissions ({stats.pendingMaterials})</button>
+                    <button onClick={() => navigate('/admin/content')} className="bg-indigo-500/30 backdrop-blur-md border border-white/20 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-indigo-500/50 transition-all">Post News</button>
+                </div>
+            </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <StatCard title="Pending Approvals" value={stats.pendingMaterials + stats.pendingLostFound} color="rose" onClick={() => navigate('/admin/approvals')} />
-            <StatCard title="Total Users" value={stats.users} color="indigo" onClick={() => navigate('/admin/users')} />
-            <StatCard title="Active Users" value={stats.active} color="emerald" onClick={() => navigate('/admin/active-users')} subtitle="Online Now" />
-        </div>
-
-        <div className="bg-white p-6 rounded-xl border border-slate-200">
-            <h3 className="font-bold text-lg mb-4 text-slate-800">Quick Actions</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <ActionLink to="/admin/approvals" icon="✅" label="Approvals" />
-                <ActionLink to="/admin/content" icon="📝" label="Content" />
-                <ActionLink to="/admin/users" icon="👥" label="Users" />
-                <ActionLink to="/admin/settings" icon="⚙️" label="Settings" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div onClick={() => navigate('/admin/approvals')} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-pointer group">
+                <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-rose-500 group-hover:text-white transition-all"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
+                <h3 className="text-slate-500 font-bold uppercase text-[10px] tracking-widest mb-1">Pending Tasks</h3>
+                <p className="text-4xl font-black text-slate-900">{stats.pendingMaterials + stats.pendingLostFound}</p>
+            </div>
+            <div onClick={() => navigate('/admin/users')} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-pointer group">
+                <div className="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-indigo-500 group-hover:text-white transition-all"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg></div>
+                <h3 className="text-slate-500 font-bold uppercase text-[10px] tracking-widest mb-1">Total Verified</h3>
+                <p className="text-4xl font-black text-slate-900">{stats.users}</p>
             </div>
         </div>
 
         {isBroadcastOpen && (
             <div className="fixed inset-0 bg-slate-950/80 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-                <div className="bg-white rounded-xl w-full max-w-md shadow-2xl p-6 animate-fade-in-up">
-                    <h3 className="text-xl font-bold mb-2">Send Broadcast</h3>
-                    <p className="text-slate-500 text-sm mb-6">Type a message for all students.</p>
-                    <textarea className="w-full border-2 border-slate-200 p-4 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none mb-6" placeholder="e.g. Exam timetable is out!" value={broadcastMsg} onChange={(e) => setBroadcastMsg(e.target.value)}></textarea>
+                <div className="bg-white rounded-[2.5rem] w-full max-w-md shadow-2xl p-10 animate-fade-in-up">
+                    <h3 className="text-2xl font-bold mb-2">Send Broadcast</h3>
+                    <p className="text-slate-500 text-sm mb-6">This will notify all students instantly.</p>
+                    <textarea className="w-full border-2 border-slate-100 p-4 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none mb-6 min-h-[150px]" placeholder="Type important update..." value={broadcastMsg} onChange={(e) => setBroadcastMsg(e.target.value)}></textarea>
                     <div className="flex gap-3">
-                        <button onClick={() => setIsBroadcastOpen(false)} className="flex-1 py-3 font-bold text-slate-500 border border-slate-200 rounded-lg">Cancel</button>
-                        <button onClick={handleBroadcast} className="flex-1 py-3 px-6 bg-indigo-600 text-white rounded-lg font-bold">Dispatch</button>
+                        <button onClick={() => setIsBroadcastOpen(false)} className="flex-1 py-4 font-bold text-slate-400">Cancel</button>
+                        <button onClick={handleBroadcast} className="flex-2 py-4 px-8 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-500/30">Send All</button>
                     </div>
                 </div>
             </div>

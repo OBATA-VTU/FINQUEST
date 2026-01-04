@@ -1,11 +1,10 @@
-
 export type Level = 100 | 200 | 300 | 400;
 
 export type Page = 'home' | 'questions' | 'executives' | 'lecturers' | 'announcements' | 'login' | 'admin' | 'profile' | 'community';
 
 export type Role = 'student' | 'executive' | 'lecturer' | 'admin' | 'librarian' | 'vice_president' | 'supplement' | 'alumni';
 
-export type BadgeType = 'pioneer' | 'first_step' | 'scholar' | 'legend' | 'brainiac' | 'archivist' | 'veteran' | 'polymath' | 'chatty' | 'top_10' | 'perfectionist' | 'helper' | 'regular' | 'librarian_pick';
+export type BadgeType = 'pioneer' | 'contributor' | 'scholar' | 'legend' | 'brainiac' | 'first_step' | 'librarian_pick' | 'chatty' | 'top_10' | 'perfectionist';
 
 export interface Badge {
     id: BadgeType;
@@ -89,7 +88,6 @@ export interface User {
   badges?: BadgeType[];
   testCount?: number;
   messageCount?: number;
-  uploadCount?: number;
   createdAt?: string;
   lastActive?: string; 
   isVerified?: boolean;

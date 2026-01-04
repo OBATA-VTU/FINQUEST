@@ -1,135 +1,43 @@
 
 import { jsPDF } from "jspdf";
 
-/**
- * A helper function to render markdown-like text to a jsPDF document,
- * handling bold, headers, lists, and automatic page breaks.
- * @param doc The jsPDF instance.
- * @param text The markdown text to render.
- * @param options Rendering options { x, y, maxWidth }.
- * @returns The final Y position after rendering.
- */
-function renderMarkdown(doc: jsPDF, text: string, options: { x: number, y: number, maxWidth: number }): number {
-    let { x, y, maxWidth } = options;
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const marginBottom = 20;
-    const lineHeight = 6;
-
-    const checkPageBreak = (spaceNeeded: number) => {
-        if (y + spaceNeeded > pageHeight - marginBottom) {
-            doc.addPage();
-            y = 20; // Reset Y to top margin
-        }
-    };
-
-    const lines = text.split('\n');
-
-    for (const line of lines) {
-        if (line.trim() === '') {
-            checkPageBreak(lineHeight);
-            y += lineHeight;
-            continue;
-        }
-
-        if (line.startsWith('## ')) {
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(14);
-            const content = line.substring(3);
-            const splitText = doc.splitTextToSize(content, maxWidth);
-            checkPageBreak(splitText.length * 7);
-            doc.text(splitText, x, y);
-            y += splitText.length * 7 + 3;
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(11);
-            continue;
-        }
-
-        if (line.startsWith('- ')) {
-            const content = line.substring(2);
-            const splitText = doc.splitTextToSize(content, maxWidth - 5);
-            checkPageBreak(splitText.length * lineHeight);
-            doc.text('•', x, y);
-            doc.text(splitText, x + 5, y);
-            y += splitText.length * lineHeight;
-            continue;
-        }
-
-        // Handle inline formatting (bold) with wrapping
-        const segments = line.split(/(\*\*.*?\*\*)/g).filter(Boolean);
-        let currentX = x;
-        
-        for (const segment of segments) {
-            let style = 'normal';
-            let content = segment;
-
-            if (segment.startsWith('**') && segment.endsWith('**')) {
-                style = 'bold';
-                content = segment.slice(2, -2);
-            }
-            
-            doc.setFont('helvetica', style as 'normal' | 'bold');
-            const words = content.split(' ');
-
-            for (const word of words) {
-                const wordWidth = doc.getStringUnitWidth(word + ' ') * doc.getFontSize() / doc.internal.scaleFactor;
-                if (currentX + wordWidth > x + maxWidth) {
-                    currentX = x;
-                    y += lineHeight;
-                    checkPageBreak(lineHeight);
-                }
-                doc.text(word + ' ', currentX, y);
-                currentX += wordWidth;
-            }
-        }
-        y += lineHeight; // Move to next line after processing all segments
-        checkPageBreak(lineHeight);
-    }
-    return y;
-}
-
-
 export const generatePDF = (title: string, content: string, courseCode: string, year: number) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 20;
   const maxLineWidth = pageWidth - margin * 2;
-  let yPos = 20;
 
   // Header
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text("ADEKUNLE AJASIN UNIVERSITY, AKUNGBA-AKOKO", pageWidth / 2, yPos, { align: "center" });
-  yPos += 8;
+  doc.text("ADEKUNLE AJASIN UNIVERSITY, AKUNGBA-AKOKO", pageWidth / 2, 20, { align: "center" });
   
   doc.setFontSize(14);
-  doc.text("FINANCE STUDENTS' ASSOCIATION", pageWidth / 2, yPos, { align: "center" });
-  yPos += 7;
+  doc.text("FINANCE STUDENTS' ASSOCIATION", pageWidth / 2, 28, { align: "center" });
 
   doc.setLineWidth(0.5);
-  doc.line(margin, yPos, pageWidth - margin, yPos);
-  yPos += 10;
+  doc.line(margin, 35, pageWidth - margin, 35);
 
   // Course Info
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
-  doc.text(`Course Code: ${courseCode}`, margin, yPos);
-  doc.text(`Year: ${year}`, pageWidth - margin, yPos, { align: "right" });
-  yPos += 7;
+  doc.text(`Course Code: ${courseCode}`, margin, 45);
+  doc.text(`Year: ${year}`, pageWidth - margin - 30, 45); // Approximate right align
   
   doc.setFont("helvetica", "bold");
-  doc.text(`Course Title: ${title}`, margin, yPos);
-  yPos += 7;
+  doc.text(`Course Title: ${title}`, margin, 52);
 
-  doc.line(margin, yPos, pageWidth - margin, yPos);
-  yPos += 10;
+  doc.line(margin, 58, pageWidth - margin, 58);
 
-  // Content using the new Markdown renderer
+  // Content
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
-  renderMarkdown(doc, content, { x: margin, y: yPos, maxWidth: maxLineWidth });
 
+  const splitText = doc.splitTextToSize(content, maxLineWidth);
+  doc.text(splitText, margin, 68);
 
   // Footer
+  // Use 'any' cast to bypass strict type checking on internal properties if types are mismatched
   const pageCount = (doc as any).internal.getNumberOfPages();
   for(let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
@@ -154,6 +62,7 @@ export const generateTestReviewPDF = (questions: any[], userAnswers: Record<numb
     const maxLineWidth = pageWidth - margin * 2;
     let yPos = 20;
 
+    // Helper to add new page if needed
     const checkPageBreak = (spaceNeeded: number) => {
         if (yPos + spaceNeeded > pageHeight - margin) {
             doc.addPage();
@@ -180,30 +89,35 @@ export const generateTestReviewPDF = (questions: any[], userAnswers: Record<numb
     doc.line(margin, yPos, pageWidth - margin, yPos);
     yPos += 15;
 
+    // Questions
     doc.setFontSize(11);
     
     questions.forEach((q, idx) => {
         const qTitle = `Q${idx + 1}: ${q.text}`;
         const splitTitle = doc.splitTextToSize(qTitle, maxLineWidth);
-        checkPageBreak(splitTitle.length * 6 + 10);
+        const titleHeight = splitTitle.length * 6; // Approx 6mm per line
+
+        checkPageBreak(titleHeight + 10); // Check for title space
 
         doc.setFont("helvetica", "bold");
         doc.text(splitTitle, margin, yPos);
-        yPos += splitTitle.length * 6 + 4;
+        yPos += titleHeight + 4; // Add extra padding after question
 
         doc.setFont("helvetica", "normal");
         q.options.forEach((opt: string, optIdx: number) => {
             const isCorrect = q.correctAnswer === optIdx;
             const isSelected = userAnswers[idx] === optIdx;
             
+            let prefix = "   ";
             let suffix = "";
             if (isCorrect) suffix += " (Correct)";
-            if (isSelected && !isCorrect) suffix += " (Your Answer)";
-            if (isSelected && isCorrect) suffix += " (Your Answer)";
+            if (isSelected) suffix += " (Your Answer)";
 
             const optText = `${String.fromCharCode(65+optIdx)}. ${opt}${suffix}`;
-            const splitOpt = doc.splitTextToSize(optText, maxLineWidth - 10);
-            checkPageBreak(splitOpt.length * 6 + 2);
+            const splitOpt = doc.splitTextToSize(optText, maxLineWidth - 10); // Indent slightly
+            const optHeight = splitOpt.length * 6;
+
+            checkPageBreak(optHeight + 2);
 
             if (isCorrect) doc.setTextColor(0, 150, 0); // Green
             else if (isSelected && !isCorrect) doc.setTextColor(200, 0, 0); // Red
@@ -211,12 +125,13 @@ export const generateTestReviewPDF = (questions: any[], userAnswers: Record<numb
 
             doc.text(splitOpt, margin + 5, yPos);
             doc.setTextColor(0, 0, 0); // Reset
-            yPos += splitOpt.length * 6 + 2;
+            yPos += optHeight + 2;
         });
         
-        yPos += 10;
+        yPos += 10; // Spacing between questions
     });
 
+    // Add footer page numbers
     const pageCount = (doc as any).internal.getNumberOfPages();
     for(let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -225,5 +140,5 @@ export const generateTestReviewPDF = (questions: any[], userAnswers: Record<numb
         doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: "center" });
     }
 
-    doc.save(`FINSA_Test_Result_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`FINQUEST_Test_Result_${new Date().toISOString().split('T')[0]}.pdf`);
 };

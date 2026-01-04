@@ -1,8 +1,8 @@
+
 import React, { useState, FormEvent, useRef, useEffect, useContext } from 'react';
 import { Level } from '../types';
 import { LEVELS } from '../constants';
-// FIX: 'uploadToFirebaseStorage' is not an exported member of '../utils/api'. Switched to using 'uploadWithFallback' and aliased it as 'uploadFile'.
-import { uploadWithFallback as uploadFile, uploadToImgBB, trackAiUsage } from '../utils/api';
+import { uploadFile, uploadToImgBB, trackAiUsage } from '../utils/api';
 import { db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { AuthContext } from '../contexts/AuthContext';
@@ -82,11 +82,7 @@ export const UploadPage: React.FC = () => {
             if (uploadType === 'document') {
                 if (!file) throw new Error("Document file not selected.");
                 setUploadStatus('Uploading Document...');
-                // FIX: The onProgress callback for uploadFile (aliased from uploadWithFallback) requires both progress and status.
-                const { url, path } = await uploadFile(file, 'past_questions', (progress, status) => {
-                    setUploadProgress(progress);
-                    setUploadStatus(status);
-                });
+                const { url, path } = await uploadFile(file, 'past_questions', setUploadProgress);
                 questionData.fileUrl = url;
                 questionData.storagePath = path;
             } else if (uploadType === 'images') {
@@ -177,7 +173,7 @@ export const UploadPage: React.FC = () => {
 
     const renderTextEditor = () => (
         <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
-            <div className="p-2 border-b border-slate-200 dark:border-slate-700 flex items-center gap-1 bg-slate-50 dark:bg-slate-800 flex-wrap sticky top-0">
+            <div className="p-2 border-b border-slate-200 dark:border-slate-700 flex items-center gap-1 bg-slate-50 dark:bg-slate-800 flex-wrap">
                 <button type="button" onClick={() => applyFormat('bold')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center font-bold" title="Bold">B</button>
                 <button type="button" onClick={() => applyFormat('italic')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center italic font-serif" title="Italic">I</button>
                 <button type="button" onClick={() => applyFormat('strike')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center line-through" title="Strikethrough">S</button>

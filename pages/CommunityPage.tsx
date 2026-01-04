@@ -1,16 +1,23 @@
-
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { db } from '../firebase';
-import { collection, addDoc, query, orderBy, onSnapshot, doc, getDocs, updateDoc, increment } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, deleteDoc, updateDoc, increment, arrayUnion } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
 import { VerificationBadge } from '../components/VerificationBadge';
-import { Role, BadgeType, CommunityGroup } from '../types';
+import { Role, BadgeType } from '../types';
 import { uploadToImgBB } from '../utils/api';
 
 interface Message {
-    id: string; text: string; imageUrl?: string; senderId: string; senderName: string; senderRole?: Role; 
-    isVerified?: boolean; senderBadges?: BadgeType[]; createdAt: string; avatarUrl?: string;
+    id: string;
+    text: string;
+    imageUrl?: string;
+    senderId: string;
+    senderName: string;
+    senderRole?: Role; 
+    isVerified?: boolean; 
+    senderBadges?: BadgeType[];
+    createdAt: string;
+    avatarUrl?: string;
 }
 
 export const CommunityPage: React.FC = () => {
@@ -22,11 +29,20 @@ export const CommunityPage: React.FC = () => {
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const dummyRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewImage, setPreviewImage] = useState<File | null>(null);
+  const [imageCaption, setImageCaption] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [socialLinks, setSocialLinks] = useState({ whatsapp: '', telegram: '' });
 
-  const [groups, setGroups] = useState<CommunityGroup[]>([]);
-  const [loadingGroups, setLoadingGroups] = useState(true);
+  useEffect(() => {
+      const fetchLinks = async () => {
+          try {
+              const snap = await getDoc(doc(db, 'content', 'social_links'));
+              if (snap.exists()) setSocialLinks(snap.data() as any);
+          } catch (e) {}
+      };
+      fetchLinks();
+  }, []);
 
   useEffect(() => {
       if (view === 'chat') {
@@ -34,17 +50,6 @@ export const CommunityPage: React.FC = () => {
           return onSnapshot(q, (snapshot) => {
               setMessages(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Message)));
           });
-      }
-      if (view === 'hub') {
-          const fetchGroups = async () => {
-              setLoadingGroups(true);
-              try {
-                  const snap = await getDocs(collection(db, 'groups'));
-                  setGroups(snap.docs.map(d => ({id: d.id, ...d.data()}) as CommunityGroup));
-              } catch (e) { console.error(e); }
-              finally { setLoadingGroups(false); }
-          };
-          fetchGroups();
       }
   }, [view]);
 
@@ -54,51 +59,66 @@ export const CommunityPage: React.FC = () => {
 
   const handleSend = async (e?: React.FormEvent) => {
       if (e) e.preventDefault();
-      if ((!newMessage.trim() && !previewImage) || !auth?.user || sending) return;
+      const textToSend = previewImage ? imageCaption.trim() : newMessage.trim();
+      if ((!textToSend && !previewImage) || !auth?.user || sending) return;
+
       setSending(true);
       try {
           let imageUrl = '';
           if (previewImage) imageUrl = await uploadToImgBB(previewImage);
+
           const displayName = auth.user.username ? `@${auth.user.username}` : auth.user.name;
           await addDoc(collection(db, 'community_messages'), {
-              text: newMessage.trim(), imageUrl, senderId: auth.user.id, senderName: displayName,
-              senderRole: auth.user.role, isVerified: auth.user.isVerified || false,
-              senderBadges: auth.user.badges || [], avatarUrl: auth.user.avatarUrl || '',
+              text: textToSend,
+              imageUrl,
+              senderId: auth.user.id,
+              senderName: displayName,
+              senderRole: auth.user.role,
+              isVerified: auth.user.isVerified || false,
+              senderBadges: auth.user.badges || [],
+              avatarUrl: auth.user.avatarUrl || '',
               createdAt: new Date().toISOString()
           });
+          
+          // Track activity for "Chatty" badge
           const userRef = doc(db, 'users', auth.user.id);
           await updateDoc(userRef, { messageCount: increment(1) });
           if ((auth.user.messageCount || 0) + 1 >= 50 && !auth.user.badges?.includes('chatty')) {
-              await updateDoc(userRef, { badges: [...(auth.user.badges || []), 'chatty'] });
+              await updateDoc(userRef, { badges: arrayUnion('chatty') });
           }
-          setNewMessage(''); setPreviewImage(null);
-      } catch (error: any) { showNotification("Failed to send.", "error"); } 
-      finally { setSending(false); }
+
+          setNewMessage('');
+          setPreviewImage(null);
+          setImageCaption('');
+      } catch (error: any) {
+          showNotification("Failed to send.", "error");
+      } finally {
+          setSending(false);
+      }
   };
 
   if (view === 'hub') {
       return (
-          <div className="p-4 sm:p-6 md:p-8 bg-slate-50 dark:bg-slate-900 min-h-full">
-              <div className="max-w-4xl mx-auto">
-                  <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Community Hub</h1>
-                  <p className="text-slate-500 dark:text-slate-400 mb-8">Engage with fellow students and join study groups.</p>
-                  <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 mb-8">
-                      <h2 className="font-bold text-xl text-slate-800 dark:text-white mb-4">Student Lounge</h2>
-                      <p className="text-slate-600 dark:text-slate-400 mb-6">A real-time public chat room for all registered finance students to discuss topics, share ideas, and connect.</p>
-                      <button onClick={() => setView('chat')} className="w-full sm:w-auto px-8 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">Enter Chat Room</button>
-                  </div>
-                  <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700">
-                       <h2 className="font-bold text-xl text-slate-800 dark:text-white mb-4">Official Groups</h2>
-                       {loadingGroups ? <p className="text-sm text-slate-500">Loading groups...</p> : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {groups.map(group => (
-                                  <a key={group.id} href={group.link} target="_blank" rel="noopener noreferrer" className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                                      <h3 className="font-bold text-slate-800 dark:text-white">{group.name}</h3>
-                                      <p className="text-xs text-slate-500 dark:text-slate-400">{group.description}</p>
-                                  </a>
-                              ))}
-                          </div>
-                       )}
+          <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 animate-fade-in transition-colors">
+              <div className="container mx-auto max-w-4xl pt-10">
+                  <h1 className="text-5xl font-serif font-black text-center text-slate-900 dark:text-white mb-4">The Square</h1>
+                  <p className="text-center text-slate-500 mb-12">Departmental connections and networking.</p>
+                  <div className="grid md:grid-cols-2 gap-8">
+                      <button onClick={() => setView('chat')} className="bg-gradient-to-br from-indigo-600 to-purple-700 p-10 rounded-[3rem] text-white shadow-2xl hover:scale-[1.02] transition-transform text-left group">
+                          <h3 className="text-3xl font-bold mb-2">Student Lounge</h3>
+                          <p className="text-indigo-100 opacity-80">Official community chat room.</p>
+                          <div className="mt-8 inline-flex items-center gap-2 bg-white/20 px-6 py-2 rounded-full font-bold text-xs uppercase tracking-widest">Enter Lounge →</div>
+                      </button>
+                      <div className="space-y-4">
+                          <a href={socialLinks.whatsapp} target="_blank" className="flex items-center gap-4 bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 hover:border-emerald-500 shadow-sm transition-all group">
+                              <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform font-bold">W</div>
+                              <span className="font-bold text-slate-800 dark:text-white">WhatsApp Hub</span>
+                          </a>
+                          <a href={socialLinks.telegram} target="_blank" className="flex items-center gap-4 bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 hover:border-sky-500 shadow-sm transition-all group">
+                              <div className="w-12 h-12 bg-sky-50 text-sky-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform font-bold">T</div>
+                              <span className="font-bold text-slate-800 dark:text-white">Telegram Channel</span>
+                          </a>
+                      </div>
                   </div>
               </div>
           </div>
@@ -106,36 +126,61 @@ export const CommunityPage: React.FC = () => {
   }
 
   return (
-      <div className="h-screen bg-slate-100 dark:bg-slate-900 flex flex-col transition-colors">
-          <header className="px-6 py-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 flex justify-between items-center z-10 shadow-sm">
-              <div className="flex items-center gap-2">
-                  <button onClick={() => setView('hub')} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500">← Back to Hub</button>
+      <div className="h-screen bg-slate-100 dark:bg-slate-950 flex flex-col transition-colors relative z-0">
+          <div className="px-6 py-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 flex justify-between items-center z-10 shadow-sm">
+              <div className="flex items-center gap-4">
+                  <button onClick={() => setView('hub')} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400">←</button>
+                  <div>
+                      <h2 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">Student Lounge</h2>
+                      <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">Active Community</p>
+                  </div>
               </div>
-              <h2 className="font-bold text-slate-900 dark:text-white">Student Lounge</h2>
-          </header>
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-              {messages.map(msg => {
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50 dark:bg-slate-950">
+              {messages.map((msg) => {
                   const isMe = msg.senderId === auth.user?.id;
                   return (
-                      <div key={msg.id} className={`flex gap-3 items-end ${isMe ? 'flex-row-reverse' : 'flex-row'} animate-fade-in group`}>
-                          {!isMe && <img src={msg.avatarUrl || `https://ui-avatars.com/api/?name=${msg.senderName}`} className="w-8 h-8 rounded-full shadow-sm" />}
-                          <div className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm ${isMe ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-bl-none'}`}>
-                              {!isMe && <div className="flex items-center gap-2 mb-1"><span className="text-xs font-bold text-indigo-500 dark:text-indigo-400">{msg.senderName}</span><VerificationBadge role={msg.senderRole} isVerified={msg.isVerified} badges={msg.senderBadges} className="w-3 h-3" /></div>}
-                              {msg.imageUrl && <img src={msg.imageUrl} className="rounded-lg mb-2 max-w-full h-auto" />}
-                              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                              <div className={`text-[10px] mt-1 opacity-70 ${isMe ? 'text-indigo-200' : 'text-slate-400'}`}>{new Date(msg.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                      <div key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''} animate-fade-in group`}>
+                          {!isMe && <div className="w-10 h-10 rounded-2xl bg-slate-200 overflow-hidden shrink-0 shadow-sm"><img src={msg.avatarUrl || `https://ui-avatars.com/api/?name=${msg.senderName}`} className="w-full h-full object-cover" /></div>}
+                          <div className={`max-w-[75%] rounded-[2rem] px-6 py-4 shadow-sm ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-tl-none border border-slate-100 dark:border-slate-800'}`}>
+                              {!isMe && (
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-[10px] font-black uppercase text-indigo-500 dark:text-indigo-400">{msg.senderName}</span>
+                                    <VerificationBadge role={msg.senderRole} isVerified={msg.isVerified} badges={msg.senderBadges} className="w-3 h-3" />
+                                </div>
+                              )}
+                              {msg.imageUrl && <img src={msg.imageUrl} className="rounded-2xl mb-3 max-w-full h-auto cursor-zoom-in" onClick={() => window.open(msg.imageUrl, '_blank')} />}
+                              <p className="text-sm leading-relaxed">{msg.text}</p>
+                              <div className="flex justify-end mt-2 opacity-30 text-[9px] font-bold">
+                                  {new Date(msg.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                              </div>
                           </div>
                       </div>
                   );
               })}
               <div ref={dummyRef}></div>
-          </main>
-          <form onSubmit={handleSend} className="p-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex items-center gap-3">
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 text-slate-400 hover:text-indigo-600 transition-colors">📎</button>
+          </div>
+
+          <form onSubmit={handleSend} className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3">
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="p-4 text-slate-400 hover:text-indigo-600">📎</button>
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => e.target.files && setPreviewImage(e.target.files[0])} />
-              <input value={newMessage} onChange={e => setNewMessage(e.target.value)} className="flex-1 bg-slate-100 dark:bg-slate-700 rounded-full px-5 py-3 outline-none text-sm dark:text-white" placeholder="Type a message..." />
-              <button type="submit" disabled={!newMessage.trim() && !previewImage || sending} className="bg-indigo-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg disabled:opacity-50">→</button>
+              <input value={newMessage} onChange={e => setNewMessage(e.target.value)} className="flex-1 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 py-4 outline-none text-sm dark:text-white" placeholder="Say something to the department..." />
+              <button type="submit" disabled={!newMessage.trim() && !previewImage || sending} className="bg-indigo-600 text-white p-4 rounded-2xl shadow-xl shadow-indigo-500/20 disabled:opacity-30">Send</button>
           </form>
+
+          {previewImage && (
+              <div className="fixed inset-0 bg-slate-950/90 z-50 flex items-center justify-center p-6 backdrop-blur-md">
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] w-full max-w-md shadow-2xl">
+                      <img src={URL.createObjectURL(previewImage)} className="rounded-[1.5rem] mb-6 max-h-[50vh] w-full object-contain bg-black" />
+                      <input className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-xl mb-6 outline-none" placeholder="Add a caption..." value={imageCaption} onChange={e => setImageCaption(e.target.value)} />
+                      <div className="flex gap-3">
+                          <button type="button" onClick={() => setPreviewImage(null)} className="flex-1 py-4 font-bold text-slate-400">Cancel</button>
+                          <button onClick={handleSend} className="flex-1 py-4 bg-indigo-600 text-white font-black rounded-2xl uppercase tracking-widest text-xs">Post</button>
+                      </div>
+                  </div>
+              </div>
+          )}
       </div>
   );
 };
