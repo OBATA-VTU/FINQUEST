@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc, getDoc, setDoc } from 'firebase/firestore';
@@ -215,6 +214,7 @@ export const AdminContentPage: React.FC = () => {
           } else {
               await addDoc(collection(db, colName), payload);
           }
+
           setIsModalOpen(false);
           fetchContent(activeContent);
           showNotification(isAiMode ? "Material generated & saved!" : "Saved successfully", "success");
