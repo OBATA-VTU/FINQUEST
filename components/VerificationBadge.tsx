@@ -18,17 +18,20 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({ role, isVe
     <div className="inline-flex items-center gap-1">
       {/* Official Status Badges */}
       {role === 'admin' && (
-        <svg className={`${className} text-amber-500 fill-current animate-pulse`} viewBox="0 0 24 24" title="Main Admin">
+        <svg className={`${className} text-amber-500 fill-current animate-pulse`} viewBox="0 0 24 24">
+          <title>Main Admin</title>
           <path d={checkmarkPath} />
         </svg>
       )}
       {['executive', 'vice_president', 'librarian', 'supplement'].includes(role || '') && (
-        <svg className={`${className} text-rose-500 fill-current`} viewBox="0 0 24 24" title="Executive Member">
+        <svg className={`${className} text-rose-500 fill-current`} viewBox="0 0 24 24">
+          <title>Executive Member</title>
           <path d={checkmarkPath} />
         </svg>
       )}
       {isVerified && role === 'student' && (
-        <svg className={`${className} text-blue-500 fill-current`} viewBox="0 0 24 24" title="Verified Student">
+        <svg className={`${className} text-blue-500 fill-current`} viewBox="0 0 24 24">
+          <title>Verified Student</title>
           <path d={checkmarkPath} />
         </svg>
       )}
