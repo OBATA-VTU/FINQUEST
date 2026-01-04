@@ -4,12 +4,61 @@ const renderMarkdownContent = (doc: jsPDF, markdown: string, startX: number, sta
     let y = startY;
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 20;
+    const lineHeight = 7;
 
     const checkPageBreak = (neededHeight: number) => {
         if (y + neededHeight > pageHeight - margin) {
             doc.addPage();
             y = margin;
         }
+    };
+
+    const renderStyledLine = (line: string) => {
+        const regex = /(\*\*.*?\*\*|_.*?_|~~.*?~~)/g;
+        const parts = line.split(regex).filter(part => part);
+
+        let currentX = startX;
+        checkPageBreak(lineHeight);
+
+        for (const part of parts) {
+            let isBold = false;
+            let isItalic = false;
+            let isStrike = false;
+            let text = part;
+
+            if (part.startsWith('**') && part.endsWith('**')) {
+                isBold = true;
+                text = part.substring(2, part.length - 2);
+            } else if (part.startsWith('_') && part.endsWith('_')) {
+                isItalic = true;
+                text = part.substring(1, part.length - 1);
+            } else if (part.startsWith('~~') && part.endsWith('~~')) {
+                isStrike = true;
+                text = part.substring(2, part.length - 2);
+            }
+            
+            let fontStyle = 'normal';
+            if (isBold && isItalic) fontStyle = 'bolditalic';
+            else if (isBold) fontStyle = 'bold';
+            else if (isItalic) fontStyle = 'italic';
+            doc.setFont('helvetica', fontStyle);
+
+            const words = text.split(' ');
+            for (let i = 0; i < words.length; i++) {
+                const word = words[i] + (i === words.length - 1 ? '' : ' ');
+                const wordWidth = doc.getStringUnitWidth(word) * doc.getFontSize() / doc.internal.scaleFactor;
+
+                if (currentX + wordWidth > startX + maxWidth) {
+                    currentX = startX;
+                    y += lineHeight;
+                    checkPageBreak(lineHeight);
+                }
+                
+                doc.text(word, currentX, y, { flags: { 'strikeout': isStrike } });
+                currentX += wordWidth;
+            }
+        }
+        y += lineHeight; // Move to the next line after the full line is processed
     };
 
     const lines = markdown.split('\n');
@@ -22,7 +71,7 @@ const renderMarkdownContent = (doc: jsPDF, markdown: string, startX: number, sta
             const splitText = doc.splitTextToSize(text, maxWidth);
             checkPageBreak(splitText.length * 8 + 4);
             doc.text(splitText, startX, y);
-            y += splitText.length * 8 + 4; // Add more space after heading
+            y += splitText.length * 8 + 4;
         } else if (line.startsWith('* ') || line.startsWith('- ')) {
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(11);
@@ -33,38 +82,11 @@ const renderMarkdownContent = (doc: jsPDF, markdown: string, startX: number, sta
             doc.text(splitText, startX + 5, y);
             y += splitText.length * 5 + 2;
         } else if (line.trim() === '') {
-            checkPageBreak(5);
-            y += 5;
+            checkPageBreak(lineHeight);
+            y += lineHeight;
         } else {
-            // Handle plain text and bold (**text**)
-            const parts = line.split('**');
-            let currentX = startX;
             doc.setFontSize(11);
-
-            checkPageBreak(7); // Check for at least one line height
-
-            for (let i = 0; i < parts.length; i++) {
-                const textPart = parts[i];
-                const isBold = i % 2 !== 0;
-
-                doc.setFont('helvetica', isBold ? 'bold' : 'normal');
-                
-                // This is a simplified inline handler. For complex multi-line wrapping with mixed styles,
-                // a more advanced layout engine would be needed. This handles simple cases.
-                const textWidth = doc.getStringUnitWidth(textPart) * doc.getFontSize() / doc.internal.scaleFactor;
-                
-                if (currentX + textWidth > startX + maxWidth) {
-                    // This simple renderer doesn't handle complex line wrapping with mixed styles well.
-                    // For now, we just move to a new line if a segment overflows.
-                    y += 7;
-                    checkPageBreak(7);
-                    currentX = startX;
-                }
-                
-                doc.text(textPart, currentX, y);
-                currentX += textWidth;
-            }
-            y += 7; // Move to the next line after processing a line.
+            renderStyledLine(line);
         }
     }
     return y;

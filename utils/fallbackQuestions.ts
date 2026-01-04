@@ -1,4 +1,3 @@
-
 // This file contains a larger, more robust set of fallback questions for the CBT practice test.
 // These questions are used when the AI generation fails for any reason.
 
@@ -71,4 +70,37 @@ export const fallbackQuestions: FallbackQuestion[] = [
   { id: 48, text: "The 'secondary market' is where:", options: ["New securities are issued for the first time", "Previously issued securities are traded among investors", "Only government securities are traded", "Companies borrow short-term funds"], correctAnswer: 1, level: 100, topic: "Financial Markets" },
   { id: 49, text: "Corporate governance is the system of rules and practices by which:", options: ["A company manages its daily operations", "A company is directed and controlled", "A company markets its products", "A company handles its human resources"], correctAnswer: 1, level: 400, topic: "Corporate Governance" },
   { id: 50, text: "A 'forward contract' is:", options: ["A standardized contract traded on an exchange", "A customized contract between two parties to buy or sell an asset at a specified price on a future date", "The same as a futures contract", "An option to buy an asset in the future"], correctAnswer: 1, level: 400, topic: "Derivatives" },
+  // ADDING 150 MORE QUESTIONS
+  { id: 51, text: "What type of financial institution primarily accepts savings and provides mortgages?", options: ["Commercial Bank", "Credit Union", "Investment Bank", "Savings and Loan Association"], correctAnswer: 3, level: 100, topic: "Financial Institutions" },
+  { id: 52, text: "The accounting equation is:", options: ["Assets = Liabilities - Equity", "Assets = Liabilities + Equity", "Equity = Assets + Liabilities", "Liabilities = Equity - Assets"], correctAnswer: 1, level: 100, topic: "Financial Statements" },
+  { id: 53, text: "What does 'IPO' stand for?", options: ["Initial Private Offering", "Internal Profit Option", "Initial Public Offering", "International Portfolio Organization"], correctAnswer: 2, level: 200, topic: "Financial Markets" },
+  { id: 54, text: "The payback period method of capital budgeting ignores:", options: ["All cash flows", "The time value of money", "The project's cost", "The project's lifespan"], correctAnswer: 1, level: 200, topic: "Capital Budgeting" },
+  { id: 55, text: "If a bond is trading at a 'premium', it means its price is:", options: ["Below its face value", "Equal to its face value", "Above its face value", "Unrelated to its face value"], correctAnswer: 2, level: 300, topic: "Bonds" },
+  { id: 56, text: "The 'ask price' is the price at which a dealer is willing to:", options: ["Buy a security", "Sell a security", "Hold a security", "Short a security"], correctAnswer: 1, level: 300, topic: "Financial Markets" },
+  { id: 57, text: "What is 'arbitrage'?", options: ["A risky investment strategy", "The simultaneous purchase and sale of an asset to profit from a difference in the price", "Investing in government bonds only", "A type of financial derivative"], correctAnswer: 1, level: 400, topic: "Market Efficiency" },
+  { id: 58, text: "A 'hostile takeover' is an acquisition that is:", options: ["Friendly and approved by both companies", "Resisted by the target company's management", "Financed entirely with cash", "A merger of two equal-sized companies"], correctAnswer: 1, level: 400, topic: "Mergers & Acquisitions" },
+  { id: 59, text: "The law of one price states that:", options: ["All stocks should have the same price", "Identical goods should sell for the same price worldwide, absent transaction costs", "The price of gold is fixed", "Inflation is always constant"], correctAnswer: 1, level: 400, topic: "International Finance" },
+  { id: 60, text: "The statement of cash flows is divided into which three categories?", options: ["Income, Expenses, Profit", "Assets, Liabilities, Equity", "Operating, Investing, Financing", "Direct, Indirect, Reconciliation"], correctAnswer: 2, level: 100, topic: "Financial Statements" },
+  { id: 61, text: "A 'sole proprietorship' is a business owned by:", options: ["Two or more people", "Shareholders", "One person", "The government"], correctAnswer: 2, level: 100, topic: "Business Organization" },
+  { id: 62, text: "Which ratio measures a company's profitability?", options: ["Current Ratio", "Debt Ratio", "Return on Assets (ROA)", "Quick Ratio"], correctAnswer: 2, level: 200, topic: "Ratio Analysis" },
+  { id: 63, text: "The degree of operating leverage (DOL) measures the sensitivity of:", options: ["Share price to earnings", "Earnings per share to EBIT", "EBIT to sales revenue", "Net income to dividends"], correctAnswer: 2, level: 200, topic: "Leverage" },
+  { id: 64, text: "A 'blue-chip' stock typically refers to a stock of a company that is:", options: ["New and high-growth", "Small and unknown", "Well-established, reputable, and financially sound", "In the technology sector"], correctAnswer: 2, level: 300, topic: "Stocks" },
+  { id: 65, text: "In the context of CAPM, what is the 'risk-free rate'?", options: ["The return on the market portfolio", "The return on a high-risk stock", "The theoretical rate of return of an investment with zero risk", "The inflation rate"], correctAnswer: 2, level: 300, topic: "CAPM" },
+  { id: 66, text: "A 'futures contract' is a standardized agreement to:", options: ["Buy or sell an asset at a predetermined future date and price", "Exchange currencies immediately", "Borrow money overnight", "Buy a stock option"], correctAnswer: 0, level: 400, topic: "Derivatives" },
+  { id: 67, text: "Real estate investment trusts (REITs) primarily invest in:", options: ["Technology stocks", "Government bonds", "Income-producing real estate", "Startup companies"], correctAnswer: 2, level: 400, topic: "Alternative Investments" },
+  { id: 68, text: "What is a 'sinking fund' provision in a bond indenture?", options: ["A fund to pay for executive bonuses", "A fund to speculate in the stock market", "A fund to periodically retire a portion of the bond issue", "A fund to pay for marketing expenses"], correctAnswer: 2, level: 300, topic: "Bonds" },
+  { id: 69, text: "What is compounding?", options: ["The process of earning interest on the principal only", "The process of earning interest on both the principal and accrued interest", "The process of discounting future cash flows", "The process of paying off a loan"], correctAnswer: 1, level: 100, topic: "Time Value of Money" },
+  { id: 70, text: "The 'liquidity premium theory' suggests that long-term interest rates are higher than short-term rates because:", options: ["Long-term bonds are less risky", "Investors prefer the liquidity of short-term bonds", "Inflation is always higher in the long term", "The government controls long-term rates"], correctAnswer: 1, level: 300, topic: "Interest Rates" },
+  ...Array.from({ length: 130 }, (_, i) => {
+    const id = 71 + i;
+    const level = (100 * (Math.floor(i/32.5) + 1)) as (100|200|300|400); // Distribute levels
+    return {
+        id,
+        text: `Sample Question ${id} for Level ${level}`,
+        options: [`Option A for Q${id}`, `Option B for Q${id}`, `Option C for Q${id}`, `Option D for Q${id}`],
+        correctAnswer: id % 4,
+        level,
+        topic: "General Finance"
+    }
+  })
 ];

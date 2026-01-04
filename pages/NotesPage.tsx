@@ -48,6 +48,11 @@ export const NotesPage: React.FC = () => {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!auth?.user) return;
+
+        if (!title.trim()) {
+            showNotification("Title cannot be empty.", "warning");
+            return;
+        }
         
         try {
             if (isEditing) {
