@@ -1,9 +1,8 @@
-
 import { db } from '../firebase';
 import { doc, setDoc, increment } from 'firebase/firestore';
 
 const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || "a4aa97ad337019899bb59b4e94b149e0";
-const DROPBOX_ACCESS_TOKEN = import.meta.env.VITE_DROPBOX_ACCESS_TOKEN;
+const DROPBOX_ACCESS_TOKEN = process.env.DROPBOX_ACCESS_TOKEN;
 
 // Helper to track AI Usage for Admin Dashboard
 export const trackAiUsage = async () => {
@@ -57,7 +56,7 @@ export const uploadFile = (file: File, folder: string = 'materials', onProgress?
     return new Promise(async (resolve, reject) => {
         try {
             if (!DROPBOX_ACCESS_TOKEN) {
-                return reject(new Error("Storage service is unavailable. Check API keys."));
+                return reject(new Error("Dropbox access token is missing. Please check the VITE_DROPBOX_ACCESS_TOKEN environment variable."));
             }
 
             const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
