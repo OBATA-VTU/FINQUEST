@@ -1,3 +1,7 @@
+
+// This file contains a larger, more robust set of fallback questions for the CBT practice test.
+// These questions are used when the AI generation fails for any reason.
+
 export interface FallbackQuestion {
   id: number;
   text: string;
@@ -8,89 +12,63 @@ export interface FallbackQuestion {
 }
 
 export const fallbackQuestions: FallbackQuestion[] = [
-  // 100 LEVEL: INTRODUCTION TO FINANCE
-  { id: 1, text: "Which financial statement reports a company's financial position at a point in time?", options: ["Income Statement", "Balance Sheet", "Cash Flow Statement", "Retained Earnings"], correctAnswer: 1, level: 100, topic: "General" },
-  { id: 2, text: "The concept that 'a Naira today is worth more than a Naira tomorrow' is known as:", options: ["Inflation", "Time Value of Money", "Opportunity Cost", "Liquidity Preference"], correctAnswer: 1, level: 100, topic: "General" },
-  { id: 3, text: "Which of the following is a primary market transaction?", options: ["Buying stock on the NSE", "Buying an IPO", "Selling shares to a friend", "Corporate buy-back"], correctAnswer: 1, level: 100, topic: "Financial Markets" },
-  { id: 4, text: "What is the primary objective of a firm in financial management?", options: ["Profit Maximization", "Cost Minimization", "Shareholder Wealth Maximization", "Tax Evasion"], correctAnswer: 2, level: 100, topic: "General" },
-  { id: 5, text: "The ratio of Current Assets to Current Liabilities is known as:", options: ["Quick Ratio", "Current Ratio", "Debt Ratio", "Profitability Ratio"], correctAnswer: 1, level: 100, topic: "Ratio Analysis" },
-  { id: 6, text: "Which entity regulates the Nigerian capital market?", options: ["Central Bank of Nigeria (CBN)", "Security and Exchange Commission (SEC)", "Federal Ministry of Finance", "Standard Organization of Nigeria"], correctAnswer: 1, level: 100, topic: "Financial Markets" },
-  { id: 7, text: "Compound interest is calculated on:", options: ["Principal only", "Accrued interest only", "Principal and accumulated interest", "None of the above"], correctAnswer: 2, level: 100, topic: "General" },
-  { id: 8, text: "Which of these is considered a 'Paper Asset'?", options: ["Real Estate", "Gold", "Stocks", "Machinery"], correctAnswer: 2, level: 100, topic: "General" },
-  { id: 9, text: "A market where long-term debt and equity are traded is the:", options: ["Money Market", "Capital Market", "Commodity Market", "Black Market"], correctAnswer: 1, level: 100, topic: "Financial Markets" },
-  { id: 10, text: "What does 'ROI' stand for?", options: ["Rate Of Interest", "Return On Investment", "Revenue Of Industry", "Ratio Of Income"], correctAnswer: 1, level: 100, topic: "General" },
+  // 100 Level - Introduction to Finance
+  { id: 1, text: "What is the primary goal of financial management?", options: ["Maximize profits", "Maximize shareholder wealth", "Minimize costs", "Maximize sales"], correctAnswer: 1, level: 100, topic: "Intro to Finance" },
+  { id: 2, text: "Which of the following is a current asset?", options: ["Land", "Machinery", "Inventory", "Bonds Payable"], correctAnswer: 2, level: 100, topic: "Financial Statements" },
+  { id: 3, text: "The concept of 'Time Value of Money' suggests that...", options: ["A dollar today is worth more than a dollar tomorrow", "A dollar today is worth less than a dollar tomorrow", "A dollar's value is constant over time", "Inflation has no effect on money"], correctAnswer: 0, level: 100, topic: "Time Value of Money" },
+  { id: 4, text: "Which financial statement shows a company's financial position at a specific point in time?", options: ["Income Statement", "Statement of Cash Flows", "Balance Sheet", "Statement of Retained Earnings"], correctAnswer: 2, level: 100, topic: "Financial Statements" },
+  { id: 5, text: "Working Capital is defined as:", options: ["Total Assets - Total Liabilities", "Current Assets - Current Liabilities", "Fixed Assets - Long-term Debt", "Total Revenue - Total Expenses"], correctAnswer: 1, level: 100, topic: "Working Capital" },
 
-  // 200 LEVEL: CORPORATE FINANCE & ACCOUNTING
-  { id: 11, text: "Net Present Value (NPV) is positive when:", options: ["IRR > Cost of Capital", "IRR < Cost of Capital", "Cost of Capital = 0", "Cash inflows are zero"], correctAnswer: 0, level: 200, topic: "Capital Budgeting" },
-  { id: 12, text: "Which capital budgeting technique considers the Time Value of Money?", options: ["Payback Period", "Accounting Rate of Return", "Profitability Index", "Average Return"], correctAnswer: 2, level: 200, topic: "Capital Budgeting" },
-  { id: 13, text: "Working capital management involves managing:", options: ["Long term assets", "Shareholder equity", "Short term assets and liabilities", "Tax liabilities"], correctAnswer: 2, level: 200, topic: "Working Capital" },
-  { id: 14, text: "Operating leverage measures the effect of fixed costs on:", options: ["EBIT", "EPS", "Net Income", "Sales"], correctAnswer: 0, level: 200, topic: "Leverage" },
-  { id: 15, text: "What is 'WACC' in corporate finance?", options: ["Weighted Average Cost of Capital", "Weekly Average Cash Collection", "Western African Currency Code", "Weighted Asset Credit Cost"], correctAnswer: 0, level: 200, topic: "Cost of Capital" },
-  { id: 16, text: "The mix of a firm's permanent long-term financing is called:", options: ["Financial structure", "Capital structure", "Asset structure", "Owner structure"], correctAnswer: 1, level: 200, topic: "Capital Structure" },
-  { id: 17, text: "Modigliani-Miller Theorem suggests that in a perfect market, capital structure is:", options: ["Extremely important", "Irrelevant to firm value", "The only thing that matters", "Dependent on tax"], correctAnswer: 1, level: 200, topic: "Capital Structure" },
-  { id: 18, text: "The point where a project's NPV is zero is the:", options: ["Break-even point", "Optimal point", "Internal Rate of Return (IRR)", "Profitability threshold"], correctAnswer: 2, level: 200, topic: "Capital Budgeting" },
-  { id: 19, text: "Inventory turnover is a measure of:", options: ["Liquidity", "Efficiency", "Profitability", "Leverage"], correctAnswer: 1, level: 200, topic: "Ratio Analysis" },
-  { id: 20, text: "Agency problem arises due to conflict of interest between:", options: ["Bankers and customers", "Managers and Shareholders", "Government and Firms", "Suppliers and Buyers"], correctAnswer: 1, level: 200, topic: "Corporate Governance" },
+  // 200 Level - Corporate Finance
+  { id: 6, text: "What does NPV stand for in capital budgeting?", options: ["Net Profit Value", "Nominal Present Value", "Net Present Value", "Net Past Value"], correctAnswer: 2, level: 200, topic: "Capital Budgeting" },
+  { id: 7, text: "If a project's NPV is positive, the project should be:", options: ["Rejected", "Accepted", "Re-evaluated", "Delayed"], correctAnswer: 1, level: 200, topic: "Capital Budgeting" },
+  { id: 8, text: "The discount rate that makes the NPV of an investment zero is called the:", options: ["Payback Period", "Accounting Rate of Return", "Profitability Index", "Internal Rate of Return (IRR)"], correctAnswer: 3, level: 200, topic: "Capital Budgeting" },
+  { id: 9, text: "Cost of capital is the:", options: ["Cost of issuing new stock", "Rate of return a firm must earn on its investments", "Interest rate on a company's debt", "Dividend paid to shareholders"], correctAnswer: 1, level: 200, topic: "Cost of Capital" },
+  { id: 10, text: "Financial leverage refers to the use of:", options: ["Equity financing", "Retained earnings", "Borrowed funds", "Current assets"], correctAnswer: 2, level: 200, topic: "Leverage" },
+  { id: 11, text: "A company's dividend policy is primarily concerned with:", options: ["How much to borrow", "How much to invest in new projects", "How much of its earnings to pay out to shareholders", "How to manage its cash flow"], correctAnswer: 2, level: 200, topic: "Dividend Policy" },
 
-  // 300 LEVEL: INVESTMENTS & FINANCIAL ANALYSIS
-  { id: 21, text: "Systematic risk is also known as:", options: ["Diversifiable risk", "Market risk", "Unique risk", "Asset risk"], correctAnswer: 1, level: 300, topic: "Risk & Return" },
-  { id: 22, text: "A stock's beta measures its:", options: ["Total risk", "Sensitivity to market movements", "Dividend yield", "Earnings growth"], correctAnswer: 1, level: 300, topic: "Risk & Return" },
-  { id: 23, text: "According to CAPM, expected return is a function of:", options: ["Alpha", "Beta", "Gamma", "Standard Deviation"], correctAnswer: 1, level: 300, topic: "Investments" },
-  { id: 24, text: "The 'Efficient Frontier' represents portfolios with:", options: ["Highest risk", "Lowest return", "Highest return for given risk", "Zero risk"], correctAnswer: 2, level: 300, topic: "Portfolio Theory" },
-  { id: 25, text: "A bond sold at a price higher than its face value is at a:", options: ["Discount", "Premium", "Par", "Yield"], correctAnswer: 1, level: 300, topic: "Bonds" },
-  { id: 26, text: "The inverse relationship between bond prices and interest rates is:", options: ["Direct", "Linear", "Inverse", "Irrelevant"], correctAnswer: 2, level: 300, topic: "Bonds" },
-  { id: 27, text: "Technical analysis involves studying:", options: ["Balance sheets", "Market trends and price charts", "Management quality", "Macroeconomics"], correctAnswer: 1, level: 300, topic: "Investments" },
-  { id: 28, text: "A portfolio with a beta of 1.0 is expected to:", options: ["Outperform the market", "Move exactly with the market", "Be risk-free", "Have zero return"], correctAnswer: 1, level: 300, topic: "Investments" },
-  { id: 29, text: "The primary tool for diversifying risk in a portfolio is:", options: ["Leverage", "Asset Allocation", "Short Selling", "Margin Trading"], correctAnswer: 1, level: 300, topic: "Portfolio Theory" },
-  { id: 30, text: "Intrinsic value is most associated with:", options: ["Fundamental Analysis", "Technical Analysis", "Efficient Market Hypothesis", "Speculation"], correctAnswer: 0, level: 300, topic: "Investments" },
+  // 300 Level - Investments
+  { id: 12, text: "Systematic risk is also known as:", options: ["Diversifiable risk", "Unsystematic risk", "Market risk", "Specific risk"], correctAnswer: 2, level: 300, topic: "Risk and Return" },
+  { id: 13, text: "The Capital Asset Pricing Model (CAPM) describes the relationship between:", options: ["Inflation and interest rates", "Systematic risk and expected return", "A company's assets and liabilities", "Dividend yield and stock price"], correctAnswer: 1, level: 300, topic: "CAPM" },
+  { id: 14, text: "A stock's beta measures its:", options: ["Total risk", "Volatility relative to the market", "Dividend yield", "Liquidity"], correctAnswer: 1, level: 300, topic: "Risk and Return" },
+  { id: 15, text: "The Efficient Market Hypothesis (EMH) suggests that:", options: ["Stock prices are always inflated", "It is easy to consistently beat the market", "Stock prices fully reflect all available information", "Past price movements can predict future prices"], correctAnswer: 2, level: 300, topic: "EMH" },
+  { id: 16, text: "A bond's price will decrease when:", options: ["Market interest rates decrease", "The bond's coupon rate increases", "Market interest rates increase", "The bond reaches maturity"], correctAnswer: 2, level: 300, topic: "Bonds" },
+  { id: 17, text: "What is a 'call option'?", options: ["An obligation to buy an asset", "A right to sell an asset", "An obligation to sell an asset", "A right to buy an asset"], correctAnswer: 3, level: 300, topic: "Derivatives" },
+  { id: 18, text: "Diversification is most effective when security returns are:", options: ["Positively correlated", "Uncorrelated", "Negatively correlated", "Perfectly correlated"], correctAnswer: 2, level: 300, topic: "Portfolio Management" },
 
-  // 400 LEVEL: ADVANCED FINANCE & DERIVATIVES
-  { id: 31, text: "A contract giving the right but not obligation to buy an asset is a:", options: ["Forward", "Future", "Call Option", "Put Option"], correctAnswer: 2, level: 400, topic: "Derivatives" },
-  { id: 32, text: "Black-Scholes model is used primarily for pricing:", options: ["Bonds", "Stocks", "Options", "Real Estate"], correctAnswer: 2, level: 400, topic: "Derivatives" },
-  { id: 33, text: "In a merger, if the acquirer pays more than fair value, the excess is:", options: ["Operating profit", "Goodwill", "Capital gain", "Badwill"], correctAnswer: 1, level: 400, topic: "M&A" },
-  { id: 34, text: "A 'LBO' stands for:", options: ["Liquid Business Option", "Leveraged Buyout", "Large Bank Overdraft", "Long-term Bond Obligation"], correctAnswer: 1, level: 400, topic: "Corporate Finance" },
-  { id: 35, text: "Exchange Rate Risk is also called:", options: ["Translation Risk", "Inflation Risk", "Political Risk", "Currency Risk"], correctAnswer: 3, level: 400, topic: "International Finance" },
-  { id: 36, text: "The 'Golden Rule' of accumulation in growth theory is about maximizing:", options: ["Savings", "Consumption", "Investment", "Output"], correctAnswer: 1, level: 400, topic: "Advanced Theory" },
-  { id: 37, text: "Arbitrage involves profiting from:", options: ["Long-term growth", "Market inefficiencies/price differences", "High interest rates", "Government subsidies"], correctAnswer: 1, level: 400, topic: "Investments" },
-  { id: 38, text: "A currency swap involves exchanging:", options: ["Interest rates only", "Principal and interest in different currencies", "Equity for debt", "Physical cash"], correctAnswer: 1, level: 400, topic: "International Finance" },
-  { id: 39, text: "Which derivative is traded on an exchange with daily marking-to-market?", options: ["Forward", "Future", "Swap", "OTC Option"], correctAnswer: 1, level: 400, topic: "Derivatives" },
-  { id: 40, text: "Capital Flight refers to:", options: ["Government spending abroad", "Large scale exit of assets from a country", "Aviation industry investment", "Stock market crash"], correctAnswer: 1, level: 400, topic: "Macro-Finance" },
-
-  // ... (Expanding further to 80 questions to provide a solid base for variety)
-  { id: 41, text: "Which component of GDP is most volatile in Nigeria?", options: ["Consumption", "Investment", "Government Spending", "Net Exports"], correctAnswer: 1, level: 100, topic: "Economics" },
-  { id: 42, text: "What is 'Fiat Money'?", options: ["Money backed by gold", "Money backed by silver", "Money with no intrinsic value, decreed by government", "Commodity money"], correctAnswer: 2, level: 100, topic: "Money & Banking" },
-  { id: 43, text: "The 'Double Entry' system means:", options: ["Recording two items", "Recording once in two places", "Debit and Credit for every transaction", "Entry for two persons"], correctAnswer: 2, level: 100, topic: "Accounting" },
-  { id: 44, text: "A 'Bull Market' refers to:", options: ["Rising prices", "Falling prices", "Sideways prices", "Market closure"], correctAnswer: 0, level: 100, topic: "General" },
-  { id: 45, text: "Dividends are paid out of:", options: ["Capital", "Retained Earnings", "Sales Revenue", "Loans"], correctAnswer: 1, level: 100, topic: "General" },
-  { id: 46, text: "The primary source of revenue for the Nigerian government is:", options: ["Agriculture", "Manufacturing", "Crude Oil", "Tourism"], correctAnswer: 2, level: 100, topic: "General" },
-  { id: 47, text: "What is the 'Spread' in banking?", options: ["Bank expansion", "Difference between lending and deposit rates", "ATM fees", "Staff salary"], correctAnswer: 1, level: 100, topic: "Banking" },
-  { id: 48, text: "Which of these is NOT a function of money?", options: ["Medium of exchange", "Store of value", "Measure of weight", "Standard of deferred payment"], correctAnswer: 2, level: 100, topic: "General" },
-  { id: 49, text: "Macroeconomics deals with:", options: ["Single firms", "Aggregates of the economy", "Individual consumers", "Specific markets"], correctAnswer: 1, level: 100, topic: "Economics" },
-  { id: 50, text: "Inflation is defined as:", options: ["Increase in price of one good", "Persistent rise in general price level", "Fall in value of stock", "Increase in population"], correctAnswer: 1, level: 100, topic: "General" },
+  // 400 Level - Advanced Topics
+  { id: 19, text: "A merger in which a firm acquires a supplier or a customer is called a:", options: ["Horizontal merger", "Vertical merger", "Conglomerate merger", "Congeneric merger"], correctAnswer: 1, level: 400, topic: "Mergers & Acquisitions" },
+  { id: 20, text: "In international finance, the 'spot exchange rate' refers to:", options: ["The exchange rate for future delivery", "The exchange rate for immediate delivery", "The average exchange rate over a period", "The exchange rate set by the central bank"], correctAnswer: 1, level: 400, topic: "International Finance" },
+  { id: 21, text: "What is the primary purpose of a 'swap' in financial markets?", options: ["To speculate on currency movements", "To exchange a series of cash flows", "To buy stocks on margin", "To issue new corporate bonds"], correctAnswer: 1, level: 400, topic: "Derivatives" },
+  { id: 22, text: "The Modigliani-Miller theorem, in a world without taxes, states that:", options: ["A firm's value is affected by its capital structure", "A firm's value is independent of its capital structure", "A firm should use 100% debt financing", "A firm should use 100% equity financing"], correctAnswer: 1, level: 400, topic: "Capital Structure" },
+  { id: 23, text: "Black-Scholes is a model used for pricing:", options: ["Bonds", "Stocks", "Options", "Real Estate"], correctAnswer: 2, level: 400, topic: "Derivatives" },
+  { id: 24, text: "What is 'venture capital'?", options: ["Long-term government bonds", "Financing for established, large corporations", "Financing for new, high-risk businesses", "Short-term loans between banks"], correctAnswer: 2, level: 400, topic: "Venture Capital" },
+  { id: 25, text: "A 'leveraged buyout' (LBO) is the acquisition of another company using a significant amount of:", options: ["Equity", "Retained earnings", "Borrowed money (debt)", "Government grants"], correctAnswer: 2, level: 400, topic: "Mergers & Acquisitions" },
   
-  // 200+
-  { id: 51, text: "The IRR of a project is the discount rate that makes NPV equal to:", options: ["One", "Negative", "Zero", "Positive"], correctAnswer: 2, level: 200, topic: "Capital Budgeting" },
-  { id: 52, text: "Which ratio measures a firm's ability to meet long-term obligations?", options: ["Current Ratio", "Solvency Ratio", "Liquidity Ratio", "Operating Ratio"], correctAnswer: 1, level: 200, topic: "Ratio Analysis" },
-  { id: 53, text: "Stock split increases:", options: ["Market cap", "Number of shares", "Total earnings", "Value per share"], correctAnswer: 1, level: 200, topic: "Equities" },
-  { id: 54, text: "Zero-based budgeting starts from:", options: ["Previous year's budget", "Current inflation rate", "Zero base every period", "Departmental request"], correctAnswer: 2, level: 200, topic: "Management" },
-  { id: 55, text: "Cost of debt is typically lower than cost of equity because:", options: ["Debt is riskier", "Interest is tax-deductible", "Dividends are high", "Bankers are friendly"], correctAnswer: 1, level: 200, topic: "Cost of Capital" },
-
-  // 300+
-  { id: 61, text: "Standard deviation measures:", options: ["Average return", "Expected return", "Total risk", "Beta"], correctAnswer: 2, level: 300, topic: "Risk" },
-  { id: 62, text: "If a stock has a beta of 0.5, it is:", options: ["Twice as volatile as market", "Half as volatile as market", "Risk-free", "Uncorrelated"], correctAnswer: 1, level: 300, topic: "Investments" },
-  { id: 63, text: "Financial analysts use DuPont analysis to break down:", options: ["Net Profit", "ROE", "Current Ratio", "Debt"], correctAnswer: 1, level: 300, topic: "Analysis" },
-  { id: 64, text: "Growth stocks typically have:", options: ["Low P/E ratios", "High dividend yields", "High P/E ratios", "Low growth potential"], correctAnswer: 2, level: 300, topic: "Equities" },
-  { id: 65, text: "An investor who 'Shorts' a stock expects the price to:", options: ["Rise", "Stay same", "Fall", "Double"], correctAnswer: 2, level: 300, topic: "Trading" },
-
-  // 400+
-  { id: 71, text: "The main objective of 'Hedging' is:", options: ["Profit maximization", "Risk reduction", "Tax avoidance", "Speculation"], correctAnswer: 1, level: 400, topic: "Risk Management" },
-  { id: 72, text: "In a 'Vertical Merger', the firms are:", options: ["In the same industry", "At different stages of production", "Unrelated", "Competitors"], correctAnswer: 1, level: 400, topic: "M&A" },
-  { id: 73, text: "Purchasing Power Parity (PPP) relates:", options: ["GDP and population", "Inflation and exchange rates", "Exports and imports", "Taxes and subsidies"], correctAnswer: 1, level: 400, topic: "International Finance" },
-  { id: 74, text: "The 'J-Curve' effect explains the lag in:", options: ["Investment returns", "Trade balance after devaluation", "Population growth", "Inflation targets"], correctAnswer: 1, level: 400, topic: "International Finance" },
-  { id: 75, text: "A 'Poison Pill' is a strategy used to:", options: ["Increase sales", "Prevent hostile takeovers", "Incentivize staff", "Lower tax"], correctAnswer: 1, level: 400, topic: "M&A" },
-  { id: 76, text: "Game theory is often used in finance to analyze:", options: ["Accounting errors", "Oligopolistic competition", "Stock price history", "Tax laws"], correctAnswer: 1, level: 400, topic: "Advanced Theory" },
-  { id: 77, text: "What is 'Moral Hazard' in finance?", options: ["Lying on tax forms", "Risk-taking knowing others bear the cost", "Giving to charity", "Buying risky stocks"], correctAnswer: 1, level: 400, topic: "Advanced Theory" },
-  { id: 78, text: "Which model assumes constant growth in dividends forever?", options: ["CAPM", "Gordon Growth Model", "Black-Scholes", "DuPont"], correctAnswer: 1, level: 200, topic: "Valuation" },
-  { id: 79, text: "A 'Repo' (Repurchase Agreement) is:", options: ["Long term bond", "Short term collateralized loan", "Equity swap", "Type of dividend"], correctAnswer: 1, level: 300, topic: "Financial Markets" },
-  { id: 80, text: "Under the Capital Asset Pricing Model, the 'Market Risk Premium' is:", options: ["Rm", "Rf", "Rm - Rf", "Beta * Rm"], correctAnswer: 2, level: 300, topic: "Investments" },
+  // More questions to reach a decent number
+  { id: 26, text: "The financial ratio that measures a company's ability to pay its short-term obligations is the:", options: ["Debt-to-Equity Ratio", "Current Ratio", "Price-to-Earnings Ratio", "Return on Equity"], correctAnswer: 1, level: 200, topic: "Ratio Analysis" },
+  { id: 27, text: "An annuity is a series of:", options: ["Single, large payments", "Equal payments made at regular intervals", "Random, unscheduled payments", "Payments that increase over time"], correctAnswer: 1, level: 100, topic: "Time Value of Money" },
+  { id: 28, text: "In portfolio theory, the 'optimal portfolio' is the one that:", options: ["Has the highest possible return", "Has zero risk", "Maximizes return for a given level of risk", "Is composed of only one stock"], correctAnswer: 2, level: 300, topic: "Portfolio Management" },
+  { id: 29, text: "What is a 'junk bond'?", options: ["A bond issued by the government", "A bond with a very high credit rating", "A bond with a low credit rating and high risk", "A zero-coupon bond"], correctAnswer: 2, level: 300, topic: "Bonds" },
+  { id: 30, text: "Hedging is a strategy designed to:", options: ["Maximize potential gains", "Reduce or eliminate risk", "Speculate on price movements", "Increase financial leverage"], correctAnswer: 1, level: 400, topic: "Risk Management" },
+  { id: 31, text: "What is the formula for the Price-to-Earnings (P/E) Ratio?", options: ["Market Price per Share / Earnings per Share", "Earnings per Share / Market Price per Share", "Total Earnings / Number of Shares", "Market Capitalization / Total Revenue"], correctAnswer: 0, level: 200, topic: "Ratio Analysis" },
+  { id: 32, text: "Which entity is primarily responsible for monetary policy in Nigeria?", options: ["The Nigerian Stock Exchange (NSE)", "The Securities and Exchange Commission (SEC)", "The Central Bank of Nigeria (CBN)", "The Ministry of Finance"], correctAnswer: 2, level: 100, topic: "Financial Markets" },
+  { id: 33, text: "If a company issues a 2-for-1 stock split, an investor who owned 100 shares will now own:", options: ["50 shares at double the price", "100 shares at the same price", "200 shares at half the price", "200 shares at the same price"], correctAnswer: 2, level: 200, topic: "Corporate Actions" },
+  { id: 34, text: "Which of these is considered the most liquid asset?", options: ["Real Estate", "Stocks", "Bonds", "Cash"], correctAnswer: 3, level: 100, topic: "Intro to Finance" },
+  { id: 35, text: "The process of planning and managing a firm's long-term investments is known as:", options: ["Working Capital Management", "Capital Budgeting", "Capital Structure", "Dividend Policy"], correctAnswer: 1, level: 200, topic: "Capital Budgeting" },
+  { id: 36, text: "A 'bear market' is characterized by:", options: ["Rising stock prices and investor optimism", "Falling stock prices and investor pessimism", "Stable stock prices", "High trading volume"], correctAnswer: 1, level: 300, topic: "Financial Markets" },
+  { id: 37, text: "The risk that a company will be unable to make its debt payments is known as:", options: ["Market Risk", "Interest Rate Risk", "Credit Risk (or Default Risk)", "Liquidity Risk"], correctAnswer: 2, level: 200, topic: "Risk Management" },
+  { id: 38, text: "Which of the following is a key feature of a common stock?", options: ["Fixed dividend payments", "Priority in liquidation", "Voting rights", "Maturity date"], correctAnswer: 2, level: 100, topic: "Stocks" },
+  { id: 39, text: "The 'yield to maturity' (YTM) of a bond is:", options: ["The same as its coupon rate", "The total return an investor can expect if they hold the bond until it matures", "The annual interest payment", "The price of the bond in the secondary market"], correctAnswer: 1, level: 300, topic: "Bonds" },
+  { id: 40, text: "Agency problem in corporate finance refers to the conflict of interest between:", options: ["The company and its customers", "The company and its suppliers", "The company's management and its shareholders", "The company and the government"], correctAnswer: 2, level: 200, topic: "Corporate Governance" },
+  { id: 41, text: "What is an 'index fund'?", options: ["A fund that tries to beat the market with active stock picking", "A fund that aims to replicate the performance of a specific market index (e.g., S&P 500)", "A fund that invests only in government bonds", "A fund that uses high-risk derivatives"], correctAnswer: 1, level: 300, topic: "Investments" },
+  { id: 42, text: "Which of the following describes a 'put option'?", options: ["The right to buy an asset at a specified price", "The obligation to buy an asset at a specified price", "The right to sell an asset at a specified price", "The obligation to sell an asset at a specified price"], correctAnswer: 2, level: 400, topic: "Derivatives" },
+  { id: 43, text: "Depreciation is a non-cash expense that:", options: ["Increases a company's cash flow", "Reduces a company's taxable income", "Is paid out to shareholders", "Represents a new source of funding"], correctAnswer: 1, level: 200, topic: "Financial Statements" },
+  { id: 44, text: "The 'money market' is the market for:", options: ["Long-term debt and equity", "Short-term borrowing and lending", "Foreign currencies", "Company stocks"], correctAnswer: 1, level: 100, topic: "Financial Markets" },
+  { id: 45, text: "In project evaluation, if IRR is greater than the cost of capital, you should:", options: ["Reject the project", "Be indifferent about the project", "Accept the project", "Invest more in the project"], correctAnswer: 2, level: 200, topic: "Capital Budgeting" },
+  { id: 46, text: "What does 'EBIT' stand for?", options: ["Earnings Before Inflation and Taxes", "Earnings Before Interest and Taxes", "Equity, Bonds, Interest, and Treasury", "Estimated Break-even Investment Time"], correctAnswer: 1, level: 200, topic: "Financial Statements" },
+  { id: 47, text: "A portfolio that lies on the 'efficient frontier' is one that:", options: ["Provides the highest possible return", "Provides the lowest possible risk", "Provides the maximum return for its level of risk", "Is 100% invested in risk-free assets"], correctAnswer: 2, level: 300, topic: "Portfolio Management" },
+  { id: 48, text: "The 'secondary market' is where:", options: ["New securities are issued for the first time", "Previously issued securities are traded among investors", "Only government securities are traded", "Companies borrow short-term funds"], correctAnswer: 1, level: 100, topic: "Financial Markets" },
+  { id: 49, text: "Corporate governance is the system of rules and practices by which:", options: ["A company manages its daily operations", "A company is directed and controlled", "A company markets its products", "A company handles its human resources"], correctAnswer: 1, level: 400, topic: "Corporate Governance" },
+  { id: 50, text: "A 'forward contract' is:", options: ["A standardized contract traded on an exchange", "A customized contract between two parties to buy or sell an asset at a specified price on a future date", "The same as a futures contract", "An option to buy an asset in the future"], correctAnswer: 1, level: 400, topic: "Derivatives" },
 ];

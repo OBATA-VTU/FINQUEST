@@ -1,55 +1,9 @@
+
 export type Level = 100 | 200 | 300 | 400;
 
 export type Page = 'home' | 'questions' | 'executives' | 'lecturers' | 'announcements' | 'login' | 'admin' | 'profile' | 'community';
 
 export type Role = 'student' | 'executive' | 'lecturer' | 'admin' | 'librarian' | 'vice_president' | 'supplement' | 'alumni';
-
-export type BadgeType = 'pioneer' | 'contributor' | 'scholar' | 'legend' | 'brainiac' | 'first_step' | 'librarian_pick' | 'chatty' | 'top_10' | 'perfectionist';
-
-export interface Badge {
-    id: BadgeType;
-    label: string;
-    icon: string;
-    description: string;
-    color: string;
-}
-
-/**
- * Added missing interface for Executive to support departmental leadership profiles.
- */
-export interface Executive {
-  id: string;
-  name: string;
-  position: string;
-  imageUrl?: string;
-  quote?: string;
-  whatsapp?: string;
-  email?: string;
-  level?: Level;
-}
-
-/**
- * Added missing interface for Lecturer to support the faculty directory.
- */
-export interface Lecturer {
-  id: string;
-  name: string;
-  title: string;
-  imageUrl: string;
-  specialization?: string;
-}
-
-/**
- * Added missing interface for Announcement to support news and updates.
- */
-export interface Announcement {
-  id: string;
-  title: string;
-  content: string;
-  date: string;
-  author?: string;
-  imageUrl?: string;
-}
 
 export interface PastQuestion {
   id: string;
@@ -57,10 +11,10 @@ export interface PastQuestion {
   courseCode: string;
   courseTitle: string;
   year: number;
-  lecturer?: string;
+  lecturer?: string; // Added for smart finder
   fileUrl?: string; 
-  storagePath?: string; 
-  pages?: string[]; 
+  storagePath?: string; // Path in Dropbox/Storage for deletion
+  pages?: string[]; // Array of image URLs if uploaded as multiple images
   textContent?: string;
   uploadedBy?: string;
   uploadedByEmail?: string;
@@ -69,10 +23,39 @@ export interface PastQuestion {
   category?: "Past Question" | "Lecture Note" | "Handout" | "Textbook" | "Other";
 }
 
-/**
- * Added type alias for PendingQuestion to resolve import error in constants.ts.
- */
-export type PendingQuestion = PastQuestion;
+export interface PendingQuestion extends PastQuestion {
+  submittedBy: string;
+  submittedByEmail?: string;
+  submittedAt: string;
+}
+
+export interface Executive {
+  id: string;
+  name: string;
+  position: string;
+  imageUrl: string;
+  level: Level;
+  whatsapp?: string;
+  email?: string;
+  quote?: string;
+}
+
+export interface Lecturer {
+  id: string;
+  name: string;
+  title: string;
+  imageUrl: string;
+  specialization: string;
+  }
+
+export interface Announcement {
+  id:string;
+  title: string;
+  date: string;
+  content: string;
+  author: string;
+  imageUrl?: string;
+}
 
 export interface User {
   id: string;
@@ -85,13 +68,10 @@ export interface User {
   avatarUrl?: string;
   contributionPoints?: number; 
   savedQuestions?: string[]; 
-  badges?: BadgeType[];
-  testCount?: number;
-  messageCount?: number;
   createdAt?: string;
   lastActive?: string; 
-  isVerified?: boolean;
-  isBanned?: boolean;
+  isVerified?: boolean; // Added for blue tick
+  isBanned?: boolean; // Added for suspension
 }
 
 export interface CommunityGroup {

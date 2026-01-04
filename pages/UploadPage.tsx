@@ -1,3 +1,4 @@
+
 import React, { useState, FormEvent, useRef, useEffect, useContext } from 'react';
 import { Level } from '../types';
 import { LEVELS } from '../constants';
@@ -172,7 +173,7 @@ export const UploadPage: React.FC = () => {
 
     const renderTextEditor = () => (
         <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
-            <div className="p-2 border-b border-slate-200 dark:border-slate-700 flex items-center gap-1 bg-slate-50 dark:bg-slate-800 flex-wrap sticky top-0">
+            <div className="p-2 border-b border-slate-200 dark:border-slate-700 flex items-center gap-1 bg-slate-50 dark:bg-slate-800 flex-wrap">
                 <button type="button" onClick={() => applyFormat('bold')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center font-bold" title="Bold">B</button>
                 <button type="button" onClick={() => applyFormat('italic')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center italic font-serif" title="Italic">I</button>
                 <button type="button" onClick={() => applyFormat('strike')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center line-through" title="Strikethrough">S</button>

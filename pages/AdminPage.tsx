@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, query, where, addDoc, doc, getDoc } from 'firebase/firestore';
@@ -10,6 +11,7 @@ export const AdminPage: React.FC = () => {
   const auth = useContext(AuthContext);
   const { showNotification } = useNotification();
   const [stats, setStats] = useState({ users: 0, activeUsers: 0, pendingMaterials: 0, materials: 0, pendingLostFound: 0 });
+  const [systemHealth, setSystemHealth] = useState({ status: 'Online', latency: '24ms', aiCredits: 'Checking...', dbStatus: 'Connected' });
   const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
   const [broadcastMsg, setBroadcastMsg] = useState('');
 
@@ -20,27 +22,65 @@ export const AdminPage: React.FC = () => {
 
   useEffect(() => {
     const fetchStats = async () => {
+        const start = Date.now();
         try {
-            const uSnap = await getDocs(collection(db, 'users'));
-            const pMatSnap = await getDocs(query(collection(db, 'questions'), where('status', '==', 'pending')));
-            const pLostSnap = await getDocs(query(collection(db, 'lost_items'), where('status', '==', 'pending')));
-            setStats({ 
-                users: uSnap.size, 
-                activeUsers: 0, 
-                materials: 0, 
-                pendingMaterials: pMatSnap.size, 
-                pendingLostFound: pLostSnap.size 
+            // General Stats
+            if (!isLibrarian) {
+                const uSnap = await getDocs(collection(db, 'users'));
+                const tenMinutesAgo = new Date().getTime() - (10 * 60 * 1000);
+                const activeCount = uSnap.docs.filter(doc => {
+                    const data = doc.data();
+                    return data.lastActive && new Date(data.lastActive).getTime() > tenMinutesAgo;
+                }).length;
+                
+                setStats(prev => ({ ...prev, users: uSnap.size, activeUsers: activeCount }));
+            }
+
+            if (!isVP) {
+                const qSnap = await getDocs(collection(db, 'questions'));
+                const pMatSnap = await getDocs(query(collection(db, 'questions'), where('status', '==', 'pending')));
+                setStats(prev => ({ ...prev, materials: qSnap.size, pendingMaterials: pMatSnap.size }));
+            }
+
+            if (!isLibrarian) {
+                const pLostSnap = await getDocs(query(collection(db, 'lost_items'), where('status', '==', 'pending')));
+                setStats(prev => ({ ...prev, pendingLostFound: pLostSnap.size }));
+            }
+
+            // Health & AI Stats
+            const usageRef = doc(db, 'system_stats', 'ai_usage');
+            const usageSnap = await getDoc(usageRef);
+            let totalCalls = 0;
+            if (usageSnap.exists()) {
+                totalCalls = usageSnap.data().total_calls || 0;
+            }
+            
+            // Latency Check
+            const end = Date.now();
+            setSystemHealth({
+                status: 'Optimal',
+                latency: `${end - start}ms`,
+                aiCredits: `Usage: ${totalCalls} calls`, // Approximating health by tracking usage
+                dbStatus: 'Connected'
             });
-        } catch (e) { console.error(e); }
+
+        } catch (e) { 
+            console.error(e);
+            setSystemHealth(prev => ({ ...prev, status: 'Issues Detected', dbStatus: 'Error' }));
+        }
     };
     fetchStats();
-  }, []);
+  }, [isLibrarian, isVP]);
 
   const handleBroadcast = async () => {
       if (!broadcastMsg.trim()) return;
       try {
           await addDoc(collection(db, 'notifications'), {
-              userId: 'all', message: broadcastMsg, type: 'info', read: false, createdAt: new Date().toISOString()
+              userId: 'all',
+              message: broadcastMsg,
+              type: 'info',
+              read: false,
+              createdAt: new Date().toISOString()
           });
           showNotification("Broadcast sent to all users!", "success");
           setIsBroadcastOpen(false);
@@ -48,57 +88,109 @@ export const AdminPage: React.FC = () => {
       } catch (e) { showNotification("Broadcast failed", "error"); }
   };
 
-  return (
-    <div className="max-w-6xl mx-auto pb-20 animate-fade-in space-y-10">
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-                <h1 className="text-4xl font-serif font-black text-slate-900">PRO Command Center</h1>
-                <p className="text-slate-500 font-medium">Welcome back, {auth?.user?.name.split(' ')[0]}. Here's the state of the portal.</p>
+  const StatCard = ({ title, value, color, icon, link, visible = true }: any) => {
+      if (!visible) return null;
+      return (
+        <div onClick={() => link && navigate(link)} className={`bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group cursor-pointer transition-all hover:shadow-md hover:-translate-y-1 ${link ? '' : 'cursor-default'}`}>
+            <div className={`absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity ${color}`}>
+                {icon}
             </div>
-            <div className="flex gap-2">
-                <button onClick={() => setIsBroadcastOpen(true)} className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl hover:bg-indigo-700 transition-all flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
-                    Broadcast Alert
-                </button>
-            </div>
-        </header>
+            <h3 className="text-slate-500 font-bold uppercase text-[10px] tracking-widest mb-2">{title}</h3>
+            <p className={`text-4xl font-bold ${color.replace('text', 'text')}`}>{value}</p>
+            {link && <div className="mt-4 text-xs font-medium text-slate-400 flex items-center gap-1 group-hover:text-indigo-600 transition-colors">View Details &rarr;</div>}
+        </div>
+      );
+  };
 
-        {/* GUIDANCE BOX FOR FUTURE PROS */}
-        <div className="bg-gradient-to-r from-slate-900 to-indigo-950 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden text-white">
-            <div className="absolute top-0 right-0 p-10 opacity-10"><svg className="w-40 h-40" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg></div>
-            <div className="relative z-10 max-w-2xl">
-                <span className="bg-indigo-500 text-[10px] font-black uppercase px-3 py-1 rounded-full mb-4 inline-block">PRO Handbook</span>
-                <h2 className="text-2xl font-bold mb-3">Maintaining the Portal</h2>
-                <p className="text-indigo-200 text-sm leading-relaxed mb-6">Success as a PRO depends on engagement. Every morning, check <b>Pending Approvals</b> to verify student uploads. Use <b>Broadcasts</b> for urgent departmental news, and keep the <b>Gallery</b> fresh with recent event photos.</p>
-                <div className="flex gap-4">
-                    <button onClick={() => navigate('/admin/approvals')} className="bg-white text-indigo-950 px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-indigo-50 transition-all">Review Submissions ({stats.pendingMaterials})</button>
-                    <button onClick={() => navigate('/admin/content')} className="bg-indigo-500/30 backdrop-blur-md border border-white/20 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-indigo-500/50 transition-all">Post News</button>
+  return (
+    <div className="space-y-8 animate-fade-in max-w-6xl mx-auto pb-20">
+        <div>
+            <h1 className="text-3xl font-bold text-slate-900">
+                {isLibrarian ? 'Library Dashboard' : isVP ? 'VP Dashboard' : 'Main Dashboard'}
+            </h1>
+            <p className="text-slate-500 text-sm mt-1">Platform overview and quick actions.</p>
+        </div>
+
+        {/* System Health Strip */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-slate-800 text-white p-4 rounded-xl flex flex-col justify-between shadow-lg">
+                <span className="text-[10px] uppercase text-slate-400 font-bold">System Status</span>
+                <div className="flex items-center gap-2">
+                    <span className={`w-3 h-3 rounded-full ${systemHealth.status === 'Optimal' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
+                    <span className="font-bold">{systemHealth.status}</span>
                 </div>
+            </div>
+            <div className="bg-white border border-slate-200 p-4 rounded-xl flex flex-col justify-between">
+                <span className="text-[10px] uppercase text-slate-400 font-bold">Latency</span>
+                <span className="font-mono font-bold text-slate-700">{systemHealth.latency}</span>
+            </div>
+            <div className="bg-white border border-slate-200 p-4 rounded-xl flex flex-col justify-between">
+                <span className="text-[10px] uppercase text-slate-400 font-bold">AI Usage</span>
+                <span className="font-bold text-indigo-600">{systemHealth.aiCredits}</span>
+            </div>
+            <div className="bg-white border border-slate-200 p-4 rounded-xl flex flex-col justify-between">
+                <span className="text-[10px] uppercase text-slate-400 font-bold">Database</span>
+                <span className="font-bold text-emerald-600">{systemHealth.dbStatus}</span>
             </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div onClick={() => navigate('/admin/approvals')} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-pointer group">
-                <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-rose-500 group-hover:text-white transition-all"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
-                <h3 className="text-slate-500 font-bold uppercase text-[10px] tracking-widest mb-1">Pending Tasks</h3>
-                <p className="text-4xl font-black text-slate-900">{stats.pendingMaterials + stats.pendingLostFound}</p>
+            <StatCard 
+                title="Total Users" value={stats.users} color="text-indigo-600" link="/admin/users" visible={!isLibrarian} 
+                icon={<svg className="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" /></svg>}
+            />
+            <StatCard 
+                title="Active Now" value={stats.activeUsers} color="text-emerald-500" link="/admin/users" visible={!isLibrarian}
+                icon={<svg className="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>}
+            />
+            <StatCard 
+                title="Study Materials" value={stats.materials} color="text-blue-600" link="/admin/content" visible={!isVP} 
+                icon={<svg className="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" /></svg>}
+            />
+            <div onClick={() => navigate('/admin/approvals')} className={`bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group cursor-pointer transition-all hover:shadow-md hover:-translate-y-1 ${isVP ? 'hidden' : ''}`}>
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 text-rose-500">
+                    <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" /></svg>
+                </div>
+                <h3 className="text-slate-500 font-bold uppercase text-[10px] tracking-widest mb-2">Pending Uploads</h3>
+                <p className="text-4xl font-bold text-rose-500">{stats.pendingMaterials}</p>
+                {stats.pendingMaterials > 0 && <div className="absolute top-6 right-6 w-3 h-3 bg-rose-500 rounded-full animate-ping"></div>}
             </div>
-            <div onClick={() => navigate('/admin/users')} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-pointer group">
-                <div className="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-indigo-500 group-hover:text-white transition-all"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg></div>
-                <h3 className="text-slate-500 font-bold uppercase text-[10px] tracking-widest mb-1">Total Verified</h3>
-                <p className="text-4xl font-black text-slate-900">{stats.users}</p>
+        </div>
+        
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <h3 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wide">Quick Actions</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <button onClick={() => navigate('/admin/content')} className="p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 text-slate-600 hover:text-indigo-700 transition flex flex-col items-center gap-2 text-center">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    <span className="text-xs font-bold">Manage Content</span>
+                </button>
+                <button onClick={() => navigate('/admin/approvals')} className="p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-200 text-slate-600 hover:text-emerald-700 transition flex flex-col items-center gap-2 text-center">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span className="text-xs font-bold">Approvals</span>
+                </button>
+                {(isSuperAdmin || isVP) && (
+                    <button onClick={() => setIsBroadcastOpen(true)} className="p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-sky-50 hover:border-sky-200 text-slate-600 hover:text-sky-700 transition flex flex-col items-center gap-2 text-center">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+                        <span className="text-xs font-bold">Broadcast Alert</span>
+                    </button>
+                )}
+                {isSuperAdmin && (
+                    <button onClick={() => navigate('/admin/settings')} className="p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-amber-50 hover:border-amber-200 text-slate-600 hover:text-amber-700 transition flex flex-col items-center gap-2 text-center">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        <span className="text-xs font-bold">Settings</span>
+                    </button>
+                )}
             </div>
         </div>
 
         {isBroadcastOpen && (
-            <div className="fixed inset-0 bg-slate-950/80 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-                <div className="bg-white rounded-[2.5rem] w-full max-w-md shadow-2xl p-10 animate-fade-in-up">
-                    <h3 className="text-2xl font-bold mb-2">Send Broadcast</h3>
-                    <p className="text-slate-500 text-sm mb-6">This will notify all students instantly.</p>
-                    <textarea className="w-full border-2 border-slate-100 p-4 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none mb-6 min-h-[150px]" placeholder="Type important update..." value={broadcastMsg} onChange={(e) => setBroadcastMsg(e.target.value)}></textarea>
-                    <div className="flex gap-3">
-                        <button onClick={() => setIsBroadcastOpen(false)} className="flex-1 py-4 font-bold text-slate-400">Cancel</button>
-                        <button onClick={handleBroadcast} className="flex-2 py-4 px-8 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-500/30">Send All</button>
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl animate-fade-in-down">
+                    <h3 className="font-bold text-lg mb-2">Global Broadcast</h3>
+                    <textarea className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none mb-4" rows={4} placeholder="Type announcement..." value={broadcastMsg} onChange={(e) => setBroadcastMsg(e.target.value)}></textarea>
+                    <div className="flex gap-2">
+                        <button onClick={() => setIsBroadcastOpen(false)} className="flex-1 py-2 border rounded-lg font-bold text-slate-600">Cancel</button>
+                        <button onClick={handleBroadcast} className="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700">Send All</button>
                     </div>
                 </div>
             </div>

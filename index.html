@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en" class="bg-slate-900">
   <head>
@@ -8,24 +9,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     
     <!-- SEO & Search Engine Visibility -->
-    <title>FINSA AAUA | Official Finance Department Portal</title>
-    <meta name="description" content="The official academic portal for Finance students at Adekunle Ajasin University (AAUA). Access verified past questions, CBT practice, and departmental news.">
-    <meta name="keywords" content="FINSA AAUA, Adekunle Ajasin University Finance, AAUA Past Questions, Finance CBT, AAUA Finance Department">
-    <meta name="author" content="FINSA AAUA">
+    <title>FINSA Portal | Finance Department AAUA - Past Questions & CBT</title>
+    <meta name="description" content="The official academic portal for Finance students at Adekunle Ajasin University (AAUA). Access verified past questions, take AI-powered CBT practice tests, view lecture notes, check the leaderboard, and stay updated with department news.">
+    <meta name="keywords" content="FINSA AAUA, Adekunle Ajasin University Finance, AAUA Past Questions, Finance CBT Practice, AAUA Portal, Finance Students Association, Akungba Finance, Nigerian University Finance Resources, Lecture Notes AAUA">
+    <meta name="author" content="FINSA AAUA Tech Team">
     <meta name="robots" content="index, follow">
     <meta name="theme-color" content="#311b92">
 
+    <!-- Google Site Verification -->
+    <meta name="google-site-verification" content="lGaMPt92YnG-2J2S9WmH048pDs773Wyg9Kf09LIYT1M" />
+    
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://finsa.vercel.app/">
-    <meta property="og:title" content="FINSA AAUA Portal">
-    <meta property="og:description" content="Official resource hub for Finance students at Adekunle Ajasin University.">
+    <meta property="og:title" content="FINSA Portal | AAUA Finance Department">
+    <meta property="og:description" content="Master your finance degree with FINSA. Access past questions, CBT practice, and connect with the community.">
     <meta property="og:image" content="https://finsa.vercel.app/logo.svg">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:title" content="FINSA AAUA Portal">
-    <meta property="twitter:description" content="Access Finance department resources and community.">
+    <meta property="twitter:title" content="FINSA Portal | AAUA Finance Department">
+    <meta property="twitter:description" content="The ultimate academic hub for AAUA Finance students. Practice for exams and download resources.">
+    <meta property="twitter:image" content="https://finsa.vercel.app/logo.svg">
+
+    <!-- Structured Data (JSON-LD) for Google -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "EducationalOrganization",
+      "name": "FINSA - Department of Finance AAUA",
+      "url": "https://finsa.vercel.app/",
+      "logo": "https://finsa.vercel.app/logo.svg",
+      "description": "Academic resource portal for Finance students providing past questions and CBT practice.",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Akungba-Akoko",
+        "addressRegion": "Ondo State",
+        "addressCountry": "NG"
+      }
+    }
+    </script>
 
     <!-- Theme Script -->
     <script>
@@ -51,10 +74,8 @@
             animation: {
               'kenburns': 'kenburns 20s ease-out infinite alternate',
               'float': 'float 6s ease-in-out infinite',
-              'pulse-slow': 'pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
               'marquee': 'marquee 40s linear infinite',
-              'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
-              'slide-in': 'slideIn 0.3s ease-out forwards',
             },
             keyframes: {
               kenburns: {
@@ -68,21 +89,13 @@
               marquee: {
                 '0%': { transform: 'translateX(0%)' },
                 '100%': { transform: 'translateX(-50%)' },
-              },
-              fadeInUp: {
-                'from': { opacity: 0, transform: 'translateY(20px)' },
-                'to': { opacity: 1, transform: 'translateY(0)' },
-              },
-              slideIn: {
-                'from': { opacity: 0, transform: 'translateX(20px)' },
-                'to': { opacity: 1, transform: 'translateX(0)' },
               }
             }
           },
         },
       }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <style>
       body {
         font-family: 'Inter', sans-serif;
@@ -91,8 +104,26 @@
       h1, h2, h3, .font-serif {
         font-family: 'Playfair Display', serif;
       }
+      .animate-fade-in-down { animation: fadeInDown 0.6s ease-out; }
+      @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+      .animate-fade-in { animation: fadeIn 0.8s ease-out; }
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+      @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+      .reveal { opacity: 0; transform: translateY(30px); transition: all 0.8s ease-out; }
+      .reveal.active { opacity: 1; transform: translateY(0); }
       .scrollbar-hide::-webkit-scrollbar { display: none; }
       .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+      /* Animation for the countdown timer */
+      @keyframes flipDown {
+        0% { transform: rotateX(0deg); opacity: 1; }
+        50% { transform: rotateX(90deg); opacity: 0; }
+        100% { transform: rotateX(0deg); opacity: 1; }
+      }
+      .animate-flip-down {
+        animation: flipDown 0.6s ease-in-out;
+      }
     </style>
   <script type="importmap">
 {
