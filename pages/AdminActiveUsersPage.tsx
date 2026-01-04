@@ -3,11 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { VerificationBadge } from '../components/VerificationBadge';
+import { User } from '../types';
 
 const INACTIVITY_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
 
 export const AdminActiveUsersPage: React.FC = () => {
-    const [activeUsers, setActiveUsers] = useState<any[]>([]);
+    const [activeUsers, setActiveUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -15,7 +16,7 @@ export const AdminActiveUsersPage: React.FC = () => {
             setLoading(true);
             try {
                 const snap = await getDocs(collection(db, 'users'));
-                const allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                const allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() })) as User[];
                 
                 const now = Date.now();
                 const filtered = allUsers.filter(u => {
@@ -25,7 +26,7 @@ export const AdminActiveUsersPage: React.FC = () => {
                 });
                 
                 // Sort by most recent activity
-                filtered.sort((a, b) => new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime());
+                filtered.sort((a, b) => new Date(b.lastActive!).getTime() - new Date(a.lastActive!).getTime());
 
                 setActiveUsers(filtered);
             } catch (error) {
@@ -82,7 +83,7 @@ export const AdminActiveUsersPage: React.FC = () => {
                                         Online
                                     </span>
                                     <p className="text-[10px] text-slate-400 mt-1">
-                                        Last seen: {new Date(user.lastActive).toLocaleTimeString()}
+                                        Last seen: {new Date(user.lastActive!).toLocaleTimeString()}
                                     </p>
                                 </div>
                             </li>
