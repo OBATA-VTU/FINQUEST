@@ -48,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 'Content-Type': 'application/octet-stream',
                 'Dropbox-API-Arg': JSON.stringify(apiArgs),
             },
-            body: createReadStream(file.filepath),
+            body: createReadStream(file.filepath) as any,
         });
 
         if (!uploadResponse.ok) {
