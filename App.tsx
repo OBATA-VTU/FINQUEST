@@ -11,10 +11,9 @@ import { LoginPage } from './pages/LoginPage';
 import { AdminLayout } from './components/AdminLayout';
 import { AdminPage } from './pages/AdminPage';
 import { AdminApprovalsPage } from './pages/AdminApprovalsPage';
-import { AdminContentPage } from './pages/AdminContentPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { AdminSettingsPage } from './pages/AdminSettingsPage';
-import { AdminActiveUsersPage } from './pages/AdminActiveUsersPage'; // New
+import { AdminActiveUsersPage } from './pages/AdminActiveUsersPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { CommunityPage } from './pages/CommunityPage';
 import { GalleryPage } from './pages/GalleryPage';
@@ -25,13 +24,21 @@ import { LostFoundPage } from './pages/LostFoundPage';
 import { FAQPage } from './pages/FAQPage';
 import { NotesPage } from './pages/NotesPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
-import { UploadPage } from './pages/UploadPage'; // New
+import { UploadPage } from './pages/UploadPage';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Layout } from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
 import { CountdownPage } from './pages/CountdownPage';
+
+// NEW: Import new admin pages
+import { AdminMaterialsPage } from './pages/AdminMaterialsPage';
+import { AdminNewsPage } from './pages/AdminNewsPage';
+import { AdminExecutivesPage } from './pages/AdminExecutivesPage';
+import { AdminLecturersPage } from './pages/AdminLecturersPage';
+import { AdminCommunityPage } from './pages/AdminCommunityPage';
+import { AdminGalleryPage } from './pages/AdminGalleryPage';
 
 // Target launch date: Jan 10, 2026, 12:00 PM West Africa Time (UTC+1)
 const LAUNCH_DATE = new Date('2026-01-10T12:00:00+01:00');
@@ -103,7 +110,13 @@ const AppContent: React.FC = () => {
                 <Route index element={<Navigate to="/admin/dashboard" replace />} />
                 <Route path="dashboard" element={<AdminPage />} />
                 <Route path="approvals" element={<AdminApprovalsPage />} />
-                <Route path="content" element={<AdminContentPage />} />
+                {/* REMOVED: <Route path="content" element={<AdminContentPage />} /> */}
+                <Route path="materials" element={<AdminMaterialsPage />} />
+                <Route path="news" element={<AdminNewsPage />} />
+                <Route path="executives" element={<AdminExecutivesPage />} />
+                <Route path="lecturers" element={<AdminLecturersPage />} />
+                <Route path="community" element={<AdminCommunityPage />} />
+                <Route path="gallery" element={<AdminGalleryPage />} />
                 <Route path="users" element={<AdminUsersPage />} />
                 <Route path="active-users" element={<AdminActiveUsersPage />} />
                 <Route path="settings" element={<AdminSettingsPage />} />

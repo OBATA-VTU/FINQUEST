@@ -152,6 +152,10 @@ export const TestPage: React.FC = () => {
 
         // Track Usage
         trackAiUsage();
+        
+        if (!response.text) {
+            throw new Error("AI returned empty or blocked content.");
+        }
 
         const jsonText = response.text;
         const cleanJson = jsonText.replace(/```json|```/g, '').trim();
@@ -185,7 +189,7 @@ export const TestPage: React.FC = () => {
 
     } catch (e: any) {
         clearInterval(progressInterval);
-        console.warn("AI Generation failed:", e);
+        console.error("AI Generation failed:", e);
         showNotification("AI generation failed. Loading standard question pack instead.", "warning");
         setLoadingMessage('AI Unavailable. Loading Standard Exam...');
         
