@@ -194,7 +194,6 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const login = async (email: string, pass: string) => {
     try {
         await signInWithEmailAndPassword(auth, email, pass);
-        // Auth state listener handles the rest
     } catch (error: any) {
         throw error;
     }
@@ -261,14 +260,14 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         const querySnapshot = await getDocs(q);
         return querySnapshot.empty;
       } catch (error: any) {
-          return true; // Optimistic fallback
+          return true;
       }
   };
 
   const signup = async (data: { name: string; email: string; pass: string; level: Level; username: string; matricNumber: string; avatarUrl?: string }) => {
       try {
           const cleanUsername = data.username.trim().toLowerCase();
-          await checkUsernameAvailability(cleanUsername); // Just to verify, though handled in UI
+          await checkUsernameAvailability(cleanUsername);
           
           const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.pass);
           const firebaseUser = userCredential.user;
@@ -327,29 +326,27 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
           showNotification("Bookmark removed", "info");
       }
 
-      // Optimistically update local state first for instant UI feedback
       updateUser({ savedQuestions: newSaved });
 
       const userRef = doc(db, 'users', user.id);
       try {
           await updateDoc(userRef, { savedQuestions: newSaved });
 
-          // Check for new bookmark-related badges
           if (isBookmarking) {
               const newBadgeAwards: string[] = [];
               if (newSaved.length >= 1 && !userBadges.includes('BOOKWORM_1')) newBadgeAwards.push('BOOKWORM_1');
               if (newSaved.length >= 10 && !userBadges.includes('BOOKWORM_10')) newBadgeAwards.push('BOOKWORM_10');
+              if (newSaved.length >= 25 && !userBadges.includes('ARCHIVIST_PRO')) newBadgeAwards.push('ARCHIVIST_PRO');
 
               if (newBadgeAwards.length > 0) {
                   const allBadges = [...new Set([...userBadges, ...newBadgeAwards])];
                   await updateDoc(userRef, { badges: allBadges });
-                  updateUser({ badges: allBadges }); // Update context state
-                  showNotification(`Unlocked: ${newBadgeAwards.map(b => b.replace(/_/g, ' ')).join(', ')}`, "success");
+                  updateUser({ badges: allBadges });
+                  showNotification(`Unlocked: ${newBadgeAwards.join(', ')}`, "success");
               }
           }
       } catch (e) {
           showNotification("Failed to sync bookmark", "error");
-          // Revert optimistic update on failure
           updateUser({ savedQuestions: currentSaved });
       }
   };
@@ -360,7 +357,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         const provider = new GoogleAuthProvider();
         await linkWithPopup(auth.currentUser, provider);
         showNotification("Google account linked successfully!", "success");
-        setIsGoogleAccount(true); // Force UI update
+        setIsGoogleAccount(true);
     } catch (error: any) {
         if (error.code === 'auth/credential-already-in-use') {
             showNotification("This Google account is already linked to another user.", "error");
@@ -381,7 +378,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         const credential = EmailAuthProvider.credential(auth.currentUser.email, password);
         await linkWithCredential(auth.currentUser, credential);
         showNotification("Password added successfully!", "success");
-        setIsPasswordAccount(true); // Force UI update
+        setIsPasswordAccount(true);
     } catch (error: any) {
         showNotification(getFriendlyErrorMessage(error), "error");
         throw error;

@@ -1,3 +1,4 @@
+
 // This file contains a larger, more robust set of fallback questions for the CBT practice test.
 // These questions are used when the AI generation fails for any reason.
 
@@ -72,7 +73,6 @@ export const fallbackQuestions: FallbackQuestion[] = [
   { id: 48, text: "The 'secondary market' is where:", options: ["New securities are issued for the first time", "Previously issued securities are traded among investors", "Only government securities are traded", "Companies borrow short-term funds"], correctAnswer: 1, level: 100, topic: "Financial Markets" },
   { id: 49, text: "Corporate governance is the system of rules and practices by which:", options: ["A company manages its daily operations", "A company is directed and controlled", "A company markets its products", "A company handles its human resources"], correctAnswer: 1, level: 400, topic: "Corporate Governance" },
   { id: 50, text: "A 'forward contract' is:", options: ["A standardized contract traded on an exchange", "A customized contract between two parties to buy or sell an asset at a specified price on a future date", "The same as a futures contract", "An option to buy an asset in the future"], correctAnswer: 1, level: 400, topic: "Derivatives" },
-  // ADDING 150 MORE QUESTIONS
   { id: 51, text: "What type of financial institution primarily accepts savings and provides mortgages?", options: ["Commercial Bank", "Credit Union", "Investment Bank", "Savings and Loan Association"], correctAnswer: 3, level: 100, topic: "Financial Institutions" },
   { id: 52, text: "The accounting equation is:", options: ["Assets = Liabilities - Equity", "Assets = Liabilities + Equity", "Equity = Assets + Liabilities", "Liabilities = Equity - Assets"], correctAnswer: 1, level: 100, topic: "Financial Statements" },
   { id: 53, text: "What does 'IPO' stand for?", options: ["Initial Private Offering", "Internal Profit Option", "Initial Public Offering", "International Portfolio Organization"], correctAnswer: 2, level: 200, topic: "Financial Markets" },
@@ -105,4 +105,17 @@ export const fallbackQuestions: FallbackQuestion[] = [
         topic: "General Finance"
     }
   })
+];
+
+export const timelineFallbackQuestions: FallbackQuestion[] = [
+  { id: 101, text: "In what year was the Nigerian Naira introduced to replace the Nigerian Pound?", options: ["1963", "1973", "1983", "1993"], correctAnswer: 1, level: 'General', topic: 'Nigerian Finance History' },
+  { id: 102, text: "The Structural Adjustment Programme (SAP) was introduced under which Nigerian Head of State?", options: ["Shehu Shagari", "Muhammadu Buhari", "Ibrahim Babangida", "Sani Abacha"], correctAnswer: 2, level: 'General', topic: 'Nigerian Finance History' },
+  { id: 103, text: "The banking sector consolidation exercise, requiring a ₦25 billion minimum capital base, was led by which CBN Governor?", options: ["Sanusi Lamido Sanusi", "Godwin Emefiele", "Charles Soludo", "Joseph Oladele Sanusi"], correctAnswer: 2, level: 'General', topic: 'Nigerian Finance History' },
+  { id: 104, text: "When was the Nigerian Stock Exchange (originally Lagos Stock Exchange) founded?", options: ["1950", "1960", "1970", "1980"], correctAnswer: 1, level: 'General', topic: 'Nigerian Finance History' },
+  { id: 105, text: "The 'Naira Redesign' policy that led to a currency shortage was initiated by the CBN in late:", options: ["2020", "2021", "2022", "2023"], correctAnswer: 2, level: 'General', topic: 'Nigerian Finance History' },
+  { id: 106, text: "The Indigenization Decree, which transferred ownership of many foreign businesses to Nigerians, was prominent in which decade?", options: ["1960s", "1970s", "1980s", "1990s"], correctAnswer: 1, level: 'General', topic: 'Nigerian Finance History' },
+  { id: 107, text: "The Treasury Single Account (TSA) policy was fully implemented by which presidential administration?", options: ["Olusegun Obasanjo", "Umaru Musa Yar'Adua", "Goodluck Jonathan", "Muhammadu Buhari"], correctAnswer: 3, level: 'General', topic: 'Nigerian Finance History' },
+  { id: 108, text: "Nigeria gained its independence from Great Britain in which year?", options: ["1958", "1960", "1963", "1966"], correctAnswer: 1, level: 'General', topic: 'Nigerian Finance History' },
+  { id: 109, text: "The 'Oil Boom' era, which significantly shaped Nigeria's economy, occurred primarily in the:", options: ["1960s", "1970s", "1980s", "1990s"], correctAnswer: 1, level: 'General', topic: 'Nigerian Finance History' },
+  { id: 110, text: "When was the Asset Management Corporation of Nigeria (AMCON) established to resolve the non-performing loan assets of banks?", options: ["2005", "2008", "2010", "2015"], correctAnswer: 2, level: 'General', topic: 'Nigerian Finance History' }
 ];
