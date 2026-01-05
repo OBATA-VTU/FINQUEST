@@ -118,6 +118,11 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
                 <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600">
                     {question.year}
                 </span>
+                {question.semester && question.semester !== 'N/A' && (
+                  <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600">
+                      {question.semester === 1 ? '1st Sem' : '2nd Sem'}
+                  </span>
+                )}
                 {question.textContent && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1 rounded border border-emerald-100">AI GEN</span>}
                 {question.pages && question.pages.length > 1 && <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1 rounded border border-indigo-100 dark:border-indigo-800">{question.pages.length} Pages</span>}
              </div>

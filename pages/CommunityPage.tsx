@@ -1,12 +1,12 @@
-
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { db } from '../firebase';
-import { collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
 import { VerificationBadge } from '../components/VerificationBadge';
-import { Role } from '../types';
+import { Role, User } from '../types';
 import { uploadToImgBB } from '../utils/api';
+import { getBadge, Badge } from '../utils/badges';
 
 interface Message {
     id: string;
@@ -18,6 +18,7 @@ interface Message {
     isVerified?: boolean; 
     createdAt: string;
     avatarUrl?: string;
+    senderBadges?: string[];
 }
 
 export const CommunityPage: React.FC = () => {
@@ -107,9 +108,18 @@ export const CommunityPage: React.FC = () => {
               senderRole: auth.user.role,
               isVerified: auth.user.isVerified || false,
               avatarUrl: auth.user.avatarUrl || '',
+              senderBadges: auth.user.badges || [],
               createdAt: new Date().toISOString()
           });
           
+          // Check for first message badge
+          if (!auth.user.badges?.includes('COMMUNITY_STARTER')) {
+              const userRef = doc(db, 'users', auth.user.id);
+              const allBadges = [...(auth.user.badges || []), 'COMMUNITY_STARTER'];
+              await updateDoc(userRef, { badges: allBadges });
+              showNotification("Badge Unlocked: Community Starter!", "success");
+          }
+
           setNewMessage('');
           cancelImagePreview();
       } catch (error: any) {
@@ -173,12 +183,21 @@ export const CommunityPage: React.FC = () => {
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#e5ddd5] dark:bg-slate-950/50 dark:bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
               {messages.map((msg) => {
                   const isMe = msg.senderId === auth.user?.id;
+                  const badges = msg.senderBadges || [];
+                  let topBadge: Badge | undefined = undefined;
+                  if (badges.length > 0) {
+                      topBadge = badges
+                          .map(id => getBadge(id))
+                          .filter((b): b is Badge => !!b)
+                          .sort((a, b) => b.rank - a.rank)[0];
+                  }
+
                   return (
                       <div key={msg.id} className={`flex gap-2 ${isMe ? 'flex-row-reverse' : ''} animate-fade-in group`}>
                           {!isMe && <div className="w-8 h-8 rounded-full bg-slate-300 overflow-hidden shrink-0"><img src={msg.avatarUrl || `https://ui-avatars.com/api/?name=${msg.senderName}`} className="w-full h-full object-cover" /></div>}
                           
                           <div className={`relative max-w-[80%] md:max-w-[60%] rounded-2xl px-4 py-2 shadow-sm ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-tl-none'}`}>
-                              {!isMe && <div className="flex items-center gap-1 mb-1"><span className={`text-xs font-bold ${['admin', 'executive'].includes(msg.senderRole || '') ? 'text-rose-500' : 'text-indigo-500'}`}>{msg.senderName}</span><VerificationBadge role={msg.senderRole || 'student'} isVerified={msg.isVerified} className="w-3 h-3" /></div>}
+                              {!isMe && <div className="flex items-center gap-1 mb-1"><span className={`text-xs font-bold ${['admin', 'executive'].includes(msg.senderRole || '') ? 'text-rose-500' : 'text-indigo-500'}`}>{msg.senderName}</span><VerificationBadge role={msg.senderRole || 'student'} isVerified={msg.isVerified} className="w-3 h-3" /> {topBadge && <span title={topBadge.name}>{topBadge.icon}</span>}</div>}
                               
                               {msg.imageUrl && <img src={msg.imageUrl} alt="Attachment" className="rounded-lg mb-2 max-w-full h-auto cursor-pointer hover:opacity-90 border-2 border-transparent hover:border-white/20" onClick={() => window.open(msg.imageUrl, '_blank')} />}
                               

@@ -7,6 +7,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { PastQuestion } from '../types';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { AddPasswordModal } from '../components/AddPasswordModal';
+import { getBadge } from '../utils/badges';
 
 export const ProfilePage: React.FC = () => {
   const auth = useContext(AuthContext);
@@ -46,16 +47,7 @@ export const ProfilePage: React.FC = () => {
   const { isGoogleAccount, isPasswordAccount } = auth;
   const points = auth.user.contributionPoints || 0;
 
-  const getBadges = (pts: number) => {
-      const badges = [];
-      if (pts > 0) badges.push({ name: 'Contributor', icon: '🌱', desc: 'Started the journey', color: 'bg-green-100 text-green-700' });
-      if (pts >= 20) badges.push({ name: 'Active Member', icon: '🚀', desc: '20+ Points earned', color: 'bg-blue-100 text-blue-700' });
-      if (pts >= 50) badges.push({ name: 'Scholar', icon: '🎓', desc: '50+ Points earned', color: 'bg-purple-100 text-purple-700' });
-      if (pts >= 100) badges.push({ name: 'Legend', icon: '👑', desc: 'Top Contributor', color: 'bg-amber-100 text-amber-700' });
-      return badges;
-  };
-
-  const badges = getBadges(points);
+  const badges = (auth.user.badges || []).map(getBadge).filter(b => b).sort((a,b) => b!.rank - a!.rank);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 transition-colors duration-300">
@@ -133,7 +125,7 @@ export const ProfilePage: React.FC = () => {
                       <div className="bg-gradient-to-br from-slate-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800/50 p-6 rounded-2xl border border-indigo-100 dark:border-slate-700 min-w-[180px] text-center">
                           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Reputation</p>
                           <p className="text-4xl font-black text-indigo-600 dark:text-indigo-400">{points}</p>
-                          <p className="text-[10px] text-indigo-400 mt-1 font-bold">Top Contributor</p>
+                          <p className="text-[10px] text-indigo-400 mt-1 font-bold">Contribution Points</p>
                       </div>
                   </div>
               </div>
@@ -166,12 +158,12 @@ export const ProfilePage: React.FC = () => {
                           </h3>
                           {badges.length > 0 ? (
                               <div className="grid grid-cols-1 gap-4">
-                                  {badges.map((badge, idx) => (
-                                      <div key={idx} className={`p-4 rounded-2xl flex items-center gap-4 ${badge.color.includes('bg-') ? badge.color.replace('bg-', 'bg-opacity-10 bg-') : 'bg-slate-50'} border border-slate-100 dark:border-slate-700 transition-transform hover:scale-[1.02]`}>
+                                  {badges.map((badge) => (
+                                      <div key={badge.id} className="p-4 rounded-2xl flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 transition-transform hover:scale-[1.02]">
                                           <div className="text-3xl bg-white dark:bg-slate-900 w-12 h-12 rounded-full flex items-center justify-center shadow-sm">{badge.icon}</div>
                                           <div>
                                               <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">{badge.name}</h4>
-                                              <p className="text-xs text-slate-500 dark:text-slate-400">{badge.desc}</p>
+                                              <p className="text-xs text-slate-500 dark:text-slate-400">{badge.description}</p>
                                           </div>
                                       </div>
                                   ))}

@@ -1,3 +1,4 @@
+
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -5,11 +6,12 @@ import { useNotification } from '../contexts/NotificationContext';
 import { db } from '../firebase';
 import { collection, addDoc, getDoc, setDoc, updateDoc, increment, doc } from 'firebase/firestore';
 import { LEVELS } from '../constants';
-import { Level } from '../types';
+import { Level, User } from '../types';
 import { generateTestReviewPDF } from '../utils/pdfGenerator';
 import { trackAiUsage } from '../utils/api';
 import { Calculator } from '../components/Calculator';
 import { fallbackQuestions } from '../utils/fallbackQuestions';
+import { checkAndAwardBadges } from '../utils/badges';
 
 interface Question {
   id: number;
@@ -189,7 +191,8 @@ export const TestPage: React.FC = () => {
         
         setTimeout(() => {
             const numQuestions = mode === 'mock' ? 30 : mode === 'game' ? 50 : 20;
-            const questionsToUse = shuffleAndPick(fallbackQuestions, numQuestions);
+            const levelQuestions = fallbackQuestions.filter(q => q.level === selectedLevel);
+            const questionsToUse = shuffleAndPick(levelQuestions.length >= numQuestions ? levelQuestions : fallbackQuestions, numQuestions);
 
             setQuestions(questionsToUse.map((q, i) => ({
                 id: i,
@@ -244,7 +247,7 @@ export const TestPage: React.FC = () => {
               setCurrentQuestionIndex(prev => prev + 1);
               setTimeLeft(30); // Reset timer for next question
           } else {
-              handleGameOver(true);
+              handleGameOver(true); // Win condition
           }
       }, 1000); // 1 second delay
   };
@@ -266,6 +269,8 @@ export const TestPage: React.FC = () => {
 
       if (auth?.user && mode !== 'game') {
           try {
+              const userRef = doc(db, 'users', auth.user.id);
+
               // 1. Add to Test History (Always)
               await addDoc(collection(db, 'test_results'), {
                   userId: auth.user.id,
@@ -302,17 +307,305 @@ export const TestPage: React.FC = () => {
               // 3. Contribution Points (Additive)
               let points = finalPercentage >= 80 ? 5 : finalPercentage >= 50 ? 2 : 0;
               if (points > 0) {
-                  await updateDoc(doc(db, 'users', auth.user.id), { contributionPoints: increment(points) });
+                  await updateDoc(userRef, { contributionPoints: increment(points) });
                   showNotification(`+${points} Contribution Points!`, "success");
               }
+
+              // 4. Check for new badges
+              const userDoc = await getDoc(userRef);
+              if (userDoc.exists()) {
+                  const user = { id: userDoc.id, ...userDoc.data() } as User;
+                  const newBadges = await checkAndAwardBadges(user);
+                  if (newBadges.length > 0) {
+                      const allBadges = [...new Set([...(user.badges || []), ...newBadges])];
+                      await updateDoc(userRef, { badges: allBadges });
+                      showNotification(`Unlocked ${newBadges.length} new badge(s)! Check your profile.`, "success");
+                  }
+              }
+
           } catch (e) { console.error(e); }
       }
   };
 
-  // --- RENDERERS ---
+  const handleSelectAnswer = (answerIndex: number) => {
+      setUserAnswers({ ...userAnswers, [currentQuestionIndex]: answerIndex });
+  };
+  
+  const nextQuestion = () => {
+      if (currentQuestionIndex < questions.length - 1) {
+          setCurrentQuestionIndex(currentQuestionIndex + 1);
+      }
+  };
 
-  if (stage === 'menu') {
-      return (
+  const prevQuestion = () => {
+      if (currentQuestionIndex > 0) {
+          setCurrentQuestionIndex(currentQuestionIndex - 1);
+      }
+  };
+  
+  const resetTest = () => {
+      setStage('menu');
+      setQuestions([]);
+      setUserAnswers({});
+      setCurrentQuestionIndex(0);
+      setTopic('');
+      setTimeLeft(1200);
+      setScore(0);
+      setGameScore(0);
+      setGameLives(3);
+      setIsGameOver(false);
+  };
+
+  // --- RENDERERS ---
+  
+  const renderSetup = () => (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4 animate-fade-in transition-colors">
+          <div className="w-full max-w-lg">
+              <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700">
+                  <button onClick={() => setStage('menu')} className="text-xs font-bold text-slate-400 hover:text-indigo-500 flex items-center gap-1 mb-6">&larr; Change Mode</button>
+                  <h2 className="text-3xl font-serif font-bold text-slate-900 dark:text-white mb-2">Test Setup</h2>
+                  <p className="text-slate-500 dark:text-slate-400 mb-8">
+                      {mode === 'topic' ? 'Specify a topic to generate questions on.' : mode === 'game' ? 'Get ready for a rapid-fire quiz!' : 'Confirm your level to start the mock exam.'}
+                  </p>
+                  <div className="space-y-6">
+                      {mode === 'topic' && (
+                          <div>
+                              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Topic</label>
+                              <input 
+                                  value={topic} 
+                                  onChange={e => setTopic(e.target.value)} 
+                                  className="w-full p-4 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white text-lg font-bold" 
+                                  placeholder="e.g. Capital Budgeting" 
+                                  autoFocus
+                              />
+                          </div>
+                      )}
+                      <div>
+                          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Academic Level</label>
+                          <select value={selectedLevel} onChange={e => setSelectedLevel(e.target.value as Level)} className="w-full p-4 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white text-lg font-bold appearance-none">
+                              {LEVELS.filter(l => typeof l === 'number').map(l => <option key={l} value={l}>{l}</option>)}
+                          </select>
+                      </div>
+                      <button onClick={startExam} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 transition-transform hover:-translate-y-1">
+                          Start Test
+                      </button>
+                  </div>
+              </div>
+          </div>
+      </div>
+  );
+  
+  const renderLoading = () => (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-white">
+          <div className="relative w-48 h-48 flex items-center justify-center mb-8">
+              <svg className="w-full h-full transform -rotate-90">
+                  <circle cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-indigo-900" />
+                  <circle cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray={552.8} strokeDashoffset={552.8 - (552.8 * loadingProgress) / 100} className="text-indigo-400 transition-all duration-500 ease-linear" />
+              </svg>
+              <span className="absolute text-5xl font-mono font-bold">{loadingProgress}%</span>
+          </div>
+          <p className="text-lg font-bold text-indigo-300 animate-pulse">{loadingMessage}</p>
+          <p className="text-sm text-indigo-400 mt-2 max-w-sm text-center">Please wait, our AI is crafting your personalized exam questions. This may take a moment.</p>
+      </div>
+  );
+
+  const renderExam = () => {
+       if (questions.length === 0) return null;
+       const currentQ = questions[currentQuestionIndex];
+       
+       if (mode === 'game') {
+           // GAME MODE UI
+           return (
+                <div className="min-h-screen bg-slate-900 text-white flex flex-col p-4 md:p-8 transition-colors">
+                    <header className="flex justify-between items-center mb-8">
+                        <div className="flex items-center gap-4">
+                            <h2 className="text-2xl font-bold font-serif text-indigo-300">FINQUEST</h2>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-1 text-2xl font-bold">
+                                {Array(gameLives).fill(0).map((_, i) => <span key={i} className="text-rose-500 animate-pulse">♥</span>)}
+                                {Array(3 - gameLives).fill(0).map((_, i) => <span key={i} className="text-rose-900">♥</span>)}
+                            </div>
+                            <div className="px-4 py-2 bg-amber-400 text-slate-900 rounded-lg font-bold text-lg">{gameScore}</div>
+                        </div>
+                    </header>
+                    <main className="flex-1 flex flex-col items-center justify-center text-center">
+                         <div className="relative w-24 h-24 mb-6">
+                            <svg className="w-full h-full transform -rotate-90">
+                                <circle cx="48" cy="48" r="44" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-indigo-800" />
+                                <circle cx="48" cy="48" r="44" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray={276.4} strokeDashoffset={276.4 - (276.4 * timeLeft) / 30} className="text-indigo-400 transition-all duration-1000 linear" />
+                            </svg>
+                            <span className="absolute inset-0 flex items-center justify-center text-3xl font-mono font-bold">{timeLeft}</span>
+                        </div>
+                        <p className="text-xs font-bold text-indigo-400 mb-2">QUESTION {currentQuestionIndex + 1} / {questions.length}</p>
+                        <h3 className="text-xl md:text-3xl font-bold max-w-3xl mb-12">{currentQ.text}</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl">
+                            {currentQ.options.map((opt, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => handleGameAnswer(i)}
+                                    disabled={!!gameFeedback}
+                                    className={`p-4 rounded-xl text-lg font-semibold text-left transition-all duration-300 border-4
+                                        ${gameFeedback && gameFeedback.correctIndex === i ? 'bg-emerald-500 border-emerald-300 scale-105' : ''}
+                                        ${gameFeedback && gameFeedback.status === 'wrong' && userAnswers[currentQuestionIndex] === i ? 'bg-rose-600 border-rose-400' : ''}
+                                        ${!gameFeedback ? 'bg-slate-800 border-slate-700 hover:bg-indigo-800 hover:border-indigo-600' : 'border-transparent'}
+                                    `}
+                                >
+                                    <span className="font-mono mr-3">{String.fromCharCode(65+i)}</span>{opt}
+                                </button>
+                            ))}
+                        </div>
+                    </main>
+                </div>
+           );
+       }
+       
+       // TOPIC & MOCK UI
+       return (
+            <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col md:flex-row transition-colors">
+                <div className="w-full md:w-1/4 bg-white dark:bg-slate-900 p-4 border-r border-slate-200 dark:border-slate-800 flex flex-col">
+                    <div className="flex-1 overflow-y-auto">
+                        <h3 className="text-xs font-bold uppercase text-slate-400 mb-2 px-2">Questions</h3>
+                        <div className="grid grid-cols-5 gap-2">
+                            {questions.map((_, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => setCurrentQuestionIndex(i)}
+                                    className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${
+                                        currentQuestionIndex === i ? 'bg-indigo-600 text-white shadow-lg' : 
+                                        userAnswers[i] !== undefined ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300' : 
+                                        'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                                    }`}
+                                >
+                                    {i + 1}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+                        <button onClick={finishTest} className="w-full py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700">Submit Exam</button>
+                    </div>
+                </div>
+                <div className="flex-1 p-6 md:p-12 overflow-y-auto relative">
+                    <div className="bg-slate-800 text-white p-4 rounded-xl flex items-center justify-between mb-8 shadow-lg">
+                        <span className="text-sm font-bold uppercase tracking-wider">{mode} Mode</span>
+                        <div className="flex items-center gap-4">
+                            <button onClick={() => setShowCalculator(!showCalculator)} className="text-indigo-300 hover:text-white transition-colors" title="Calculator">
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            </button>
+                            <span className="font-mono text-xl font-bold">{formatTime(timeLeft)}</span>
+                        </div>
+                    </div>
+                    
+                    {showCalculator && <div className="absolute top-24 right-12 z-20 animate-fade-in-down"><Calculator/></div>}
+
+                    <div className="mb-8">
+                        <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mb-2">Question {currentQuestionIndex + 1} of {questions.length}</p>
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white leading-snug">{currentQ.text}</h2>
+                    </div>
+                    <div className="space-y-4">
+                        {currentQ.options.map((opt, i) => (
+                            <button 
+                                key={i}
+                                onClick={() => handleSelectAnswer(i)}
+                                className={`w-full p-5 text-left rounded-xl border-2 transition-all duration-200 group flex items-start gap-4 ${
+                                    userAnswers[currentQuestionIndex] === i ? 'bg-indigo-100 dark:bg-indigo-900/50 border-indigo-500 shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-300'
+                                }`}
+                            >
+                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center font-bold text-xs shrink-0 mt-1 ${
+                                    userAnswers[currentQuestionIndex] === i ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 group-hover:border-indigo-500 text-slate-500'
+                                }`}>
+                                    {String.fromCharCode(65 + i)}
+                                </div>
+                                <span className="flex-1 text-slate-800 dark:text-slate-200 font-medium">{opt}</span>
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex justify-between mt-12">
+                        <button onClick={prevQuestion} disabled={currentQuestionIndex === 0} className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-slate-600 dark:text-slate-300 disabled:opacity-50">Previous</button>
+                        <button onClick={nextQuestion} disabled={currentQuestionIndex === questions.length - 1} className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-bold disabled:opacity-50">Next</button>
+                    </div>
+                </div>
+            </div>
+       );
+  };
+  
+  const renderResult = () => {
+    const isGame = mode === 'game';
+    const finalScore = isGame ? gameScore : score;
+    const isPass = isGame ? true : finalScore >= 50;
+
+    return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center p-4 text-center animate-fade-in transition-colors">
+            <div className={`w-32 h-32 rounded-full flex items-center justify-center mb-6 animate-float ${isPass ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-rose-100 dark:bg-rose-900/30'}`}>
+                <span className={`text-6xl ${isPass ? 'text-emerald-500' : 'text-rose-500'}`}>{isPass ? '🎉' : '😔'}</span>
+            </div>
+            <h2 className="text-3xl font-serif font-bold text-slate-900 dark:text-white mb-2">{isGame ? 'Game Over!' : 'Test Complete!'}</h2>
+            <p className="text-slate-500 dark:text-slate-400 mb-8">
+                {isGame ? `You answered ${Object.keys(userAnswers).length} questions and scored:` : "Here's how you performed:"}
+            </p>
+            <div className={`mb-10 p-6 rounded-2xl border-2 ${isPass ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' : 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800'}`}>
+                <p className={`text-6xl font-black ${isPass ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                    {finalScore}{isGame ? '' : '%'}
+                </p>
+                <p className={`text-sm font-bold uppercase tracking-wider ${isPass ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    {isGame ? 'Points' : 'Final Score'}
+                </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+                <button onClick={resetTest} className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-lg hover:bg-slate-50">Main Menu</button>
+                {!isGame && <button onClick={() => setStage('review')} className="px-6 py-3 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-bold rounded-lg hover:bg-indigo-200">Review Answers</button>}
+                <button onClick={startExam} className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">Play Again</button>
+            </div>
+            {!isGame && <button onClick={() => generateTestReviewPDF(questions, userAnswers, score, auth?.user)} className="mt-4 text-xs text-slate-400 hover:underline">Download Results PDF</button>}
+        </div>
+    );
+  };
+  
+  const renderReview = () => (
+      <div className="min-h-screen bg-slate-100 dark:bg-slate-900 p-4 md:p-8">
+          <div className="max-w-4xl mx-auto">
+              <div className="flex justify-between items-center mb-8">
+                  <div>
+                      <h2 className="text-3xl font-serif font-bold text-slate-900 dark:text-white">Review Answers</h2>
+                      <p className="text-slate-500 dark:text-slate-400">Green is correct, Red is your incorrect answer.</p>
+                  </div>
+                  <button onClick={() => setStage('result')} className="px-5 py-2 bg-indigo-600 text-white rounded-lg font-bold">Back to Result</button>
+              </div>
+              <div className="space-y-6">
+                  {questions.map((q, i) => {
+                      const userAnswer = userAnswers[i];
+                      const isCorrect = userAnswer === q.correctAnswer;
+                      return (
+                          <div key={i} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                              <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-2">Question {i+1}</p>
+                              <p className="font-bold text-slate-900 dark:text-white mb-4">{q.text}</p>
+                              <div className="space-y-2">
+                                  {q.options.map((opt, optIdx) => (
+                                      <div key={optIdx} className={`p-3 rounded-lg border-2 text-sm
+                                          ${optIdx === q.correctAnswer ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700' : ''}
+                                          ${!isCorrect && optIdx === userAnswer ? 'bg-rose-50 dark:bg-rose-900/30 border-rose-300 dark:border-rose-700' : ''}
+                                      `}>
+                                          <span className={`font-mono mr-3 font-bold ${optIdx === q.correctAnswer ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500'}`}>
+                                              {String.fromCharCode(65+optIdx)}
+                                          </span>
+                                          <span className={`${optIdx === q.correctAnswer ? 'text-emerald-800 dark:text-emerald-200 font-bold' : 'text-slate-700 dark:text-slate-300'}`}>
+                                            {opt}
+                                          </span>
+                                      </div>
+                                  ))}
+                              </div>
+                          </div>
+                      );
+                  })}
+              </div>
+          </div>
+      </div>
+  );
+  
+  // --- STAGE ROUTER ---
+  switch (stage) {
+      case 'menu': return (
           <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-16 px-4 flex flex-col items-center animate-fade-in transition-colors">
               <div className="max-w-6xl w-full">
                   <div className="text-center mb-16">
@@ -324,7 +617,6 @@ export const TestPage: React.FC = () => {
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                      {/* Mode 1: Topic */}
                       <button 
                         onClick={() => { setMode('topic'); setStage('setup'); }} 
                         className="group relative bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-100 dark:border-slate-700 hover:-translate-y-2 overflow-hidden text-left"
@@ -339,7 +631,6 @@ export const TestPage: React.FC = () => {
                           </p>
                       </button>
 
-                      {/* Mode 2: Mock */}
                       <button 
                         onClick={() => { setMode('mock'); setStage('setup'); }} 
                         className="group relative bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-100 dark:border-slate-700 hover:-translate-y-2 overflow-hidden text-left"
@@ -354,326 +645,28 @@ export const TestPage: React.FC = () => {
                           </p>
                       </button>
 
-                      {/* Mode 3: Game */}
                       <button 
                         onClick={() => { setMode('game'); setStage('setup'); }} 
                         className="group relative bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-100 dark:border-slate-700 hover:-translate-y-2 overflow-hidden text-left"
                       >
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-bl-[100px] transition-transform group-hover:scale-110"></div>
-                          <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mb-6 text-amber-600 dark:text-amber-400 group-hover:bg-amber-600 group-hover:text-white transition-colors relative z-10">
-                              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-bl-[100px] transition-transform group-hover:scale-110"></div>
+                          <div className="w-14 h-14 bg-rose-100 dark:bg-rose-900/30 rounded-2xl flex items-center justify-center mb-6 text-rose-600 dark:text-rose-400 group-hover:bg-rose-600 group-hover:text-white transition-colors relative z-10">
+                              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                           </div>
-                          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 relative z-10">Trivia Challenge</h3>
+                          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 relative z-10">FINQUEST</h3>
                           <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed relative z-10">
-                              Rapid-fire questions with a timer. 3 lives. Compete for the high score on the leaderboard.
+                              A fast-paced survival game. Answer questions correctly before time runs out. 3 lives. Go for the high score!
                           </p>
                       </button>
                   </div>
               </div>
           </div>
       );
+      case 'setup': return renderSetup();
+      case 'loading': return renderLoading();
+      case 'exam': return renderExam();
+      case 'result': return renderResult();
+      case 'review': return renderReview();
+      default: return null;
   }
-
-  if (stage === 'setup') {
-      return (
-          <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
-              <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl max-w-md w-full animate-fade-in-up border border-slate-100 dark:border-slate-700">
-                  <div className="flex items-center gap-3 mb-6">
-                      <button onClick={() => setStage('menu')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 transition-colors">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                      </button>
-                      <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Configure {mode === 'game' ? 'Game' : 'Exam'}</h2>
-                  </div>
-                  
-                  <div className="space-y-6">
-                      <div>
-                          <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Academic Level</label>
-                          <select value={selectedLevel} onChange={e => setSelectedLevel(Number(e.target.value) as Level)} className="w-full p-4 bg-slate-50 dark:bg-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 border border-slate-200 dark:border-slate-600 font-bold text-lg">
-                              {LEVELS.map(l => <option key={l} value={l}>{l} Level</option>)}
-                          </select>
-                      </div>
-                      
-                      {mode === 'topic' && (
-                          <div>
-                              <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Focus Topic</label>
-                              <input 
-                                autoFocus 
-                                value={topic} 
-                                onChange={e => setTopic(e.target.value)} 
-                                className="w-full p-4 bg-slate-50 dark:bg-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 border border-slate-200 dark:border-slate-600 text-lg" 
-                                placeholder="e.g. Capital Budgeting..." 
-                              />
-                          </div>
-                      )}
-
-                      <button onClick={startExam} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 mt-4">
-                          <span>Start Session</span>
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                      </button>
-                  </div>
-              </div>
-          </div>
-      );
-  }
-
-  if (stage === 'loading') {
-      return (
-          <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-8 text-white text-center">
-              <div className="relative w-32 h-32 mb-8">
-                  <svg className="w-full h-full animate-spin text-indigo-600" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center font-bold text-xl">{loadingProgress}%</div>
-              </div>
-              <h2 className="text-2xl font-bold animate-pulse mb-3">{loadingMessage}</h2>
-              <p className="text-slate-400 text-sm max-w-sm mx-auto leading-relaxed">Our AI is generating a unique question set tailored to your level. Please wait...</p>
-              <button onClick={() => setStage('setup')} className="mt-10 px-6 py-2 border border-slate-700 rounded-full text-xs font-bold hover:bg-slate-800 transition-colors">Cancel</button>
-          </div>
-      );
-  }
-
-  if (stage === 'exam') {
-      const currentQ = questions[currentQuestionIndex];
-      const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
-
-      if (mode === 'game') {
-          return (
-              <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4">
-                  <div className="w-full max-w-lg">
-                      <div className="flex justify-between items-center mb-6">
-                          <div className="flex items-center gap-2 text-white">
-                              <span className="text-xl">❤️</span>
-                              <span className="font-bold text-xl">{gameLives}</span>
-                          </div>
-                          <div className="text-center">
-                              <p className="text-xs text-slate-400 uppercase font-bold tracking-widest">Score</p>
-                              <p className="text-2xl font-black text-amber-400">{gameScore}</p>
-                          </div>
-                          <div className="bg-slate-800 px-4 py-2 rounded-full border border-slate-700 text-indigo-400 font-mono font-bold">
-                              {formatTime(timeLeft)}
-                          </div>
-                      </div>
-
-                      <div className="relative bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-2xl border-4 border-slate-100 dark:border-slate-700">
-                          {/* Feedback Overlay */}
-                          {gameFeedback && (
-                              <div className={`absolute inset-0 z-20 flex items-center justify-center backdrop-blur-sm rounded-2xl ${gameFeedback.status === 'correct' ? 'bg-emerald-500/20' : 'bg-rose-500/20'}`}>
-                                  <div className={`transform scale-125 transition-transform font-black text-4xl ${gameFeedback.status === 'correct' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                      {gameFeedback.status === 'correct' ? 'CORRECT!' : 'WRONG!'}
-                                  </div>
-                              </div>
-                          )}
-
-                          <div className="mb-6">
-                              <h2 className="text-lg font-serif font-bold text-slate-900 dark:text-white leading-relaxed">{currentQ.text}</h2>
-                          </div>
-
-                          <div className="space-y-3">
-                              {currentQ.options.map((opt, idx) => {
-                                  let btnClass = "w-full p-4 text-left rounded-xl border-2 font-bold transition-all transform hover:scale-[1.02] ";
-                                  
-                                  if (gameFeedback) {
-                                      if (idx === gameFeedback.correctIndex) btnClass += "bg-emerald-500 border-emerald-600 text-white";
-                                      else if (idx === userAnswers[currentQuestionIndex] && idx !== gameFeedback.correctIndex) btnClass += "bg-rose-500 border-rose-600 text-white";
-                                      else btnClass += "bg-slate-100 dark:bg-slate-700 border-transparent opacity-50";
-                                  } else {
-                                      btnClass += "bg-slate-100 dark:bg-slate-700 border-transparent hover:bg-indigo-100 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200";
-                                  }
-
-                                  return (
-                                      <button 
-                                          key={idx} 
-                                          onClick={() => handleGameAnswer(idx)} 
-                                          className={btnClass}
-                                          disabled={!!gameFeedback}
-                                      >
-                                          {opt}
-                                      </button>
-                                  );
-                              })}
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          );
-      }
-
-      // Standard Exam Mode
-      return (
-          <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col md:flex-row transition-colors">
-              {/* Left Sidebar (Question Nav) */}
-              <div className="w-full md:w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex-shrink-0 flex flex-col h-auto md:h-screen">
-                  <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-                      <h1 className="font-bold text-slate-900 dark:text-white text-lg">CBT Session</h1>
-                      <div className="mt-4 flex items-center justify-between bg-slate-100 dark:bg-slate-700 p-3 rounded-lg">
-                          <span className="text-xs font-bold text-slate-500 dark:text-slate-400">TIME LEFT</span>
-                          <span className={`font-mono font-bold text-xl ${timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-slate-800 dark:text-white'}`}>{formatTime(timeLeft)}</span>
-                      </div>
-                  </div>
-                  
-                  <div className="flex-1 overflow-y-auto p-4">
-                      <div className="grid grid-cols-5 gap-2">
-                          {questions.map((_, i) => (
-                              <button
-                                  key={i}
-                                  onClick={() => setCurrentQuestionIndex(i)}
-                                  className={`aspect-square rounded-lg text-xs font-bold flex items-center justify-center transition-all ${
-                                      currentQuestionIndex === i ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-800' : ''
-                                  } ${
-                                      userAnswers[i] !== undefined ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600'
-                                  }`}
-                              >
-                                  {i + 1}
-                              </button>
-                          ))}
-                      </div>
-                  </div>
-
-                  <div className="p-4 border-t border-slate-200 dark:border-slate-700 space-y-3">
-                      <button onClick={() => setShowCalculator(!showCalculator)} className="w-full py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded hover:bg-slate-200 dark:hover:bg-slate-600">
-                          {showCalculator ? 'Hide Calculator' : 'Show Calculator'}
-                      </button>
-                      <button onClick={finishTest} className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg transition-colors">
-                          Submit Exam
-                      </button>
-                  </div>
-              </div>
-
-              {/* Main Area */}
-              <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
-                  {showCalculator && (
-                      <div className="absolute top-4 right-4 z-50">
-                          <Calculator />
-                      </div>
-                  )}
-
-                  <div className="h-1 bg-slate-200 dark:bg-slate-700">
-                      <div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${progress}%` }}></div>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto p-6 md:p-12 pb-32">
-                      <div className="max-w-3xl mx-auto">
-                          <div className="mb-8">
-                              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Question {currentQuestionIndex + 1} of {questions.length}</span>
-                              <h2 className="text-2xl md:text-3xl font-serif font-bold text-slate-900 dark:text-white mt-4 leading-relaxed">
-                                  {currentQ.text}
-                              </h2>
-                          </div>
-
-                          <div className="space-y-4">
-                              {currentQ.options.map((opt, idx) => (
-                                  <label 
-                                      key={idx} 
-                                      className={`flex items-center p-5 rounded-2xl border-2 cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-800 ${
-                                          userAnswers[currentQuestionIndex] === idx 
-                                              ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' 
-                                              : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
-                                      }`}
-                                  >
-                                      <input 
-                                          type="radio" 
-                                          name={`q-${currentQuestionIndex}`} 
-                                          className="hidden" 
-                                          checked={userAnswers[currentQuestionIndex] === idx} 
-                                          onChange={() => setUserAnswers({...userAnswers, [currentQuestionIndex]: idx})} 
-                                      />
-                                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mr-4 ${
-                                          userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600' : 'border-slate-400'
-                                      }`}>
-                                          {userAnswers[currentQuestionIndex] === idx && <div className="w-3 h-3 rounded-full bg-indigo-600"></div>}
-                                      </div>
-                                      <span className={`text-lg ${userAnswers[currentQuestionIndex] === idx ? 'font-bold text-indigo-900 dark:text-indigo-200' : 'text-slate-700 dark:text-slate-300'}`}>{opt}</span>
-                                  </label>
-                              ))}
-                          </div>
-                      </div>
-                  </div>
-
-                  <div className="p-6 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex justify-between items-center max-w-full">
-                      <button 
-                          onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
-                          disabled={currentQuestionIndex === 0}
-                          className="px-6 py-3 rounded-xl font-bold text-slate-600 dark:text-slate-300 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                      >
-                          Previous
-                      </button>
-                      <button 
-                          onClick={() => {
-                              if (currentQuestionIndex === questions.length - 1) finishTest();
-                              else setCurrentQuestionIndex(prev => prev + 1);
-                          }}
-                          className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg"
-                      >
-                          {currentQuestionIndex === questions.length - 1 ? 'Finish' : 'Next Question'}
-                      </button>
-                  </div>
-              </div>
-          </div>
-      );
-  }
-
-  if (stage === 'result' || stage === 'review') {
-      return (
-          <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 animate-fade-in transition-colors">
-              <div className="max-w-3xl mx-auto bg-white dark:bg-slate-800 rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
-                  <div className={`p-12 text-center ${mode === 'game' ? 'bg-gradient-to-br from-amber-500 to-orange-600' : score >= 50 ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-rose-500 to-red-600'} text-white relative overflow-hidden`}>
-                      <div className="relative z-10">
-                          <p className="text-sm font-bold uppercase tracking-widest opacity-80 mb-4">{mode === 'game' ? 'Game Over' : 'Test Complete'}</p>
-                          <h2 className="text-8xl font-black mb-4 tracking-tighter drop-shadow-md">{mode === 'game' ? gameScore : `${score}%`}</h2>
-                          <p className="text-2xl font-medium opacity-95">
-                              {mode === 'game' 
-                                  ? `You reached Question ${currentQuestionIndex + 1}` 
-                                  : score >= 80 ? 'Outstanding Performance!' : score >= 50 ? 'Good Effort, Keep Pushing!' : 'Don\'t give up, try again!'}
-                          </p>
-                      </div>
-                      <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-                  </div>
-                  
-                  <div className="p-8 md:p-12 bg-slate-50 dark:bg-slate-800/50">
-                      {stage === 'result' ? (
-                          <div className="grid gap-4 max-w-sm mx-auto">
-                              {mode !== 'game' && <button onClick={() => setStage('review')} className="w-full py-4 bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-bold rounded-xl border border-slate-200 dark:border-slate-600 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all shadow-sm">Review Answers</button>}
-                              {mode !== 'game' && <button onClick={() => generateTestReviewPDF(questions, userAnswers, score, auth?.user)} className="w-full py-4 bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 font-bold rounded-xl border border-slate-200 dark:border-slate-600 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all shadow-sm">Download PDF Report</button>}
-                              <button onClick={() => setStage('menu')} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 mt-4">
-                                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                  Play Again
-                              </button>
-                          </div>
-                      ) : (
-                          <div className="space-y-8">
-                              <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-4">
-                                  <h3 className="font-bold text-2xl text-slate-800 dark:text-white">Answer Review</h3>
-                                  <button onClick={() => setStage('result')} className="text-sm font-bold text-slate-500 hover:text-indigo-600">Back to Score</button>
-                              </div>
-                              
-                              {questions.map((q, i) => (
-                                  <div key={i} className={`p-6 rounded-2xl border-2 ${userAnswers[i] === q.correctAnswer ? 'border-emerald-100 bg-emerald-50/50 dark:bg-emerald-900/10 dark:border-emerald-900/50' : 'border-rose-100 bg-rose-50/50 dark:bg-rose-900/10 dark:border-rose-900/50'}`}>
-                                      <div className="flex gap-4 mb-4">
-                                          <span className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-sm font-bold text-white shadow-sm ${userAnswers[i] === q.correctAnswer ? 'bg-emerald-500' : 'bg-rose-500'}`}>{i + 1}</span>
-                                          <p className="font-serif text-lg text-slate-800 dark:text-white leading-relaxed">{q.text}</p>
-                                      </div>
-                                      <div className="pl-12 space-y-2">
-                                          {q.options.map((opt, oid) => (
-                                              <div key={oid} className={`p-3 rounded-xl flex items-center gap-3 text-sm ${oid === q.correctAnswer ? 'bg-emerald-100 text-emerald-800 font-bold dark:bg-emerald-900/40 dark:text-emerald-300' : userAnswers[i] === oid ? 'bg-rose-100 text-rose-800 font-bold dark:bg-rose-900/40 dark:text-rose-300' : 'bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
-                                                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${oid === q.correctAnswer ? 'border-emerald-500 bg-emerald-500 text-white' : userAnswers[i] === oid ? 'border-rose-500 bg-rose-500 text-white' : 'border-slate-300'}`}>
-                                                      {(oid === q.correctAnswer || userAnswers[i] === oid) && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                                                  </div>
-                                                  {opt}
-                                                  {oid === q.correctAnswer && <span className="ml-auto text-xs font-bold text-emerald-600 uppercase tracking-wider">Correct Answer</span>}
-                                                  {userAnswers[i] === oid && oid !== q.correctAnswer && <span className="ml-auto text-xs font-bold text-rose-600 uppercase tracking-wider">Your Answer</span>}
-                                              </div>
-                                          ))}
-                                      </div>
-                                  </div>
-                              ))}
-                          </div>
-                      )}
-                  </div>
-              </div>
-          </div>
-      );
-  }
-
-  return null;
 };

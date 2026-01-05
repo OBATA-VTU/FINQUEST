@@ -163,7 +163,8 @@ export const AdminContentPage: React.FC = () => {
               payload.year = Number(payload.year || new Date().getFullYear());
               payload.level = payload.level === 'General' ? 'General' : Number(payload.level || 100);
               payload.courseCode = (payload.courseCode || 'GEN').toUpperCase();
-              
+              payload.semester = payload.semester === 'N/A' ? 'N/A' : Number(payload.semester);
+
               if (isAiMode) {
                   // AI GENERATION LOGIC
                   if (!payload.courseTitle) throw new Error("Topic is compulsory for AI generation.");
@@ -394,13 +395,23 @@ export const AdminContentPage: React.FC = () => {
                                         </select>
                                     </div>
                                 </div>
-                                
-                                {!isAiMode && (
+
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Year</label>
-                                        <input type="number" className="w-full border p-3 rounded-xl" placeholder="2023" value={formData.year || ''} onChange={e => setFormData({...formData, year: e.target.value})} required />
+                                      <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Semester</label>
+                                      <select className="w-full border p-3 rounded-xl bg-white" value={formData.semester || 'N/A'} onChange={e => setFormData({...formData, semester: e.target.value})}>
+                                          <option value="N/A">Not Specified</option>
+                                          <option value="1">1st Semester</option>
+                                          <option value="2">2nd Semester</option>
+                                      </select>
                                     </div>
-                                )}
+                                    {!isAiMode && (
+                                      <div>
+                                          <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Year</label>
+                                          <input type="number" className="w-full border p-3 rounded-xl" placeholder="2023" value={formData.year || ''} onChange={e => setFormData({...formData, year: e.target.value})} required />
+                                      </div>
+                                    )}
+                                </div>
                             </>
                         )}
 

@@ -17,6 +17,7 @@ export const PastQuestionsPage: React.FC = () => {
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [selectedSemester, setSelectedSemester] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
 
   const auth = useContext(AuthContext);
@@ -37,6 +38,7 @@ export const PastQuestionsPage: React.FC = () => {
                     courseCode: data.courseCode,
                     courseTitle: data.courseTitle,
                     year: data.year,
+                    semester: data.semester,
                     lecturer: data.lecturer,
                     fileUrl: data.fileUrl,
                     storagePath: data.storagePath,
@@ -64,7 +66,7 @@ export const PastQuestionsPage: React.FC = () => {
   const recommendedQuestions = useMemo(() => {
       if (!auth?.user || selectedLevel !== 'all') return [];
       return questions
-        .filter(q => q.level === auth.user!.level)
+        .filter(q => q.level === auth.user!.level || q.level === 'General')
         .sort((a, b) => b.year - a.year)
         .slice(0, 3);
   }, [questions, auth?.user, selectedLevel]);
@@ -81,6 +83,10 @@ export const PastQuestionsPage: React.FC = () => {
         filtered = filtered.filter(q => q.year === Number(selectedYear));
     }
     
+    if (selectedSemester !== 'all') {
+        filtered = filtered.filter(q => String(q.semester) === selectedSemester);
+    }
+
     if (searchTerm) {
         const lowerTerm = searchTerm.toLowerCase().trim();
         filtered = filtered.filter(q => 
@@ -95,7 +101,7 @@ export const PastQuestionsPage: React.FC = () => {
         return a.year - b.year;
     });
 
-  }, [questions, selectedLevel, searchTerm, selectedYear, sortOrder]);
+  }, [questions, selectedLevel, searchTerm, selectedYear, selectedSemester, sortOrder]);
 
   return (
     <div className="bg-slate-50 dark:bg-slate-900 min-h-screen pb-20 transition-colors duration-300">
@@ -130,6 +136,20 @@ export const PastQuestionsPage: React.FC = () => {
                          >
                              <option value="all">All Years</option>
                              {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                         </select>
+                         <svg className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                     </div>
+
+                     {/* Semester Filter */}
+                     <div className="relative">
+                         <select 
+                            value={selectedSemester} 
+                            onChange={(e) => setSelectedSemester(e.target.value)}
+                            className="w-full sm:w-36 pl-4 pr-8 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none cursor-pointer"
+                         >
+                             <option value="all">All Semesters</option>
+                             <option value="1">1st Semester</option>
+                             <option value="2">2nd Semester</option>
                          </select>
                          <svg className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                      </div>

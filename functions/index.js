@@ -1,4 +1,3 @@
-
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 
@@ -235,4 +234,80 @@ exports.sendAnnouncementEmail = functions.firestore
     return request
       .then((result) => console.log("Announcement email sent successfully.", JSON.stringify(result.body)))
       .catch((err) => console.error("Error sending announcement email:", err.statusCode, err.message, err.ErrorMessage));
+  });
+
+/**
+ * Sends a notification and email when a new lost item is posted.
+ */
+exports.sendLostItemAlert = functions.firestore
+  .document("lost_items/{itemId}")
+  .onCreate(async (snap) => {
+    const item = snap.data();
+    if (item.status !== "approved") {
+      console.log(`Lost item ${snap.id} is not approved. Skipping notification.`);
+      return null;
+    }
+    const message = `Lost & Found Alert: "${item.itemName}" found at ${item.locationFound}. Contact ${item.finderName}.`;
+    
+    // 1. Create a global in-app notification
+    try {
+        await admin.firestore().collection("notifications").add({
+            userId: "all",
+            message: message,
+            type: "info",
+            read: false,
+            createdAt: new Date().toISOString(),
+        });
+        console.log("Global notification created for new lost item.");
+    } catch(e) {
+        console.error("Failed to create global notification for lost item.", e);
+    }
+
+    // 2. Send an email broadcast
+    const mailjetConfig = functions.config().mailjet;
+    if (!mailjetConfig?.apikey || !mailjetConfig?.apisecret || !mailjetConfig?.sender) {
+        console.error("CRITICAL: Mailjet configuration is missing for Lost & Found email.");
+        return;
+    }
+
+    const mailjet = require("@mailjet/node").connect(mailjetConfig.apikey, mailjetConfig.apisecret);
+    const senderEmail = mailjetConfig.sender;
+
+    const usersSnap = await admin.firestore().collection("users").get();
+    const recipients = usersSnap.docs.map((doc) => ({
+      Email: doc.data().email,
+      Name: doc.data().name || "Student",
+    }));
+
+    if (recipients.length === 0) return null;
+
+    console.log(`Sending Lost & Found email to ${recipients.length} users.`);
+    const request = mailjet.post("send", { version: "v3.1" }).request({
+      Messages: [
+        {
+          From: { Email: senderEmail, Name: "FINSA Lost & Found" },
+          To: recipients,
+          Subject: `Lost & Found Alert: ${item.itemName}`,
+          HTMLPart: `
+            <h3>Dear Student,</h3>
+            <p>A new item has been reported in the Lost & Found section.</p>
+            <div style="padding: 15px; border-left: 4px solid #F59E0B; background-color: #FFFBEB;">
+              <p><strong>Item:</strong> ${item.itemName}</p>
+              <p><strong>Found At:</strong> ${item.locationFound}</p>
+              <p><strong>Reported By:</strong> ${item.finderName}</p>
+            </div>
+            <p>
+              <a href="https://finsa.vercel.app/lost-and-found">Click here to view details and contact the finder.</a>
+            </p>
+            <br/>
+            <p>Best regards,</p>
+            <p><strong>The FINSA Team</strong></p>
+          `,
+        },
+      ],
+    });
+
+    return request
+      .then((result) => console.log("Lost & Found email sent successfully.", JSON.stringify(result.body)))
+      .catch((err) => console.error("Error sending Lost & Found email:", err.statusCode, err.message, err.ErrorMessage));
   });

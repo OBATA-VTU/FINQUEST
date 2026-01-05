@@ -11,6 +11,7 @@ export interface PastQuestion {
   courseCode: string;
   courseTitle: string;
   year: number;
+  semester?: 1 | 2 | 'N/A';
   lecturer?: string; // Added for smart finder
   fileUrl?: string; 
   storagePath?: string; // Path in Dropbox/Storage for deletion
@@ -72,6 +73,7 @@ export interface User {
   lastActive?: string; 
   isVerified?: boolean; // Added for blue tick
   isBanned?: boolean; // Added for suspension
+  badges?: string[];
 }
 
 export interface CommunityGroup {

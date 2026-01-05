@@ -1,4 +1,3 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -41,7 +40,7 @@ service cloud.firestore {
       // Update: 
       // 1. Owner can update a limited set of their profile fields.
       // 2. Admin can update anything.
-      allow update: if (isOwner(userId) && request.writeFields.hasOnly(['name', 'level', 'matricNumber', 'avatarUrl', 'username', 'savedQuestions', 'lastActive'])) || isAdmin();
+      allow update: if (isOwner(userId) && request.writeFields.hasOnly(['name', 'level', 'matricNumber', 'avatarUrl', 'username', 'savedQuestions', 'lastActive', 'badges'])) || isAdmin();
       
       // Delete: Only admins can delete users
       allow delete: if isAdmin();
@@ -115,17 +114,15 @@ service cloud.firestore {
 
     // --- LOST & FOUND ---
     match /lost_items/{itemId} {
-      // Read: Public sees Approved/Recovered. Owner sees their own pending. Admin sees all.
-      allow read: if resource.data.status == 'approved' || 
-                     resource.data.status == 'recovered' || 
-                     (isAuthenticated() && (resource.data.finderId == request.auth.uid || isAdmin()));
+      // Anyone can read approved/recovered items.
+      allow read: if resource.data.status == 'approved' || resource.data.status == 'recovered' || isAdmin();
       
-      // Create: Any logged in user can report a lost item
-      allow create: if isAuthenticated();
+      // Any authenticated user can create an item, but it must be set to 'approved' immediately.
+      allow create: if isAuthenticated() && request.resource.data.status == 'approved';
       
       // Update: 
       // 1. Owner can mark status as 'recovered'.
-      // 2. Admin can approve ('approved') or edit.
+      // 2. Admin can edit anything (for moderation).
       allow update: if (isAuthenticated() && resource.data.finderId == request.auth.uid && request.resource.data.status == 'recovered') || isAdmin();
       
       // Delete: Admin only

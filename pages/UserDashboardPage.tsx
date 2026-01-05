@@ -77,20 +77,15 @@ export const UserDashboardPage: React.FC = () => {
               setRecentNews(news.slice(0, 3));
 
               // 3. Recommended Questions
-              // Fetch only approved questions, filter level in JS
               const recQ = query(
                   collection(db, 'questions'),
                   where('status', '==', 'approved')
               );
               const recSnap = await getDocs(recQ);
-              let allQuestions = recSnap.docs.map(d => ({ id: d.id, ...d.data() } as PastQuestion));
+              const allQuestions = recSnap.docs.map(d => ({ id: d.id, ...d.data() } as PastQuestion));
               
-              // Client-side filter for user level
-              let levelQuestions = allQuestions;
-              if (user.level) {
-                  const specific = allQuestions.filter(q => q.level === user.level);
-                  if (specific.length > 0) levelQuestions = specific;
-              }
+              // Improved recommendation logic
+              const levelQuestions = allQuestions.filter(q => q.level === user.level || q.level === 'General');
               
               // Sort by year desc
               levelQuestions.sort((a, b) => b.year - a.year);

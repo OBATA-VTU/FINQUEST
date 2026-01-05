@@ -26,6 +26,7 @@ export const UploadPage: React.FC = () => {
     const [lecturer, setLecturer] = useState('');
     const [level, setLevel] = useState<Level | string>(auth?.user?.level?.toString() || '100');
     const [year, setYear] = useState(new Date().getFullYear());
+    const [semester, setSemester] = useState<'1' | '2' | 'N/A'>('N/A');
     const [category, setCategory] = useState("Past Question");
     
     // Specific Fields
@@ -71,6 +72,7 @@ export const UploadPage: React.FC = () => {
                 lecturer,
                 level: level === 'General' ? 'General' : Number(level),
                 year,
+                semester: semester === 'N/A' ? 'N/A' : Number(semester),
                 category,
                 uploadedBy: auth.user.id,
                 uploadedByEmail: auth.user.email,
@@ -234,11 +236,16 @@ export const UploadPage: React.FC = () => {
                             {uploadType === 'text' && renderTextEditor()}
                             {uploadType === 'ai' && <div className="bg-amber-50 p-4 rounded-xl text-center text-amber-800 text-sm font-medium">AI will generate content based on the Course Title you provide below.</div>}
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Code</label><input type="text" value={courseCode} onChange={e => setCourseCode(e.target.value)} required className="w-full p-3 border rounded-xl" placeholder="FIN 101" /></div>
-                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Level</label><select value={level} onChange={e => setLevel(e.target.value)} className="w-full p-3 border rounded-xl bg-white">{LEVELS.map(l => <option key={l} value={l}>{typeof l === 'number' ? `${l}L` : l}</option>)}</select></div>
+                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Title</label><input type="text" value={courseTitle} onChange={e => setCourseTitle(e.target.value)} required className="w-full p-3 border rounded-xl" placeholder="e.g. Intro to Finance" /></div>
                             </div>
-                            <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">{uploadType === 'ai' ? 'Topic' : 'Course Title'}</label><input type="text" value={courseTitle} onChange={e => setCourseTitle(e.target.value)} required className="w-full p-3 border rounded-xl" placeholder="e.g. Introduction to Finance" /></div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Level</label><select value={level} onChange={e => setLevel(e.target.value)} className="w-full p-3 border rounded-xl bg-white">{LEVELS.map(l => <option key={l} value={l}>{typeof l === 'number' ? `${l}L` : l}</option>)}</select></div>
+                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Semester</label><select value={semester} onChange={e => setSemester(e.target.value as any)} className="w-full p-3 border rounded-xl bg-white"><option value="N/A">Not Specified</option><option value="1">1st Semester</option><option value="2">2nd Semester</option></select></div>
+                            </div>
+
                             <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Lecturer (Optional)</label><input type="text" value={lecturer} onChange={e => setLecturer(e.target.value)} className="w-full p-3 border rounded-xl" placeholder="e.g. Dr. A. Adebayo" /></div>
                             
                             {isSubmitting && <div className="space-y-1"><div className="flex justify-between text-xs font-bold text-indigo-600"><span>{uploadStatus}</span><span>{Math.round(uploadProgress)}%</span></div><div className="w-full bg-slate-200 rounded-full h-2"><div className="bg-indigo-600 h-full rounded-full" style={{ width: `${uploadProgress}%` }}></div></div></div>}
