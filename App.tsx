@@ -29,7 +29,6 @@ import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Layout } from './components/Layout';
-import ScrollToTop from './components/ScrollToTop';
 import { CountdownPage } from './pages/CountdownPage';
 
 // NEW: Import new admin pages
@@ -73,7 +72,6 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
 const AppContent: React.FC = () => {
   return (
     <>
-        <ScrollToTop />
         <Routes>
             {/* The special /cdq bypass is now handled by the main App component logic */}
             

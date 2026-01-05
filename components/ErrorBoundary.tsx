@@ -43,7 +43,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       );
     }
 
-    // FIX: Property 'props' does not exist on type 'ErrorBoundary'. In a class component, props are accessed via `this.props`.
+    // FIX: In a class component, props are accessed via `this.props`.
     return this.props.children;
   }
 }
