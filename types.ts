@@ -1,5 +1,5 @@
 
-export type Level = 100 | 200 | 300 | 400;
+export type Level = 100 | 200 | 300 | 400 | 'General';
 
 export type Page = 'home' | 'questions' | 'executives' | 'lecturers' | 'announcements' | 'login' | 'admin' | 'profile' | 'community';
 

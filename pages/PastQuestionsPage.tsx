@@ -74,7 +74,7 @@ export const PastQuestionsPage: React.FC = () => {
     let filtered = questions;
 
     if (selectedLevel !== 'all') {
-        filtered = filtered.filter(q => q.level === Number(selectedLevel));
+        filtered = filtered.filter(q => String(q.level) === selectedLevel);
     }
 
     if (selectedYear !== 'all') {
@@ -116,7 +116,7 @@ export const PastQuestionsPage: React.FC = () => {
                             className="w-full sm:w-32 pl-4 pr-8 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none cursor-pointer"
                          >
                              <option value="all">All Levels</option>
-                             {LEVELS.map(l => <option key={l} value={l}>{l} Level</option>)}
+                             {LEVELS.map(l => <option key={l} value={l}>{typeof l === 'number' ? `${l} Level` : l}</option>)}
                          </select>
                          <svg className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                      </div>

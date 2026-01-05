@@ -1,4 +1,3 @@
-
 import React, { useState, FormEvent, useRef, useEffect, useContext } from 'react';
 import { Level } from '../types';
 import { LEVELS } from '../constants';
@@ -25,7 +24,7 @@ export const UploadPage: React.FC = () => {
     const [courseCode, setCourseCode] = useState('');
     const [courseTitle, setCourseTitle] = useState('');
     const [lecturer, setLecturer] = useState('');
-    const [level, setLevel] = useState<Level>(auth?.user?.level || 100);
+    const [level, setLevel] = useState<Level | string>(auth?.user?.level?.toString() || '100');
     const [year, setYear] = useState(new Date().getFullYear());
     const [category, setCategory] = useState("Past Question");
     
@@ -70,7 +69,7 @@ export const UploadPage: React.FC = () => {
                 courseCode: courseCode.toUpperCase(),
                 courseTitle,
                 lecturer,
-                level,
+                level: level === 'General' ? 'General' : Number(level),
                 year,
                 category,
                 uploadedBy: auth.user.id,
@@ -237,7 +236,7 @@ export const UploadPage: React.FC = () => {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Code</label><input type="text" value={courseCode} onChange={e => setCourseCode(e.target.value)} required className="w-full p-3 border rounded-xl" placeholder="FIN 101" /></div>
-                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Level</label><select value={level} onChange={e => setLevel(Number(e.target.value) as Level)} className="w-full p-3 border rounded-xl bg-white">{LEVELS.map(l => <option key={l} value={l}>{l}L</option>)}</select></div>
+                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Level</label><select value={level} onChange={e => setLevel(e.target.value)} className="w-full p-3 border rounded-xl bg-white">{LEVELS.map(l => <option key={l} value={l}>{typeof l === 'number' ? `${l}L` : l}</option>)}</select></div>
                             </div>
                             <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">{uploadType === 'ai' ? 'Topic' : 'Course Title'}</label><input type="text" value={courseTitle} onChange={e => setCourseTitle(e.target.value)} required className="w-full p-3 border rounded-xl" placeholder="e.g. Introduction to Finance" /></div>
                             <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Lecturer (Optional)</label><input type="text" value={lecturer} onChange={e => setLecturer(e.target.value)} className="w-full p-3 border rounded-xl" placeholder="e.g. Dr. A. Adebayo" /></div>

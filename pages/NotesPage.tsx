@@ -4,6 +4,28 @@ import { collection, addDoc, query, where, getDocs, deleteDoc, doc, updateDoc } 
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 
+// Simple Markdown to HTML Renderer Component
+const MarkdownRenderer: React.FC<{ text: string; className?: string }> = ({ text, className }) => {
+    const createMarkup = () => {
+        if (!text) return { __html: '' };
+        // Chain of replacements for markdown syntax
+        const html = text
+            .replace(/</g, "&lt;").replace(/>/g, "&gt;") // Escape HTML tags first
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/_(.*?)_/g, '<em>$1</em>')
+            .replace(/~~(.*?)~~/g, '<s>$1</s>')
+            .replace(/^## (.*$)/gim, '<h2 class="text-lg font-bold mt-2 mb-1">$1</h2>')
+            .replace(/^- (.*$)/gim, '<li class="ml-4 list-disc">$1</li>')
+            .replace(/\n/g, '<br />')
+            // Cleanup: remove <br> before lists/headings
+            .replace(/<br \/>(<h2|<li)/g, '$1')
+            .replace(/(<\/h2>|<\/li>)<br \/>/g, '$1');
+
+        return { __html: html };
+    };
+    return <div className={className} dangerouslySetInnerHTML={createMarkup()} />;
+};
+
 interface Note {
     id: string;
     title: string;
@@ -180,7 +202,7 @@ export const NotesPage: React.FC = () => {
                                     <button onClick={() => handleDelete(note.id)} className="p-2 bg-white/50 dark:bg-slate-700/50 rounded-full hover:bg-white text-rose-600"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
                                 </div>
                                 <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 mb-3 pr-16">{note.title}</h3>
-                                <p className="text-slate-700 dark:text-slate-300 text-sm whitespace-pre-wrap leading-relaxed max-h-40 overflow-hidden">{note.content}</p>
+                                <MarkdownRenderer text={note.content} className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed max-h-40 overflow-hidden" />
                                 <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-4 uppercase tracking-widest">{new Date(note.createdAt).toLocaleDateString()}</p>
                             </div>
                         ))}

@@ -13,54 +13,6 @@ const renderMarkdownContent = (doc: jsPDF, markdown: string, startX: number, sta
         }
     };
 
-    const renderStyledLine = (line: string) => {
-        const regex = /(\*\*.*?\*\*|_.*?_|~~.*?~~)/g;
-        const parts = line.split(regex).filter(part => part);
-
-        let currentX = startX;
-        checkPageBreak(lineHeight);
-
-        for (const part of parts) {
-            let isBold = false;
-            let isItalic = false;
-            let isStrike = false;
-            let text = part;
-
-            if (part.startsWith('**') && part.endsWith('**')) {
-                isBold = true;
-                text = part.substring(2, part.length - 2);
-            } else if (part.startsWith('_') && part.endsWith('_')) {
-                isItalic = true;
-                text = part.substring(1, part.length - 1);
-            } else if (part.startsWith('~~') && part.endsWith('~~')) {
-                isStrike = true;
-                text = part.substring(2, part.length - 2);
-            }
-            
-            let fontStyle = 'normal';
-            if (isBold && isItalic) fontStyle = 'bolditalic';
-            else if (isBold) fontStyle = 'bold';
-            else if (isItalic) fontStyle = 'italic';
-            doc.setFont('helvetica', fontStyle);
-
-            const words = text.split(' ');
-            for (let i = 0; i < words.length; i++) {
-                const word = words[i] + (i === words.length - 1 ? '' : ' ');
-                const wordWidth = doc.getStringUnitWidth(word) * doc.getFontSize() / doc.internal.scaleFactor;
-
-                if (currentX + wordWidth > startX + maxWidth) {
-                    currentX = startX;
-                    y += lineHeight;
-                    checkPageBreak(lineHeight);
-                }
-                
-                doc.text(word, currentX, y, { flags: { strikeout: isStrike } } as any);
-                currentX += wordWidth;
-            }
-        }
-        y += lineHeight; // Move to the next line after the full line is processed
-    };
-
     const lines = markdown.split('\n');
 
     for (const line of lines) {
@@ -85,8 +37,48 @@ const renderMarkdownContent = (doc: jsPDF, markdown: string, startX: number, sta
             checkPageBreak(lineHeight);
             y += lineHeight;
         } else {
+            // New logic for styled lines
             doc.setFontSize(11);
-            renderStyledLine(line);
+            const parts = line.split(/(\*\*.*?\*\*|_.*?_|~~.*?~~)/g).filter(Boolean);
+            let currentX = startX;
+
+            for (const part of parts) {
+                let text = part;
+                let style = 'normal';
+                let isStrike = false;
+
+                if (part.startsWith('**') && part.endsWith('**')) {
+                    style = 'bold';
+                    text = part.slice(2, -2);
+                } else if (part.startsWith('_') && part.endsWith('_')) {
+                    style = 'italic';
+                    text = part.slice(1, -1);
+                } else if (part.startsWith('~~') && part.endsWith('~~')) {
+                    isStrike = true;
+                    text = part.slice(2, -2);
+                }
+                
+                doc.setFont('helvetica', style);
+
+                const words = text.split(' ');
+                for (let i = 0; i < words.length; i++) {
+                    const word = words[i];
+                    if (!word) continue;
+
+                    const wordWithSpace = i === words.length - 1 ? word : word + ' ';
+                    const wordWidth = doc.getStringUnitWidth(wordWithSpace) * doc.getFontSize() / doc.internal.scaleFactor;
+                    
+                    if (currentX !== startX && currentX + wordWidth > startX + maxWidth) {
+                        currentX = startX;
+                        y += lineHeight;
+                        checkPageBreak(lineHeight);
+                    }
+                    
+                    doc.text(wordWithSpace, currentX, y, { flags: { strikeout: isStrike } } as any);
+                    currentX += wordWidth;
+                }
+            }
+            y += lineHeight; // Advance to the next line after all parts are rendered
         }
     }
     return y;

@@ -1,12 +1,14 @@
 // This file contains a larger, more robust set of fallback questions for the CBT practice test.
 // These questions are used when the AI generation fails for any reason.
 
+import { Level } from '../types';
+
 export interface FallbackQuestion {
   id: number;
   text: string;
   options: string[];
   correctAnswer: number;
-  level: 100 | 200 | 300 | 400;
+  level: Level;
   topic: string;
 }
 

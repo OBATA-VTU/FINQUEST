@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc, getDoc, setDoc } from 'firebase/firestore';
@@ -162,7 +161,7 @@ export const AdminContentPage: React.FC = () => {
           if (activeContent === 'materials') {
               // Ensure numeric types
               payload.year = Number(payload.year || new Date().getFullYear());
-              payload.level = Number(payload.level || 100);
+              payload.level = payload.level === 'General' ? 'General' : Number(payload.level || 100);
               payload.courseCode = (payload.courseCode || 'GEN').toUpperCase();
               
               if (isAiMode) {
@@ -334,11 +333,8 @@ export const AdminContentPage: React.FC = () => {
                         {(activeContent === 'executives' || activeContent === 'lecturers') && (
                              <div>
                                 <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Level</label>
-                                <select className="w-full border border-slate-300 p-3 rounded-xl bg-white" value={formData.level || '100'} onChange={e => setFormData({...formData, level: Number(e.target.value)})}>
-                                    <option value="100">100 Level</option>
-                                    <option value="200">200 Level</option>
-                                    <option value="300">300 Level</option>
-                                    <option value="400">400 Level</option>
+                                <select className="w-full border border-slate-300 p-3 rounded-xl bg-white" value={formData.level || '100'} onChange={e => setFormData({...formData, level: e.target.value === 'General' ? 'General' : Number(e.target.value)})}>
+                                    {LEVELS.map(l => <option key={l} value={l}>{typeof l === 'number' ? `${l} Level` : l}</option>)}
                                 </select>
                              </div>
                         )}
@@ -394,7 +390,7 @@ export const AdminContentPage: React.FC = () => {
                                             Level {isAiMode && '(Optional)'}
                                         </label>
                                         <select className="w-full border p-3 rounded-xl bg-white" value={formData.level || '100'} onChange={e => setFormData({...formData, level: e.target.value})}>
-                                            {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                                            {LEVELS.map(l => <option key={l} value={l}>{typeof l === 'number' ? `${l} Level` : l}</option>)}
                                         </select>
                                     </div>
                                 </div>
