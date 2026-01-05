@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { User, Level } from '../types';
 import { auth, db } from '../firebase';
@@ -27,6 +28,7 @@ interface AuthContextType {
   toggleBookmark: (questionId: string) => Promise<void>;
   linkGoogleAccount: () => Promise<void>;
   addPassword: (password: string) => Promise<void>;
+  updateUser: (updates: Partial<User>) => void; // For real-time UI updates
   isPasswordAccount: boolean;
   isGoogleAccount: boolean;
 }
@@ -92,9 +94,11 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     avatarUrl: userData.avatarUrl || firebaseUser.photoURL,
                     contributionPoints: userData.contributionPoints || 0,
                     savedQuestions: userData.savedQuestions || [],
+                    createdAt: userData.createdAt,
                     lastActive: userData.lastActive,
                     isVerified: userData.isVerified,
-                    isBanned: userData.isBanned
+                    isBanned: userData.isBanned,
+                    badges: userData.badges || []
                 });
             } else {
                 const newUser = {
@@ -105,7 +109,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     role: 'student' as const,
                     level: 100 as Level,
                     avatarUrl: firebaseUser.photoURL || undefined,
-                    savedQuestions: []
+                    savedQuestions: [],
+                    badges: []
                 };
                 setUser(newUser);
             }
@@ -180,6 +185,12 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       };
   }, [user?.id]);
 
+  const updateUser = (updates: Partial<User>) => {
+      if (user) {
+          setUser(prevUser => ({ ...prevUser!, ...updates }));
+      }
+  };
+
   const login = async (email: string, pass: string) => {
     try {
         await signInWithEmailAndPassword(auth, email, pass);
@@ -192,9 +203,6 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const loginWithGoogle = async (): Promise<boolean> => {
     try {
         const provider = new GoogleAuthProvider();
-        // REMOVED 'select_account' prompt to speed up flow
-        // provider.setCustomParameters({ prompt: 'select_account' });
-
         const result = await signInWithPopup(auth, provider);
         const firebaseUser = result.user;
         let isIncompleteProfile = false;
@@ -216,7 +224,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             createdAt: new Date().toISOString(),
             photoURL: firebaseUser.photoURL,
             savedQuestions: [],
-            lastActive: new Date().toISOString()
+            lastActive: new Date().toISOString(),
+            badges: []
           });
 
           await setDoc(userRef, cleanData);
@@ -281,6 +290,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             matricNumber: data.matricNumber || '',
             avatarUrl: data.avatarUrl,
             savedQuestions: [],
+            badges: [],
             lastActive: new Date().toISOString()
           };
 
@@ -304,6 +314,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const toggleBookmark = async (questionId: string) => {
       if (!user) return;
       const currentSaved = user.savedQuestions || [];
+      const userBadges = user.badges || [];
       let newSaved: string[];
 
       const isBookmarking = !currentSaved.includes(questionId);
@@ -316,14 +327,30 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
           showNotification("Bookmark removed", "info");
       }
 
-      setUser({ ...user, savedQuestions: newSaved });
+      // Optimistically update local state first for instant UI feedback
+      updateUser({ savedQuestions: newSaved });
 
+      const userRef = doc(db, 'users', user.id);
       try {
-          const userRef = doc(db, 'users', user.id);
           await updateDoc(userRef, { savedQuestions: newSaved });
+
+          // Check for new bookmark-related badges
+          if (isBookmarking) {
+              const newBadgeAwards: string[] = [];
+              if (newSaved.length >= 1 && !userBadges.includes('BOOKWORM_1')) newBadgeAwards.push('BOOKWORM_1');
+              if (newSaved.length >= 10 && !userBadges.includes('BOOKWORM_10')) newBadgeAwards.push('BOOKWORM_10');
+
+              if (newBadgeAwards.length > 0) {
+                  const allBadges = [...new Set([...userBadges, ...newBadgeAwards])];
+                  await updateDoc(userRef, { badges: allBadges });
+                  updateUser({ badges: allBadges }); // Update context state
+                  showNotification(`Unlocked: ${newBadgeAwards.map(b => b.replace(/_/g, ' ')).join(', ')}`, "success");
+              }
+          }
       } catch (e) {
           showNotification("Failed to sync bookmark", "error");
-          setUser(user);
+          // Revert optimistic update on failure
+          updateUser({ savedQuestions: currentSaved });
       }
   };
 
@@ -372,6 +399,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     toggleBookmark,
     linkGoogleAccount,
     addPassword,
+    updateUser,
     isPasswordAccount,
     isGoogleAccount,
   };

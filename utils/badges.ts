@@ -1,3 +1,4 @@
+
 import { User } from '../types';
 import { collection, query, where, getDocs, getCountFromServer, limit } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -20,6 +21,11 @@ export const BADGE_DEFINITIONS: Record<string, Omit<Badge, 'id'>> = {
   VETERAN_5: { name: 'Test Veteran', description: 'Completed 5 CBT practice sessions.', icon: '🎖️', rank: 25 },
   VETERAN_20: { name: 'Exam Warrior', description: 'Completed 20+ CBT practice sessions.', icon: '⚔️', rank: 55 },
   COMMUNITY_STARTER: { name: 'Community Starter', description: 'Sent your first message in the lounge.', icon: '💬', rank: 5 },
+  // NEW BADGES
+  BOOKWORM_1: { name: 'Bookworm', description: 'Saved your first past question for later.', icon: '🔖', rank: 5 },
+  BOOKWORM_10: { name: 'Archivist', description: 'Saved 10+ past questions.', icon: '🗂️', rank: 20 },
+  PERFECTIONIST: { name: 'Perfectionist', description: 'Scored a perfect 100% on a CBT practice.', icon: '💯', rank: 65 },
+  FINQUEST_SURVIVOR: { name: 'FinQuest Survivor', description: 'Completed your first round of FinQuest.', icon: '🕹️', rank: 15 },
 };
 
 export const getBadge = (id: string): Badge | undefined => {
