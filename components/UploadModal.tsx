@@ -72,12 +72,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
 
         try {
             // Dropbox Upload
-            const { url, path } = await uploadFile(file, 'past_questions', (progress) => {
-                setUploadProgress(progress);
-                setUploadStatus('Uploading Document...');
-            });
+            // FIX: The `uploadFile` function now only accepts 2 arguments. The progress callback is no longer supported by the new API-based upload.
+            const { url, path } = await uploadFile(file, 'past_questions');
 
             setUploadStatus('Saving record...');
+            setUploadProgress(90);
             
             const questionData = {
                 courseCode: courseCode.toUpperCase(),

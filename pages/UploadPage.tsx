@@ -38,7 +38,7 @@ export const UploadPage: React.FC = () => {
     // Processing State
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [uploadStatus, setUploadStatus] = useState<string>(''); 
-    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadProgress, setUploadProgress] = useState(0); // This can be simplified now
     const [dragActive, setDragActive] = useState(false);
 
     const canUseAi = (auth?.user?.contributionPoints || 0) >= 500;
@@ -62,7 +62,7 @@ export const UploadPage: React.FC = () => {
         }
 
         setIsSubmitting(true);
-        setUploadStatus('Starting...');
+        setUploadStatus('Submitting...');
         setUploadProgress(5);
 
         try {
@@ -83,7 +83,9 @@ export const UploadPage: React.FC = () => {
             if (uploadType === 'document') {
                 if (!file) throw new Error("Document file not selected.");
                 setUploadStatus('Uploading Document...');
-                const { url, path } = await uploadFile(file, 'past_questions', setUploadProgress);
+                // The onProgress callback is removed as the new API call doesn't support it directly.
+                const { url, path } = await uploadFile(file, 'past_questions');
+                setUploadProgress(80);
                 questionData.fileUrl = url;
                 questionData.storagePath = path;
             } else if (uploadType === 'images') {
@@ -124,6 +126,8 @@ export const UploadPage: React.FC = () => {
             showNotification(`Failed: ${error.message}`, "error");
         } finally {
             setIsSubmitting(false);
+            setUploadProgress(0);
+            setUploadStatus('');
         }
     };
 
@@ -160,6 +164,7 @@ export const UploadPage: React.FC = () => {
             suffix + 
             textContent.substring(end);
 
+        // FIX: The state setter was named `setContent` but should be `setTextContent`.
         setTextContent(newText);
         
         setTimeout(() => {
@@ -186,7 +191,7 @@ export const UploadPage: React.FC = () => {
             </div>
             <textarea 
                 ref={textAreaRef}
-                className="w-full p-4 h-64 bg-transparent outline-none resize-y text-slate-700 dark:text-slate-200" 
+                className="w-full h-64 p-4 resize-none bg-transparent outline-none text-slate-700 dark:text-slate-200 leading-relaxed" 
                 placeholder="Type your material here... Use the tools above for formatting." 
                 value={textContent} 
                 onChange={e => setTextContent(e.target.value)} 
@@ -248,7 +253,7 @@ export const UploadPage: React.FC = () => {
 
                             <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Lecturer (Optional)</label><input type="text" value={lecturer} onChange={e => setLecturer(e.target.value)} className="w-full p-3 border rounded-xl" placeholder="e.g. Dr. A. Adebayo" /></div>
                             
-                            {isSubmitting && <div className="space-y-1"><div className="flex justify-between text-xs font-bold text-indigo-600"><span>{uploadStatus}</span><span>{Math.round(uploadProgress)}%</span></div><div className="w-full bg-slate-200 rounded-full h-2"><div className="bg-indigo-600 h-full rounded-full" style={{ width: `${uploadProgress}%` }}></div></div></div>}
+                            {isSubmitting && <div className="space-y-1"><div className="flex justify-between text-xs font-bold text-indigo-600"><span>{uploadStatus}</span></div><div className="w-full bg-slate-200 rounded-full h-2"><div className="bg-indigo-600 h-full rounded-full animate-pulse"></div></div></div>}
 
                             <button type="submit" disabled={isSubmitting} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50">{isSubmitting ? 'Submitting...' : 'Submit Contribution'}</button>
                         </form>
