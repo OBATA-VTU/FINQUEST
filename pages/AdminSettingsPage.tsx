@@ -82,11 +82,20 @@ export const AdminSettingsPage: React.FC = () => {
               body: new URLSearchParams({
                   code: response.code,
                   client_id: GOOGLE_DRIVE_CLIENT_ID,
-                  redirect_uri: window.location.origin,
+                  // The redirect_uri was explicitly set, which can cause a mismatch if the auth flow
+                  // was initiated from a different path. The Google client library implicitly uses the
+                  // primary redirect URI. By omitting it here, we allow the token endpoint to also
+                  // default to that primary URI, resolving the mismatch.
                   grant_type: 'authorization_code',
               }),
           });
-          if (!tokenResponse.ok) throw new Error("Failed to get tokens.");
+          
+          if (!tokenResponse.ok) {
+              const errorData = await tokenResponse.json();
+              console.error("Google Token Exchange Error:", errorData);
+              const errorMessage = errorData.error_description || "Could not get tokens. Ensure your Google Client ID is correct and the website's URL is listed as an 'Authorized redirect URI' in your Google Cloud project.";
+              throw new Error(errorMessage);
+          }
           
           const tokens = await tokenResponse.json();
           
@@ -106,7 +115,9 @@ export const AdminSettingsPage: React.FC = () => {
           }, { merge: true });
           setDriveSettings(prev => ({...prev, connected_email: profile.email}));
           showNotification(`Connected to Google Drive as ${profile.email}`, "success");
-      } catch (error) { showNotification("Failed to connect Google Drive.", "error"); }
+      } catch (error: any) { 
+          showNotification(error.message || "Failed to connect Google Drive.", "error"); 
+      }
   };
 
   const handleGoogleConnect = () => {
