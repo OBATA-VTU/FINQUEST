@@ -1,4 +1,3 @@
-
 import React, { useState, useContext } from 'react';
 import { PastQuestion } from '../types';
 import { downloadPDF, generatePDF } from '../utils/pdfGenerator';
@@ -9,9 +8,10 @@ import { AuthContext } from '../contexts/AuthContext';
 
 interface QuestionCardProps {
   question: PastQuestion;
+  uploaderName?: string;
 }
 
-export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
+export const QuestionCard: React.FC<QuestionCardProps> = ({ question, uploaderName }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const { showNotification } = useNotification();
@@ -144,9 +144,15 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
             <span className="text-xs font-black text-indigo-900 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-900/50 px-2 py-1 rounded">{question.courseCode}</span>
         </div>
 
-        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug mb-3 line-clamp-2 min-h-[2.5em]">
+        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug line-clamp-2 min-h-[2.5em]">
             {question.courseTitle}
         </h4>
+
+        {uploaderName && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 mb-3">
+                Uploaded by <span className="font-bold text-indigo-600 dark:text-indigo-400">@{uploaderName.split('@')[0]}</span>
+            </p>
+        )}
 
         <div className="flex gap-2 mt-auto pt-2 border-t border-slate-50 dark:border-slate-700">
             <button onClick={handlePreview} className="flex-1 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700 rounded hover:bg-white dark:hover:bg-slate-600 hover:text-indigo-600 dark:hover:text-indigo-300 hover:shadow-sm border border-transparent hover:border-slate-200 transition flex items-center justify-center gap-1">

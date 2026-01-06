@@ -1,75 +1,55 @@
-
 import React, { useState, useMemo, useCallback, useContext, useEffect } from 'react';
 import { QuestionCard } from '../components/QuestionCard';
 import { AdBanner } from '../components/AdBanner';
-import { PastQuestion } from '../types';
+import { PastQuestion, User } from '../types';
 import { LEVELS } from '../constants';
 import { AuthContext } from '../contexts/AuthContext';
 import { db } from '../firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
+
+const CATEGORIES = ["All", "Past Question", "Lecture Note", "Handout", "Textbook", "Other"];
 
 export const PastQuestionsPage: React.FC = () => {
   const [questions, setQuestions] = useState<PastQuestion[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [userMap, setUserMap] = useState<Record<string, string>>({});
   
   // Filters
-  const [selectedLevel, setSelectedLevel] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedYear, setSelectedYear] = useState<string>('all');
-  const [selectedSemester, setSelectedSemester] = useState<string>('all');
+  const [selectedLevel, setSelectedLevel] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
 
   const auth = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchQuestions = async () => {
+    const fetchAllData = async () => {
         setLoading(true);
         try {
-            const q = query(collection(db, "questions"), where("status", "==", "approved"));
-            const querySnapshot = await getDocs(q);
-            const firebaseQuestions: PastQuestion[] = [];
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                firebaseQuestions.push({ 
-                    id: doc.id, 
-                    level: data.level,
-                    courseCode: data.courseCode,
-                    courseTitle: data.courseTitle,
-                    year: data.year,
-                    semester: data.semester,
-                    lecturer: data.lecturer,
-                    fileUrl: data.fileUrl,
-                    storagePath: data.storagePath,
-                    textContent: data.textContent,
-                    pages: data.pages 
-                } as PastQuestion);
+            const [questionsQuerySnapshot, usersQuerySnapshot] = await Promise.all([
+                getDocs(query(collection(db, "questions"), where("status", "==", "approved"), orderBy('year', 'desc'))),
+                getDocs(collection(db, "users"))
+            ]);
+
+            const usersData: Record<string, string> = {};
+            usersQuerySnapshot.forEach(doc => {
+                const userData = doc.data() as User;
+                usersData[doc.id] = userData.username || userData.name;
             });
+            setUserMap(usersData);
+
+            const firebaseQuestions = questionsQuerySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PastQuestion));
             setQuestions(firebaseQuestions);
         } catch (error) {
-            console.error("Error fetching questions: ", error);
+            console.error("Error fetching data: ", error);
         } finally {
             setLoading(false);
         }
     };
-    fetchQuestions();
+    fetchAllData();
   }, []);
-
-  // "Intelligence" - Get Unique Years for Filter
-  const availableYears = useMemo(() => {
-      const years = new Set(questions.map(q => q.year));
-      return Array.from(years).sort((a: number, b: number) => b - a);
-  }, [questions]);
-
-  // "Intelligence" - Recommended for User
-  const recommendedQuestions = useMemo(() => {
-      if (!auth?.user || selectedLevel !== 'all') return [];
-      return questions
-        .filter(q => q.level === auth.user!.level || q.level === 'General')
-        .sort((a, b) => b.year - a.year)
-        .slice(0, 3);
-  }, [questions, auth?.user, selectedLevel]);
 
   // Main Filter Logic
   const filteredQuestions = useMemo(() => {
@@ -78,13 +58,9 @@ export const PastQuestionsPage: React.FC = () => {
     if (selectedLevel !== 'all') {
         filtered = filtered.filter(q => String(q.level) === selectedLevel);
     }
-
-    if (selectedYear !== 'all') {
-        filtered = filtered.filter(q => q.year === Number(selectedYear));
-    }
     
-    if (selectedSemester !== 'all') {
-        filtered = filtered.filter(q => String(q.semester) === selectedSemester);
+    if (selectedCategory !== 'All') {
+        filtered = filtered.filter(q => q.category === selectedCategory);
     }
 
     if (searchTerm) {
@@ -97,127 +73,106 @@ export const PastQuestionsPage: React.FC = () => {
     }
 
     return filtered.sort((a, b) => {
-        if (sortOrder === 'newest') return b.year - a.year;
-        return a.year - b.year;
+        if (sortOrder === 'newest') return (b.year || 0) - (a.year || 0) || new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        return (a.year || 0) - (b.year || 0) || new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
     });
 
-  }, [questions, selectedLevel, searchTerm, selectedYear, selectedSemester, sortOrder]);
+  }, [questions, selectedLevel, searchTerm, selectedCategory, sortOrder]);
 
-  return (
-    <div className="bg-slate-50 dark:bg-slate-900 min-h-screen pb-20 transition-colors duration-300">
-      
-      {/* HEADER & FILTERS */}
-      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-20 shadow-sm py-4 transition-colors">
-        <div className="container mx-auto px-4">
-             <div className="flex flex-col lg:flex-row gap-4 justify-between items-center">
-                 <h1 className="text-2xl font-serif font-bold text-slate-900 dark:text-white">Archives</h1>
-                 
-                 {/* SMART FILTER BAR */}
-                 <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-                     {/* Level Dropdown */}
-                     <div className="relative">
-                         <select 
-                            value={selectedLevel} 
-                            onChange={(e) => setSelectedLevel(e.target.value)}
-                            className="w-full sm:w-32 pl-4 pr-8 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none cursor-pointer"
-                         >
-                             <option value="all">All Levels</option>
-                             {LEVELS.map(l => <option key={l} value={l}>{typeof l === 'number' ? `${l} Level` : l}</option>)}
-                         </select>
-                         <svg className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                     </div>
-
-                     {/* Year Filter */}
-                     <div className="relative">
-                         <select 
-                            value={selectedYear} 
-                            onChange={(e) => setSelectedYear(e.target.value)}
-                            className="w-full sm:w-32 pl-4 pr-8 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none cursor-pointer"
-                         >
-                             <option value="all">All Years</option>
-                             {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-                         </select>
-                         <svg className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                     </div>
-
-                     {/* Semester Filter */}
-                     <div className="relative">
-                         <select 
-                            value={selectedSemester} 
-                            onChange={(e) => setSelectedSemester(e.target.value)}
-                            className="w-full sm:w-36 pl-4 pr-8 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none cursor-pointer"
-                         >
-                             <option value="all">All Semesters</option>
-                             <option value="1">1st Semester</option>
-                             <option value="2">2nd Semester</option>
-                         </select>
-                         <svg className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                     </div>
-
-                     {/* Search */}
-                     <div className="relative flex-1 sm:w-80">
-                        <input
-                            type="text"
-                            placeholder="Search by Code, Title or Lecturer"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                        />
-                        <svg className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                     </div>
-                 </div>
-             </div>
+  const FilterPanel = () => (
+    <div className="w-full lg:w-72 lg:flex-shrink-0 space-y-6">
+        {/* Search */}
+        <div className="relative">
+            <input
+                type="text"
+                placeholder="Search by code, title..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
+            />
+            <svg className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </div>
-      </div>
-      
-      <div className="container mx-auto px-4 py-8">
         
-        {/* RECOMMENDED SECTION (INTELLIGENCE) */}
-        {recommendedQuestions.length > 0 && !searchTerm && selectedLevel === 'all' && (
-            <div className="mb-10 animate-fade-in">
-                <div className="flex items-center gap-2 mb-4">
-                    <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 p-1 rounded"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></span>
-                    <h2 className="text-lg font-bold text-slate-800 dark:text-white">Recommended for You ({auth?.user?.level}L)</h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {recommendedQuestions.map(q => <QuestionCard key={q.id} question={q} />)}
-                </div>
-            </div>
-        )}
-
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/50 rounded-lg p-3 mb-8 flex items-center justify-between gap-3 text-xs text-blue-800 dark:text-blue-300 font-medium">
-             <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <span>Showing {filteredQuestions.length} materials. Uploads require approval.</span>
-             </div>
-             <button onClick={() => navigate('/upload')} className="px-3 py-1.5 bg-indigo-600 text-white rounded-md font-bold text-[10px] uppercase hover:bg-indigo-700 transition-colors shadow-sm">
-                Contribute
-             </button>
-        </div>
-
-        {loading ? (
-            <div className="flex justify-center py-32"><div className="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600"></div></div>
-        ) : filteredQuestions.length === 0 ? (
-            <div className="text-center py-24 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 border-dashed animate-fade-in">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Materials Found</h3>
-                <p className="text-slate-500 dark:text-slate-400 mt-2">Try adjusting your level or search filters.</p>
-            </div>
-        ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fade-in">
-                {filteredQuestions.map(q => (
-                    <div key={q.id} className="relative group">
-                        <QuestionCard question={q} />
-                        {q.lecturer && (
-                            <div className="absolute top-12 left-4 z-10 bg-white/90 dark:bg-slate-900/90 backdrop-blur text-[10px] px-2 py-0.5 rounded shadow text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                Lecturer: {q.lecturer}
-                            </div>
-                        )}
-                    </div>
+        {/* Category Filter */}
+        <div>
+            <h3 className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-3">Category</h3>
+            <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map(cat => (
+                    <button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedCategory === cat ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>{cat}</button>
                 ))}
             </div>
-        )}
+        </div>
         
-        <div className="mt-12"><AdBanner /></div>
+        {/* Level Filter */}
+        <div>
+            <h3 className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-3">Level</h3>
+            <div className="grid grid-cols-3 gap-2">
+                <button onClick={() => setSelectedLevel('all')} className={`py-2 rounded-lg text-sm font-bold transition-all ${selectedLevel === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200'}`}>All</button>
+                {LEVELS.map(l => (
+                    <button key={l} onClick={() => setSelectedLevel(String(l))} className={`py-2 rounded-lg text-sm font-bold transition-all ${selectedLevel === String(l) ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200'}`}>{l === 'General' ? 'Gen' : `${l}L`}</button>
+                ))}
+            </div>
+        </div>
+
+        {/* Sort */}
+        <div>
+            <label htmlFor="sort-order" className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">Sort by</label>
+            <select id="sort-order" value={sortOrder} onChange={e => setSortOrder(e.target.value as any)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+            </select>
+        </div>
+
+        <button onClick={() => navigate('/upload')} className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-500 text-white font-bold rounded-xl shadow-lg hover:bg-emerald-600 transition-transform hover:-translate-y-1">
+             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+            Contribute Material
+        </button>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 transition-colors duration-300">
+      
+      <header className="bg-white dark:bg-slate-900 py-6 border-b border-slate-100 dark:border-slate-800 text-center">
+        <div className="container mx-auto px-4">
+            <h1 className="text-3xl font-serif font-bold text-slate-900 dark:text-white">Resources Archives</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">Find past questions, lecture notes, and other study materials.</p>
+        </div>
+      </header>
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+            <aside className="lg:sticky lg:top-8 lg:self-start">
+                <FilterPanel />
+            </aside>
+            
+            <main className="flex-1 min-w-0">
+                {loading ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {[...Array(6)].map((_, i) => <div key={i} className="h-48 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse"></div>)}
+                    </div>
+                ) : filteredQuestions.length === 0 ? (
+                    <div className="text-center py-24 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 animate-fade-in flex flex-col items-center">
+                        <svg className="w-16 h-16 text-slate-300 dark:text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Materials Found</h3>
+                        <p className="text-slate-500 dark:text-slate-400 mt-2 max-w-sm">Your search for "{searchTerm}" did not match any documents. Try adjusting your filters or contributing new material.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in">
+                        {filteredQuestions.map(q => {
+                            const uploaderName = userMap[q.uploadedBy || ''] || q.uploadedByEmail || 'Admin';
+                            return (
+                                <div key={q.id} className="relative group">
+                                    <QuestionCard question={q} uploaderName={uploaderName} />
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+                
+                <div className="mt-12"><AdBanner /></div>
+            </main>
+        </div>
       </div>
     </div>
   );

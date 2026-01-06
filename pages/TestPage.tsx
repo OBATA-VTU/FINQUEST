@@ -23,33 +23,33 @@ interface Question {
 
 // --- CFO Challenge Data ---
 interface CfoChoice { text: string; feedback: string; score: number; }
-interface CfoScenario { id: number; prompt: string; choices: CfoChoice[]; }
+interface CfoScenario { id: number; icon: React.ReactNode; prompt: string; choices: CfoChoice[]; }
 const cfoScenarios: CfoScenario[] = [
-    { id: 1, prompt: "Your company wants to build a new factory for ₦5 billion. How do you finance it?", choices: [
+    { id: 1, icon: <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5h1.586a1 1 0 01.707.293l2.414 2.414a1 1 0 00.707.293h3.172a1 1 0 00.707-.293l2.414-2.414a1 1 0 01.707-.293H21" /></svg>, prompt: "Hey {{name}}, big news! The board wants to build a new factory for ₦5 billion. As CFO, how do you advise we finance this massive project?", choices: [
         { text: "Take a long-term bank loan.", feedback: "Good choice. Debt financing is often cheaper than equity and doesn't dilute ownership. However, it increases financial risk.", score: 10 },
         { text: "Issue new corporate bonds.", feedback: "Excellent. Bonds can secure long-term funding at a fixed rate, often lower than bank loans, but involve complex regulatory steps.", score: 15 },
         { text: "Sell more company stock (equity).", feedback: "A safe option that brings in cash without debt, but it dilutes existing shareholders' ownership and can be expensive.", score: 5 },
-        { text: "Use the company's saved cash.", feedback: "The cheapest option, but it depletes your liquidity, leaving you vulnerable to unexpected market downturns. Risky.", score: 0 },
+        { text: "Use the company's saved cash reserves.", feedback: "The cheapest option, but it depletes your liquidity, leaving you vulnerable to unexpected market downturns. A very risky move.", score: 0 },
     ]},
-    { id: 2, prompt: "A competitor is struggling. Analysts suggest acquiring them to gain market share. What do you advise?", choices: [
+    { id: 2, icon: <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>, prompt: "A competitor, 'FinCorp', is struggling. Analysts suggest acquiring them to gain market share. What's your immediate recommendation, {{name}}?", choices: [
         { text: "Acquire them immediately using debt.", feedback: "Aggressive move. This could be a huge win, but taking on debt for a struggling company is high-risk. Proper due diligence is critical.", score: 5 },
         { text: "Conduct thorough due diligence first.", feedback: "The perfect CFO answer. Never rush an acquisition. Analyze their financials, debts, and operational issues before making any offer.", score: 15 },
-        { text: "Ignore them and focus on organic growth.", feedback: "A conservative and safe strategy, but you might miss a once-in-a-decade opportunity to eliminate a competitor and gain assets cheaply.", score: 5 },
+        { text: "Ignore them and focus on our own growth.", feedback: "A conservative and safe strategy, but you might miss a once-in-a-decade opportunity to eliminate a competitor and gain assets cheaply.", score: 5 },
         { text: "Initiate a hostile takeover.", feedback: "Very risky and expensive. This can lead to a prolonged, public battle that damages both companies' reputations, even if you win.", score: 0 },
     ]},
-    { id: 3, prompt: "The company has ₦10 billion in excess cash. What's the best use for it?", choices: [
+    { id: 3, icon: <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>, prompt: "We have ₦10 billion in excess cash on the balance sheet. The CEO asks for your opinion on the best use for it. What do you suggest?", choices: [
         { text: "Pay a large one-time special dividend.", feedback: "Shareholders will love this, but it's a short-term reward. Does the company have better long-term investment opportunities?", score: 5 },
         { text: "Initiate a share buyback program.", feedback: "A great way to return value to shareholders by increasing Earnings Per Share (EPS). It signals confidence in the company's future.", score: 10 },
         { text: "Invest in a promising but risky R&D project.", feedback: "High risk, high reward. A successful project could secure the company's future, but failure means the cash is gone. Depends on risk appetite.", score: 5 },
         { text: "Pay down existing company debt.", feedback: "A solid, conservative choice. Reducing debt lowers interest payments and de-risks the company's balance sheet, improving financial stability.", score: 15 },
     ]},
-     { id: 4, prompt: "Sales have dropped 20% due to a sudden recession. What is your immediate priority?", choices: [
+     { id: 4, icon: <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>, prompt: "Disaster, {{username}}! Sales have dropped 20% due to a sudden recession. What is your immediate priority as CFO?", choices: [
         { text: "Cut costs across the board, including layoffs.", feedback: "A drastic but often necessary step to preserve cash. However, it can damage morale and long-term capabilities if not done carefully.", score: 5 },
         { text: "Secure a new line of credit immediately.", feedback: "Crucial move. Access to liquidity is king in a downturn. This gives you options and a safety net to navigate the crisis.", score: 15 },
         { text: "Increase marketing spend to win back customers.", feedback: "Counter-intuitive but can be effective. 'Spending your way out' can gain market share while competitors retreat, but it's a cash-intensive gamble.", score: 5 },
         { text: "Sell off a non-core business division.", feedback: "A good long-term strategic move to raise cash, but it's not an 'immediate' solution. The sale process can take months.", score: 0 },
     ]},
-    { id: 5, prompt: "Your top-performing division needs a new ₦2bn machine. Their manager wants to lease it, not buy it. What do you say?", choices: [
+    { id: 5, icon: <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>, prompt: "Your top-performing division needs a new ₦2bn machine. Their manager wants to lease it, not buy it. What's your final call?", choices: [
         { text: "Approve the lease. It's cheaper upfront.", feedback: "Leasing (Operating Lease) keeps the large expense off the balance sheet and preserves cash. A flexible and often smart choice for rapidly evolving tech.", score: 15 },
         { text: "Deny the lease. Buying is always better for ownership.", feedback: "Not necessarily. Buying (Capital Expenditure) offers depreciation tax benefits, but it's a large cash outlay and you're stuck with an asset that may become obsolete.", score: 0 },
         { text: "Analyze the Net Advantage to Leasing (NAL).", feedback: "The textbook CFO answer. This calculation directly compares the present value of the costs of leasing vs. buying to make a purely financial decision.", score: 10 },
