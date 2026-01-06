@@ -1,10 +1,9 @@
-
 // ... imports
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, query, where, doc, updateDoc, deleteDoc, addDoc, increment, getDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
-import { deleteFile } from '../utils/api';
+import { deleteDocument } from '../utils/api';
 import { PastQuestion, User } from '../types';
 import { AuthContext } from '../contexts/AuthContext';
 import { checkAndAwardBadges } from '../utils/badges';
@@ -70,7 +69,7 @@ export const AdminApprovalsPage: React.FC = () => {
               showNotification("Question approved & 10 Points awarded!", "success");
           } else {
               if (item.storagePath) {
-                  await deleteFile(item.storagePath);
+                  await deleteDocument(item.storagePath);
               }
               await deleteDoc(ref);
               showNotification("Record and file rejected.", "info");

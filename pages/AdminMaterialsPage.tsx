@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
-import { uploadFile, deleteFile } from '../utils/api';
+import { uploadDocument, deleteDocument } from '../utils/api';
 import { LEVELS } from '../constants';
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -37,7 +36,7 @@ export const AdminMaterialsPage: React.FC = () => {
       if (!window.confirm("Permanently delete this item?")) return;
       try {
           if (item.storagePath) {
-              await deleteFile(item.storagePath);
+              await deleteDocument(item.storagePath);
           }
           await deleteDoc(doc(db, 'questions', item.id));
           showNotification("Deleted", "info");
@@ -76,7 +75,7 @@ export const AdminMaterialsPage: React.FC = () => {
           } else {
               if (!editingItem && !formFile) throw new Error("File is required for new materials");
               if (formFile) {
-                  const { url, path } = await uploadFile(formFile, 'past_questions');
+                  const { url, path } = await uploadDocument(formFile, 'past_questions');
                   payload.fileUrl = url;
                   payload.storagePath = path;
               }
