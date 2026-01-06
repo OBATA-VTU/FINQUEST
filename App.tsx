@@ -1,4 +1,5 @@
 
+
 import React, { useContext, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
@@ -31,6 +32,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { Layout } from './components/Layout';
 import { CountdownPage } from './pages/CountdownPage';
 import ScrollToTop from './components/ScrollToTop';
+import { NotificationHandler } from './components/NotificationHandler';
 
 // NEW: Import new admin pages
 import { AdminMaterialsPage } from './pages/AdminMaterialsPage';
@@ -74,6 +76,7 @@ const AppContent: React.FC = () => {
   return (
     <>
         <ScrollToTop />
+        <NotificationHandler />
         <Routes>
             {/* The special /cdq bypass is now handled by the main App component logic */}
             

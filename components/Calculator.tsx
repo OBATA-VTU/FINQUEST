@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 
 interface CalculatorProps {
@@ -62,12 +63,13 @@ export const Calculator: React.FC<CalculatorProps> = ({ onClose }) => {
 
   const handleEqual = () => {
     try {
-      // Basic protection against unsafe eval
-      if (/[^0-9+\-*/.()]/.test(expression)) {
-          throw new Error("Invalid characters in expression");
+      // Basic protection against unsafe characters
+      const sanitizedExpression = expression.replace(/[^-()\d/*+.]/g, '');
+      if (sanitizedExpression !== expression) {
+          throw new Error("Invalid characters");
       }
-      // eslint-disable-next-line no-eval
-      const result = eval(expression); 
+      // Use the Function constructor for safer evaluation than eval()
+      const result = new Function('return ' + sanitizedExpression)();
       setDisplay(String(result));
       setExpression(String(result));
     } catch (e) {

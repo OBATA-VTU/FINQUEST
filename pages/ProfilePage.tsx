@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { QuestionGrid } from '../components/QuestionGrid';
@@ -8,6 +9,7 @@ import { PastQuestion, TestResult } from '../types';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { AddPasswordModal } from '../components/AddPasswordModal';
 import { getBadge } from '../utils/badges';
+import { useNavigate } from 'react-router-dom';
 
 const StatCard: React.FC<{ icon: React.ReactNode, label: string, value: string | number, colorClass: string }> = ({ icon, label, value, colorClass }) => (
     <div className={`bg-white dark:bg-slate-800 p-5 rounded-2xl flex items-center gap-4 border border-slate-200 dark:border-slate-700 shadow-sm`}>
@@ -23,6 +25,7 @@ const StatCard: React.FC<{ icon: React.ReactNode, label: string, value: string |
 
 export const ProfilePage: React.FC = () => {
   const auth = useContext(AuthContext);
+  const navigate = useNavigate();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddPasswordModalOpen, setIsAddPasswordModalOpen] = useState(false);
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<PastQuestion[]>([]);
@@ -33,6 +36,31 @@ export const ProfilePage: React.FC = () => {
   const [testCount, setTestCount] = useState(0);
   const [avgScore, setAvgScore] = useState(0);
   const [loadingStats, setLoadingStats] = useState(true);
+
+  // PWA Install state
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  const handleInstallClick = () => {
+    if (installPrompt) {
+      installPrompt.prompt();
+    }
+  };
+
+  const handleLogout = async () => {
+      if (auth) {
+          await auth.logout();
+          navigate('/login');
+      }
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -119,7 +147,13 @@ export const ProfilePage: React.FC = () => {
               )}
 
               <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-slate-700/50 overflow-hidden mb-8 p-8 relative">
-                  <div className="absolute top-4 right-4">
+                  <div className="absolute top-4 right-4 flex gap-2">
+                      {installPrompt && (
+                          <button onClick={handleInstallClick} className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-lg transition-colors hover:bg-emerald-600">
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                              Install App
+                          </button>
+                      )}
                       <button onClick={() => setIsEditModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg transition-colors border border-slate-200 dark:border-slate-700">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                           Edit Profile
@@ -206,6 +240,14 @@ export const ProfilePage: React.FC = () => {
                       )}
                   </div>
               )}
+              
+              <div className="mt-12 text-center">
+                  <button onClick={handleLogout} className="px-8 py-3 bg-rose-500/10 dark:bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20 font-bold rounded-xl hover:bg-rose-500 hover:text-white dark:hover:bg-rose-500 dark:hover:text-white transition-all duration-300 flex items-center gap-2 mx-auto">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                      Logout
+                  </button>
+              </div>
+
           </div>
       </div>
       <EditProfileModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} />

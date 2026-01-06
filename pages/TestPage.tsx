@@ -1,159 +1,32 @@
+
+
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { GoogleGenAI, Type } from "@google/genai";
 import { useNotification } from '../contexts/NotificationContext';
 import { db } from '../firebase';
-import { collection, addDoc, getDoc, setDoc, updateDoc, increment, doc } from 'firebase/firestore';
+// FIX: Added missing import for getDoc
+import { collection, addDoc, doc, updateDoc, increment, getDoc } from 'firebase/firestore';
 import { LEVELS } from '../constants';
 import { Level, User } from '../types';
 import { generateTestReviewPDF } from '../utils/pdfGenerator';
 import { trackAiUsage } from '../utils/api';
 import { Calculator } from '../components/Calculator';
-import { fallbackQuestions, timelineFallbackQuestions, FallbackQuestion } from '../utils/fallbackQuestions';
+import { fallbackQuestions } from '../utils/fallbackQuestions';
+// FIX: Added missing import for checkAndAwardBadges
 import { checkAndAwardBadges } from '../utils/badges';
 
-// --- GAME DATA & TYPES ---
-
+// --- TYPES ---
 interface Question {
   id: number;
   text: string;
   options: string[];
   correctAnswer: number;
 }
-
-// --- CFO Challenge Data ---
-interface CfoChoice { text: string; feedback: string; score: number; }
-interface CfoScenario { id: number; icon: React.ReactNode; prompt: string; choices: CfoChoice[]; }
-const cfoScenarios: CfoScenario[] = [
-    { id: 1, icon: <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5h1.586a1 1 0 01.707.293l2.414 2.414a1 1 0 00.707.293h3.172a1 1 0 00.707-.293l2.414-2.414a1 1 0 01.707-.293H21" /></svg>, prompt: "Hey {{name}}, big news! The board wants to build a new factory for ₦5 billion. As CFO, how do you advise we finance this massive project?", choices: [
-        { text: "Take a long-term bank loan.", feedback: "Good choice. Debt financing is often cheaper than equity and doesn't dilute ownership. However, it increases financial risk.", score: 10 },
-        { text: "Issue new corporate bonds.", feedback: "Excellent. Bonds can secure long-term funding at a fixed rate, often lower than bank loans, but involve complex regulatory steps.", score: 15 },
-        { text: "Sell more company stock (equity).", feedback: "A safe option that brings in cash without debt, but it dilutes existing shareholders' ownership and can be expensive.", score: 5 },
-        { text: "Use the company's saved cash reserves.", feedback: "The cheapest option, but it depletes your liquidity, leaving you vulnerable to unexpected market downturns. A very risky move.", score: 0 },
-    ]},
-    { id: 2, icon: <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>, prompt: "A competitor, 'FinCorp', is struggling. Analysts suggest acquiring them to gain market share. What's your immediate recommendation, {{name}}?", choices: [
-        { text: "Acquire them immediately using debt.", feedback: "Aggressive move. This could be a huge win, but taking on debt for a struggling company is high-risk. Proper due diligence is critical.", score: 5 },
-        { text: "Conduct thorough due diligence first.", feedback: "The perfect CFO answer. Never rush an acquisition. Analyze their financials, debts, and operational issues before making any offer.", score: 15 },
-        { text: "Ignore them and focus on our own growth.", feedback: "A conservative and safe strategy, but you might miss a once-in-a-decade opportunity to eliminate a competitor and gain assets cheaply.", score: 5 },
-        { text: "Initiate a hostile takeover.", feedback: "Very risky and expensive. This can lead to a prolonged, public battle that damages both companies' reputations, even if you win.", score: 0 },
-    ]},
-    { id: 3, icon: <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>, prompt: "We have ₦10 billion in excess cash on the balance sheet. The CEO asks for your opinion on the best use for it. What do you suggest?", choices: [
-        { text: "Pay a large one-time special dividend.", feedback: "Shareholders will love this, but it's a short-term reward. Does the company have better long-term investment opportunities?", score: 5 },
-        { text: "Initiate a share buyback program.", feedback: "A great way to return value to shareholders by increasing Earnings Per Share (EPS). It signals confidence in the company's future.", score: 10 },
-        { text: "Invest in a promising but risky R&D project.", feedback: "High risk, high reward. A successful project could secure the company's future, but failure means the cash is gone. Depends on risk appetite.", score: 5 },
-        { text: "Pay down existing company debt.", feedback: "A solid, conservative choice. Reducing debt lowers interest payments and de-risks the company's balance sheet, improving financial stability.", score: 15 },
-    ]},
-    { id: 4, icon: <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>,
-        prompt: "Oh no, {{name}}! A sudden market crash has reduced our quarterly revenue by 30%. The media is panicking. What is your first public statement?",
-        choices: [
-            { text: "Announce immediate cost-cutting measures.", feedback: "Shows proactive management, but can signal panic to the market and hurt employee morale. Timing is key.", score: 5 },
-            { text: "Reassure investors of our strong fundamentals.", feedback: "Excellent. Confidence is crucial. Remind the market of your long-term strategy and solid balance sheet to calm nerves.", score: 15 },
-            { text: "Blame external market forces entirely.", feedback: "While true, it can sound defensive and like you have no plan. A good response owns the situation while providing context.", score: 0 },
-            { text: "Remain silent until the next earnings call.", feedback: "Silence can be interpreted as having something to hide, leading to more panic and speculation. Communication is vital.", score: 0 }
-        ]
-    },
-];
-
-type GameMode = 'select' | 'cbt' | 'cfo' | 'finquest' | 'timeline';
-
-// --- MISSING COMPONENT DEFINITIONS ---
-
-const GameModeSelection: React.FC<{ onSelectMode: (mode: GameMode) => void; user: User }> = ({ onSelectMode, user }) => {
-    // Component implementation
-    return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 animate-fade-in transition-colors">
-            <div className="container mx-auto max-w-4xl pt-10">
-                <h1 className="text-3xl font-bold text-center text-slate-900 dark:text-white mb-2">Practice Center</h1>
-                <p className="text-center text-slate-500 dark:text-slate-400 mb-10">Choose a mode to test your knowledge and climb the leaderboard.</p>
-                <div className="grid md:grid-cols-2 gap-6">
-                    <button onClick={() => onSelectMode('cbt')} className="bg-white dark:bg-slate-900 p-8 rounded-3xl text-left border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
-                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Standard CBT</h3>
-                        <p className="text-slate-500 dark:text-slate-400">Classic mock exam. Choose a topic and level to start.</p>
-                    </button>
-                    <button onClick={() => onSelectMode('cfo')} className="bg-white dark:bg-slate-900 p-8 rounded-3xl text-left border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
-                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">CFO Challenge</h3>
-                        <p className="text-slate-500 dark:text-slate-400">Roleplay as a CFO and make critical business decisions.</p>
-                    </button>
-                    <button onClick={() => onSelectMode('finquest')} className="bg-white dark:bg-slate-900 p-8 rounded-3xl text-left border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
-                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">FinQuest</h3>
-                        <p className="text-slate-500 dark:text-slate-400">A fast-paced quiz game with power-ups and boss questions.</p>
-                    </button>
-                    <button onClick={() => onSelectMode('timeline')} className="bg-white dark:bg-slate-900 p-8 rounded-3xl text-left border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
-                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Timeline Challenge</h3>
-                        <p className="text-slate-500 dark:text-slate-400">Test your knowledge of Nigerian financial history.</p>
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const CBTTest: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-    // Component implementation
-    return <div><h2 className="text-white">CBT Test Component</h2><button onClick={onBack}>Back</button></div>;
-};
-
-const CFORoleplay: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-    const auth = useContext(AuthContext);
-    const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0);
-    const [totalScore, setTotalScore] = useState(0);
-    const [feedback, setFeedback] = useState<string | null>(null);
-
-    const handleChoice = (choice: CfoChoice) => {
-        setTotalScore(s => s + choice.score);
-        setFeedback(choice.feedback);
-        setTimeout(() => {
-            setFeedback(null);
-            if (currentScenarioIndex < cfoScenarios.length - 1) {
-                setCurrentScenarioIndex(i => i + 1);
-            } else {
-                // Game over
-                setCurrentScenarioIndex(-1);
-            }
-        }, 3000);
-    };
-
-    if (currentScenarioIndex === -1) {
-        return (
-            <div className="p-8 text-center">
-                <h2 className="text-2xl font-bold text-white">Challenge Complete!</h2>
-                <p className="text-lg text-slate-300">Your final CFO score is: {totalScore}</p>
-                <button onClick={onBack} className="mt-4 px-4 py-2 bg-indigo-600 rounded">Back to Menu</button>
-            </div>
-        );
-    }
-    
-    const scenario = cfoScenarios[currentScenarioIndex];
-
-    return (
-        <div className="p-8">
-            <button onClick={onBack} className="text-indigo-300 mb-4">&larr; Back</button>
-            <div className="text-center text-white">
-                {scenario.icon}
-                <p className="mt-4 text-lg">{scenario.prompt.replace('{{name}}', auth?.user?.name || 'CFO')}</p>
-            </div>
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-                {scenario.choices.map((choice, i) => (
-                    <button key={i} onClick={() => handleChoice(choice)} disabled={!!feedback} className="p-4 bg-indigo-800 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
-                        {choice.text}
-                    </button>
-                ))}
-            </div>
-            {feedback && <div className="mt-4 p-4 bg-slate-800 text-white rounded-lg animate-fade-in">{feedback}</div>}
-        </div>
-    );
-};
-
-const FinQuestGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-    return <div><h2 className="text-white">FinQuest Game Component</h2><button onClick={onBack}>Back</button></div>;
-};
-
-const TimelineChallenge: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-    return <div><h2 className="text-white">Timeline Challenge Component</h2><button onClick={onBack}>Back</button></div>;
-};
+type GameState = 'setup' | 'loading' | 'testing' | 'results';
+type GameMode = 'select' | 'cbt'; // Simplified for now
 
 // --- MAIN PAGE COMPONENT ---
-// Fix: Export the main TestPage component to be used in App.tsx
 export const TestPage: React.FC = () => {
     const auth = useContext(AuthContext);
     const [gameMode, setGameMode] = useState<GameMode>('select');
@@ -163,19 +36,235 @@ export const TestPage: React.FC = () => {
     }
 
     if (gameMode === 'select') {
-        return <GameModeSelection onSelectMode={setGameMode} user={auth.user} />;
+        return <GameModeSelection onSelectMode={setGameMode} />;
     }
     if (gameMode === 'cbt') {
         return <CBTTest onBack={() => setGameMode('select')} />;
     }
-    if (gameMode === 'cfo') {
-        return <CFORoleplay onBack={() => setGameMode('select')} />;
-    }
-    if (gameMode === 'finquest') {
-        return <FinQuestGame onBack={() => setGameMode('select')} />;
-    }
-    if (gameMode === 'timeline') {
-        return <TimelineChallenge onBack={() => setGameMode('select')} />;
-    }
     return <div>Invalid Game Mode</div>;
+};
+
+
+// --- GAME MODE SELECTION ---
+const GameModeSelection: React.FC<{ onSelectMode: (mode: GameMode) => void; }> = ({ onSelectMode }) => (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 animate-fade-in transition-colors">
+        <div className="container mx-auto max-w-4xl pt-10">
+            <h1 className="text-3xl font-bold text-center text-slate-900 dark:text-white mb-2">Practice Center</h1>
+            <p className="text-center text-slate-500 dark:text-slate-400 mb-10">Choose a mode to test your knowledge.</p>
+            <div className="grid md:grid-cols-2 gap-6">
+                <button onClick={() => onSelectMode('cbt')} className="bg-white dark:bg-slate-900 p-8 rounded-3xl text-left border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Standard CBT</h3>
+                    <p className="text-slate-500 dark:text-slate-400">Classic mock exam. Choose a topic and level to start.</p>
+                </button>
+                <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl text-left border border-slate-200 dark:border-slate-700 shadow-sm opacity-50 relative">
+                     <div className="absolute top-4 right-4 text-xs font-bold bg-amber-100 text-amber-700 px-2 py-1 rounded-full">Coming Soon</div>
+                    <h3 className="text-2xl font-bold text-slate-400 dark:text-slate-600 mb-2">CFO Challenge</h3>
+                    <p className="text-slate-400 dark:text-slate-600">Roleplay as a CFO and make critical business decisions.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
+// --- CBT TEST COMPONENT ---
+const CBTTest: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+    const auth = useContext(AuthContext);
+    const { showNotification } = useNotification();
+    const [gameState, setGameState] = useState<GameState>('setup');
+
+    // Setup state
+    const [level, setLevel] = useState<Level>(auth?.user?.level || 100);
+    const [topic, setTopic] = useState('');
+
+    // Test state
+    const [questions, setQuestions] = useState<Question[]>([]);
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
+    const [score, setScore] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
+    const timerRef = useRef<any>(null);
+
+    // Tools
+    const [showCalculator, setShowCalculator] = useState(false);
+    
+    useEffect(() => {
+        if (gameState === 'testing') {
+            timerRef.current = setInterval(() => {
+                setTimeLeft(prev => {
+                    if (prev <= 1) {
+                        clearInterval(timerRef.current);
+                        endTest();
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        return () => clearInterval(timerRef.current);
+    }, [gameState]);
+
+    const startTest = async () => {
+        if (!topic) {
+            showNotification("Please enter a topic.", "warning");
+            return;
+        }
+
+        setGameState('loading');
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const prompt = `Generate 10 multiple-choice questions for a university ${level}-level finance exam on the topic "${topic}". Each question must have exactly 4 options. Format the response as a JSON array, where each object has keys "id" (number), "text" (string), "options" (array of 4 strings), and "correctAnswer" (number index 0-3).`;
+
+            const result = await ai.models.generateContent({
+                model: 'gemini-3-flash-preview',
+                contents: prompt,
+                config: { responseMimeType: 'application/json' }
+            });
+            trackAiUsage();
+            
+            let parsedQuestions = JSON.parse(result.text.trim());
+            setQuestions(parsedQuestions);
+            setGameState('testing');
+        } catch (error) {
+            console.error("AI Generation Failed:", error);
+            showNotification("AI failed, using standard questions.", "info");
+            const standardQuestions = fallbackQuestions
+                .filter(q => q.level === level)
+                .sort(() => 0.5 - Math.random())
+                .slice(0, 10);
+            setQuestions(standardQuestions);
+            setGameState('testing');
+        }
+    };
+
+    const handleAnswer = (optionIndex: number) => {
+        setUserAnswers(prev => ({ ...prev, [currentQuestionIndex]: optionIndex }));
+    };
+
+    const nextQuestion = () => {
+        if (currentQuestionIndex < questions.length - 1) {
+            setCurrentQuestionIndex(prev => prev + 1);
+        }
+    };
+    
+    const endTest = async () => {
+        clearInterval(timerRef.current);
+        let correctAnswers = 0;
+        for (let i = 0; i < questions.length; i++) {
+            if (userAnswers[i] === questions[i].correctAnswer) {
+                correctAnswers++;
+            }
+        }
+        const finalScore = (correctAnswers / questions.length) * 100;
+        setScore(finalScore);
+        setGameState('results');
+
+        // Save result to Firestore
+        if (auth?.user) {
+            try {
+                await addDoc(collection(db, 'test_results'), {
+                    userId: auth.user.id,
+                    username: auth.user.username,
+                    avatarUrl: auth.user.avatarUrl,
+                    score: finalScore,
+                    totalQuestions: questions.length,
+                    level,
+                    date: new Date().toISOString()
+                });
+
+                let points = 0;
+                if (finalScore >= 80) points = 5;
+                else if (finalScore >= 50) points = 2;
+
+                if (points > 0) {
+                    const userRef = doc(db, 'users', auth.user.id);
+                    await updateDoc(userRef, { contributionPoints: increment(points) });
+                    showNotification(`You earned ${points} contribution points!`, "success");
+                    
+                    const userDoc = await getDoc(userRef);
+                    if (userDoc.exists()) {
+                        const updatedUser = { id: userDoc.id, ...userDoc.data() } as User;
+                        const newBadges = await checkAndAwardBadges(updatedUser);
+                        if(newBadges.length > 0) {
+                           await updateDoc(userRef, { badges: [...(updatedUser.badges || []), ...newBadges] });
+                           showNotification(`Unlocked: ${newBadges.join(", ")}!`, 'success');
+                        }
+                    }
+                }
+            } catch (e) { console.error("Failed to save test result", e); }
+        }
+    };
+
+    const restartTest = () => {
+        setGameState('setup');
+        setCurrentQuestionIndex(0);
+        setUserAnswers({});
+        setScore(0);
+        setTimeLeft(600);
+    };
+
+    if (gameState === 'setup') {
+        return (
+            <div className="p-8 max-w-lg mx-auto">
+                <button onClick={onBack} className="text-sm text-indigo-600 dark:text-indigo-400 mb-4">&larr; Back to Modes</button>
+                <h2 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">CBT Setup</h2>
+                <div className="space-y-4">
+                    <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Level</label><select value={level} onChange={e => setLevel(Number(e.target.value) as Level)} className="w-full p-3 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-white mt-1">{LEVELS.map(l => <option key={l} value={l}>{l}</option>)}</select></div>
+                    <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Topic</label><input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="e.g., Capital Budgeting" className="w-full p-3 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-white mt-1" /></div>
+                    <button onClick={startTest} className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold">Start Test</button>
+                </div>
+            </div>
+        );
+    }
+
+    if (gameState === 'loading') {
+        return <div className="p-8 text-center text-slate-600 dark:text-slate-300">Generating questions with AI...</div>;
+    }
+
+    if (gameState === 'results') {
+        return (
+            <div className="p-8 text-center max-w-md mx-auto">
+                <h2 className="text-3xl font-bold mb-4 text-slate-900 dark:text-white">Test Complete!</h2>
+                <p className="text-6xl font-bold mb-4" style={{ color: score >= 50 ? '#10B981' : '#EF4444' }}>{score}%</p>
+                <div className="flex gap-4 mt-8">
+                    <button onClick={restartTest} className="flex-1 py-3 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white rounded-lg font-bold">Try Again</button>
+                    <button onClick={onBack} className="flex-1 py-3 bg-indigo-600 text-white rounded-lg font-bold">Back to Menu</button>
+                </div>
+                 <button onClick={() => generateTestReviewPDF(questions, userAnswers, score, auth?.user)} className="mt-4 w-full py-2 border border-indigo-500 text-indigo-500 rounded-lg text-sm font-bold">Download Review PDF</button>
+            </div>
+        );
+    }
+    
+    const currentQuestion = questions[currentQuestionIndex];
+    const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+    
+    return (
+        <div className="p-4 md:p-8 max-w-4xl mx-auto relative">
+            {showCalculator && <Calculator onClose={() => setShowCalculator(false)} />}
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700">
+                <div className="flex justify-between items-center mb-4">
+                    <div className="text-sm font-bold text-slate-500 dark:text-slate-400">Question {currentQuestionIndex + 1} of {questions.length}</div>
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => setShowCalculator(true)} className="text-slate-400 hover:text-indigo-500"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m2 10h-8a2 2 0 01-2-2V5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 01-2 2z" /></svg></button>
+                        <div className="font-mono font-bold text-lg text-indigo-600 dark:text-indigo-400">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</div>
+                    </div>
+                </div>
+                <div className="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full mb-6"><div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${progress}%` }}></div></div>
+                
+                <p className="text-lg font-semibold mb-6 min-h-[6em] text-slate-900 dark:text-white">{currentQuestion.text}</p>
+                
+                <div className="space-y-3">
+                    {currentQuestion.options.map((option, index) => (
+                        <button key={index} onClick={() => handleAnswer(index)} className={`w-full text-left p-4 border-2 rounded-lg transition-all ${userAnswers[currentQuestionIndex] === index ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' : 'border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                           <span className="font-bold mr-2">{String.fromCharCode(65 + index)}.</span> {option}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex justify-between mt-8">
+                    <button onClick={endTest} className="px-6 py-2 bg-rose-500 text-white rounded-lg font-bold">End Test</button>
+                    <button onClick={nextQuestion} disabled={currentQuestionIndex === questions.length - 1} className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold disabled:opacity-50">Next</button>
+                </div>
+            </div>
+        </div>
+    );
 };
