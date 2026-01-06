@@ -58,7 +58,7 @@ export const AdminSettingsPage: React.FC = () => {
             // Revert to the 'code' flow which provides a code to be exchanged for tokens.
             const client = window.google.accounts.oauth2.initCodeClient({
                 client_id: GOOGLE_DRIVE_CLIENT_ID,
-                scope: 'https://www.googleapis.com/auth/drive.file',
+                scope: 'https://www.googleapis.com/auth/drive',
                 callback: handleGoogleAuthCallback,
             });
             setTokenClient(client);
@@ -125,7 +125,7 @@ export const AdminSettingsPage: React.FC = () => {
           return;
       }
       if (tokenClient) {
-          tokenClient.requestCode();
+          tokenClient.requestCode({ prompt: 'consent' });
       } else {
           showNotification("Google Auth is not ready. Please wait.", "info");
       }

@@ -48,7 +48,8 @@ const getGoogleAuthToken = async (): Promise<string> => {
     const newTokens = await tokenResponse.json();
     if (!tokenResponse.ok) {
         console.error("Failed to refresh Google token:", newTokens);
-        throw new Error("Failed to refresh Google Drive connection. Please ask an admin to reconnect.");
+        const errorDescription = newTokens.error_description || "Unknown error during token refresh.";
+        throw new Error(`Failed to refresh Google Drive connection: ${errorDescription} Please ask an admin to reconnect.`);
     }
 
     // Update Firestore with the new access token and expiry time
@@ -182,7 +183,9 @@ export const uploadFileToGoogleDrive = async (file: File, onProgress?: (progress
         });
 
         if (!response.ok) {
-            throw new Error(`Google Drive upload failed: ${response.statusText}`);
+            const errorBody = await response.json().catch(() => ({}));
+            const message = errorBody?.error?.message || response.statusText;
+            throw new Error(`Google Drive upload failed: ${message}`);
         }
         
         const result = await response.json();
