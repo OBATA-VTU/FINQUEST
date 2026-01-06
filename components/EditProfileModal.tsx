@@ -54,7 +54,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
         }
 
         const userRef = doc(db, 'users', auth.user!.id);
-        const updates = { name, level, matricNumber, avatarUrl: photoURL };
+        const updates = { name, level, avatarUrl: photoURL }; // Matric number is intentionally omitted
         await updateDoc(userRef, updates);
 
         showNotification("Profile updated! Refresh to see changes.", "success");
@@ -69,7 +69,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div ref={modalRef} className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-down">
+        <div ref={modalRef} className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-down">
             <div className="bg-indigo-900 px-6 py-4 flex justify-between items-center">
                 <h3 className="text-white font-bold text-lg">Edit Profile</h3>
                 <button onClick={onClose} className="text-indigo-200 hover:text-white">✕</button>
@@ -104,7 +104,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1">Matric No.</label>
-                        <input type="text" value={matricNumber} onChange={e => setMatricNumber(e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none" />
+                        <input type="text" value={matricNumber} className="w-full px-4 py-2 border rounded-lg outline-none bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed" disabled />
+                         <p className="text-xs text-slate-500 mt-1">To update your matric number, please contact the current PRO.</p>
                     </div>
                 </div>
 
