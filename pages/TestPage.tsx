@@ -54,9 +54,11 @@ const cfoScenarios: CfoScenario[] = [
     },
 ];
 
+type GameMode = 'select' | 'cbt' | 'cfo' | 'finquest' | 'timeline';
+
 // --- MISSING COMPONENT DEFINITIONS ---
 
-const GameModeSelection: React.FC<{ onSelectMode: (mode: string) => void; user: User }> = ({ onSelectMode, user }) => {
+const GameModeSelection: React.FC<{ onSelectMode: (mode: GameMode) => void; user: User }> = ({ onSelectMode, user }) => {
     // Component implementation
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 animate-fade-in transition-colors">
@@ -154,7 +156,7 @@ const TimelineChallenge: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 // Fix: Export the main TestPage component to be used in App.tsx
 export const TestPage: React.FC = () => {
     const auth = useContext(AuthContext);
-    const [gameMode, setGameMode] = useState<'select' | 'cbt' | 'cfo' | 'finquest' | 'timeline'>('select');
+    const [gameMode, setGameMode] = useState<GameMode>('select');
 
     if (!auth?.user) {
         return <div className="p-8 text-center">Please log in to access tests.</div>;
