@@ -82,10 +82,11 @@ export const AdminSettingsPage: React.FC = () => {
               body: new URLSearchParams({
                   code: response.code,
                   client_id: GOOGLE_DRIVE_CLIENT_ID,
-                  // The redirect_uri was explicitly set, which can cause a mismatch if the auth flow
-                  // was initiated from a different path. The Google client library implicitly uses the
-                  // primary redirect URI. By omitting it here, we allow the token endpoint to also
-                  // default to that primary URI, resolving the mismatch.
+                  // FIX: Explicitly set the redirect_uri to 'postmessage'.
+                  // This tells Google's OAuth server that this is a client-side JavaScript
+                  // application that does not use a traditional redirect and, crucially,
+                  // does not have a client_secret. This resolves the "Client_secret is missing" error.
+                  redirect_uri: 'postmessage',
                   grant_type: 'authorization_code',
               }),
           });
