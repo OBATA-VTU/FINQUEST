@@ -416,7 +416,8 @@ export const TestPage: React.FC = () => {
   const GameCard = ({ title, desc, icon, onClick, mode }: {title: string, desc: string, icon: React.ReactNode, onClick: (mode: any) => void, mode: any}) => ( <div onClick={() => onClick(mode)} className="group relative bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all border border-slate-200 dark:border-slate-700 hover:-translate-y-2 text-left cursor-pointer overflow-hidden flex flex-col"><div className="absolute top-0 right-0 p-4 text-slate-100 dark:text-slate-800 text-8xl opacity-10 group-hover:opacity-50 group-hover:scale-125 transition-all duration-300 group-hover:rotate-6">{icon}</div><div className="relative z-10 flex-1 flex flex-col"><h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">{title}</h3><p className="text-slate-500 dark:text-slate-400 text-sm flex-1">{desc}</p><div className="mt-6 text-sm font-bold text-indigo-600 dark:text-indigo-400 group-hover:underline">Play Now &rarr;</div></div></div> );
   const renderFinquestArcade = () => ( <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-16 px-4 animate-fade-in"><div className="container mx-auto max-w-7xl"><div className="flex justify-between items-center mb-12"><button onClick={() => setStage('menu')} className="text-sm font-bold text-slate-500 hover:text-indigo-500 flex items-center gap-2">&larr; Back to Practice Hub</button></div><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"><GameCard title="Rapid Fire Quiz" desc="A fast-paced survival quiz. Answer questions against the clock, three strikes and you're out!" icon={<svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>} onClick={handleStartGame} mode="rapid_fire" /><GameCard title="Naija Finance Timeline" desc="Test your knowledge of Nigeria's key financial and economic events." icon={<svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} onClick={handleStartGame} mode="timeline" /><GameCard title="FINSA Stock Exchange" desc="Manage a virtual ₦1M portfolio. Buy and sell stocks over 15 simulated days." icon={<svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>} onClick={handleStartGame} mode="stock_market" /><GameCard title="The CFO Challenge" desc="Step into the shoes of a CFO and make tough corporate finance decisions." icon={<svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>} onClick={handleStartGame} mode="cfo_challenge" /></div></div></div>);
 
-  switch (stage) {
+  const renderCurrentStage = () => {
+    switch (stage) {
       case 'menu': return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-16 px-4 animate-fade-in">
             <div className="container mx-auto max-w-5xl">
@@ -439,12 +440,16 @@ export const TestPage: React.FC = () => {
         return renderTraditionalExam();
       case 'result': return renderResult();
       case 'review': return renderReview();
-      default: return (
-        <>
-            {showInstructionModal.show && <InstructionModal mode={showInstructionModal.mode!} onCancel={() => setShowInstructionModal({ show: false, mode: null })} onProceed={() => startExam(showInstructionModal.mode!)} />}
-        </>
-      );
-  }
+      default: return null;
+    }
+  };
+
+  return (
+    <>
+      {showInstructionModal.show && <InstructionModal mode={showInstructionModal.mode!} onCancel={() => setShowInstructionModal({ show: false, mode: null })} onProceed={() => startExam(showInstructionModal.mode!)} />}
+      {renderCurrentStage()}
+    </>
+  );
 };
 
 const InstructionModal: React.FC<{ mode: string, onCancel: () => void, onProceed: () => void }> = ({ mode, onCancel, onProceed }) => {

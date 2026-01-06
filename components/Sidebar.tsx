@@ -215,6 +215,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
                     onClose={onClose}
                 />
+                <NavItem 
+                    to="/gallery" 
+                    label="Gallery" 
+                    icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+                    onClose={onClose}
+                />
+                <NavItem 
+                    to="/faq" 
+                    label="FAQ / Support" 
+                    icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.79 4 4 0 1.105-.448 2.105-1.172 2.828l-1.089 1.09a2 2 0 00-.586 1.415V18m0-3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                    onClose={onClose}
+                />
             </NavSection>
           </nav>
           
