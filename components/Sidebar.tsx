@@ -1,5 +1,3 @@
-
-
 import React, { useContext, useState } from 'react';
 import { Logo } from './Logo';
 import { AuthContext } from '../contexts/AuthContext';
@@ -80,7 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       department: true
   });
 
-  const isAdminUser = ['admin', 'librarian', 'vice_president'].includes(auth?.user?.role || '');
+  const isAdminUser = ['admin', 'librarian', 'vice_president', 'supplement'].includes(auth?.user?.role || '');
 
   const toggleSection = (section: string) => {
       setExpandedSections(prev => ({...prev, [section]: !prev[section]}));
@@ -188,4 +186,78 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                      <NavItem 
                         to="/community" 
                         label="Community" 
-                        icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.
+                        icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
+                        onClose={onClose}
+                    />
+                </NavSection>
+            )}
+
+            <NavSection 
+                title="Department"
+                isExpanded={expandedSections['department']}
+                onToggle={() => toggleSection('department')}
+            >
+                <NavItem 
+                    to="/announcements" 
+                    label="News & Updates" 
+                    icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>}
+                    onClose={onClose}
+                />
+                <NavItem 
+                    to="/executives" 
+                    label="Executives" 
+                    icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
+                    onClose={onClose}
+                />
+                <NavItem 
+                    to="/lecturers" 
+                    label="Lecturers" 
+                    icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
+                    onClose={onClose}
+                />
+            </NavSection>
+          </nav>
+          
+          <div className="mt-auto p-3">
+              {auth?.user ? (
+                  <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                      <div className="flex items-center gap-3 mb-4">
+                          <div className="relative">
+                              <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden shadow-inner">
+                                  {auth.user.avatarUrl ? (
+                                      <img src={auth.user.avatarUrl} alt={auth.user.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                      <div className="flex items-center justify-center h-full text-indigo-700 font-bold">{auth.user.name.charAt(0)}</div>
+                                  )}
+                              </div>
+                              <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-indigo-950 rounded-full"></div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                              <p className="font-bold text-white text-sm truncate">{auth.user.name}</p>
+                              <p className="text-xs text-indigo-300 truncate">@{auth.user.username}</p>
+                          </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                          <NavLink to="/profile" onClick={onClose} className="flex-1 py-2 text-center text-xs font-bold text-indigo-200 bg-indigo-800/50 hover:bg-indigo-700/80 rounded-lg transition-colors">Profile</NavLink>
+                          <button onClick={handleLogout} className="px-3 py-2 text-xs font-bold text-rose-200 bg-rose-800/50 hover:bg-rose-700/80 rounded-lg transition-colors" title="Logout">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                          </button>
+                      </div>
+
+                      {isAdminUser && (
+                          <NavLink to="/admin" onClick={onClose} className="mt-2 block w-full py-2 text-center text-xs font-bold text-amber-200 bg-amber-800/50 hover:bg-amber-700/80 rounded-lg transition-colors">
+                              Admin Panel
+                          </NavLink>
+                      )}
+                  </div>
+              ) : (
+                  <NavLink to="/login" onClick={onClose} className="block w-full py-3 text-center text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-lg">
+                      Login / Register
+                  </NavLink>
+              )}
+          </div>
+        </aside>
+    </>
+  );
+};
