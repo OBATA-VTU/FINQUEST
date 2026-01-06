@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback, useContext, useEffect } from 'react';
 import { QuestionCard } from '../components/QuestionCard';
 import { AdBanner } from '../components/AdBanner';
@@ -29,7 +30,7 @@ export const PastQuestionsPage: React.FC = () => {
         setLoading(true);
         try {
             const [questionsQuerySnapshot, usersQuerySnapshot] = await Promise.all([
-                getDocs(query(collection(db, "questions"), where("status", "==", "approved"), orderBy('year', 'desc'))),
+                getDocs(query(collection(db, "questions"), where("status", "==", "approved"))),
                 getDocs(collection(db, "users"))
             ]);
 
@@ -93,31 +94,26 @@ export const PastQuestionsPage: React.FC = () => {
             <svg className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </div>
         
-        {/* Category Filter */}
+        {/* Redesigned Filters with Dropdowns */}
         <div>
-            <h3 className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-3">Category</h3>
-            <div className="flex flex-wrap gap-2">
-                {CATEGORIES.map(cat => (
-                    <button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedCategory === cat ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>{cat}</button>
-                ))}
-            </div>
+            <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">Category</label>
+            <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
+                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
         </div>
         
-        {/* Level Filter */}
         <div>
-            <h3 className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-3">Level</h3>
-            <div className="grid grid-cols-3 gap-2">
-                <button onClick={() => setSelectedLevel('all')} className={`py-2 rounded-lg text-sm font-bold transition-all ${selectedLevel === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200'}`}>All</button>
-                {LEVELS.map(l => (
-                    <button key={l} onClick={() => setSelectedLevel(String(l))} className={`py-2 rounded-lg text-sm font-bold transition-all ${selectedLevel === String(l) ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200'}`}>{l === 'General' ? 'Gen' : `${l}L`}</button>
-                ))}
-            </div>
+            <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">Level</label>
+            <select value={selectedLevel} onChange={e => setSelectedLevel(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
+                <option value="all">All Levels</option>
+                {LEVELS.map(l => <option key={l} value={String(l)}>{l === 'General' ? l : `${l} Level`}</option>)}
+            </select>
         </div>
 
         {/* Sort */}
         <div>
-            <label htmlFor="sort-order" className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">Sort by</label>
-            <select id="sort-order" value={sortOrder} onChange={e => setSortOrder(e.target.value as any)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
+            <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">Sort by</label>
+            <select value={sortOrder} onChange={e => setSortOrder(e.target.value as any)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
             </select>
@@ -155,7 +151,7 @@ export const PastQuestionsPage: React.FC = () => {
                     <div className="text-center py-24 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 animate-fade-in flex flex-col items-center">
                         <svg className="w-16 h-16 text-slate-300 dark:text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Materials Found</h3>
-                        <p className="text-slate-500 dark:text-slate-400 mt-2 max-w-sm">Your search for "{searchTerm}" did not match any documents. Try adjusting your filters or contributing new material.</p>
+                        <p className="text-slate-500 dark:text-slate-400 mt-2 max-w-sm">Try adjusting your filters or contributing new material. If you believe this is an error, please wait a moment for the database to sync.</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in">
