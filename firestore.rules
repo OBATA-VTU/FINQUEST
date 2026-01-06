@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -14,10 +15,11 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    // Check if the user has the 'admin' role in their user profile
+    // Check if the user has an administrative role.
+    // FIX: Expanded to include all roles that can access the admin panel.
     function isAdmin() {
       return isAuthenticated() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'librarian', 'vice_president', 'supplement'];
     }
     
     // --- SECURE CONFIGURATION ---
@@ -107,9 +109,9 @@ service cloud.firestore {
     // --- SYSTEM STATS (New - For Admin Health) ---
     match /system_stats/{docId} {
       allow read: if isAdmin();
-      // Allow authenticated users to increment usage counters (e.g. for AI calls)
-      allow update: if isAuthenticated(); 
-      allow create: if isAdmin();
+      // FIX: Allow any authenticated user to create or update the 'ai_usage' doc.
+      // This is necessary for the trackAiUsage function which creates the doc on the first run for a non-admin user.
+      allow write: if docId == 'ai_usage' && isAuthenticated();
     }
 
     // --- LOST & FOUND ---
