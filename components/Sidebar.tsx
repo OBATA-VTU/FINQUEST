@@ -8,7 +8,6 @@ import { NavLink, useNavigate } from 'react-router-dom';
 interface NavItemProps {
     to: string;
     label: string;
-    // FIX: Explicitly typed the icon prop to accept a className, resolving a TypeScript error with React.cloneElement where the props were being inferred as 'unknown'.
     icon: React.ReactElement<{ className?: string }>;
     onClose: () => void;
 }
@@ -26,7 +25,6 @@ const NavItem: React.FC<NavItemProps> = ({ to, label, icon, onClose }) => (
         {({ isActive }) => (
             <>
                 <div className={`${isActive ? 'text-indigo-400' : 'text-indigo-300 group-hover:text-white'} transition-colors`}>
-                    {/* FIX: Removed the unsafe 'as React.ReactElement' cast as the prop type is now correct. */}
                     {React.cloneElement(icon, { className: "w-4 h-4" })}
                 </div>
                 <span className={`font-semibold text-xs tracking-wide ${isActive ? 'font-bold' : ''}`}>{label}</span>
@@ -190,113 +188,4 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                      <NavItem 
                         to="/community" 
                         label="Community" 
-                        icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
-                        onClose={onClose}
-                    />
-                    <NavItem 
-                        to="/lost-and-found" 
-                        label="Lost & Found" 
-                        icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>}
-                        onClose={onClose}
-                    />
-                </NavSection>
-            )}
-
-            <NavSection 
-                title="Department"
-                isExpanded={expandedSections['department']}
-                onToggle={() => toggleSection('department')}
-            >
-                 <NavItem 
-                    to="/announcements" 
-                    label="News & Updates" 
-                    icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>}
-                    onClose={onClose}
-                />
-                <NavItem 
-                    to="/gallery" 
-                    label="Gallery" 
-                    icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
-                    onClose={onClose}
-                />
-                
-                {auth?.user && (
-                    <>
-                        <NavItem 
-                            to="/lecturers" 
-                            label="Lecturers" 
-                            icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
-                            onClose={onClose}
-                        />
-                        <NavItem 
-                            to="/executives" 
-                            label="Executives" 
-                            icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
-                            onClose={onClose}
-                        />
-                    </>
-                )}
-                <NavItem 
-                    to="/faq" 
-                    label="FAQ" 
-                    icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                    onClose={onClose}
-                />
-            </NavSection>
-          </nav>
-
-          <div className="p-4 border-t border-indigo-900 bg-black/20 shrink-0">
-            {auth?.user ? (
-                <div>
-                    <div 
-                        onClick={() => { navigate('/profile'); onClose(); }}
-                        className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 cursor-pointer transition-all mb-2 group"
-                    >
-                        <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold border-2 border-indigo-400 overflow-hidden shrink-0 group-hover:border-white transition-colors">
-                            {auth.user.avatarUrl ? (
-                                <img src={auth.user.avatarUrl} alt={auth.user.name} className="w-full h-full object-cover" />
-                            ) : (
-                                auth.user.name.charAt(0).toUpperCase()
-                            )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-white truncate">{auth.user.name}</p>
-                            <p className="text-[10px] text-indigo-300 truncate uppercase font-semibold tracking-wide">
-                                {isAdminUser ? auth.user.role.replace('_', ' ') : auth.user.role === 'alumni' ? 'Alumnus' : `${auth.user.level}L Student`}
-                            </p>
-                        </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-4 gap-2">
-                        {isAdminUser && (
-                            <button 
-                                onClick={() => { navigate('/admin/dashboard'); onClose(); }}
-                                className="col-span-3 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold rounded-md transition-colors flex items-center justify-center gap-2 shadow-lg"
-                            >
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                Panel
-                            </button>
-                        )}
-                        <button 
-                            onClick={handleLogout}
-                            className={`px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-md transition-colors flex items-center justify-center shadow-lg ${isAdminUser ? 'col-span-1' : 'col-span-4'}`}
-                            title="Logout"
-                        >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                        </button>
-                    </div>
-                </div>
-            ) : (
-                <button
-                    onClick={() => { navigate('/login'); onClose(); }}
-                    className="w-full py-2.5 rounded-lg bg-white hover:bg-indigo-50 text-indigo-900 font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2"
-                >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                    Student Login
-                </button>
-            )}
-          </div>
-        </aside>
-    </>
-  );
-};
+                        icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.

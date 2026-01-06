@@ -10,8 +10,6 @@ interface ErrorBoundaryState {
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // FIX: Using a class property initializer for state. This is a more modern approach
-  // and resolves type errors where the compiler couldn't find `this.state` or `this.props`.
   state: ErrorBoundaryState = {
     hasError: false,
     error: null,
@@ -43,7 +41,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       );
     }
 
-    // FIX: In a class component, props are accessed via `this.props`.
+    // FIX: In a class component, props are accessed via `this.props`. 
+    // The error "Property 'props' does not exist" suggests `props` may have been accessed directly.
     return this.props.children;
   }
 }

@@ -7,7 +7,7 @@ import { AuthContext } from '../contexts/AuthContext';
 interface AdminNavItemProps {
     to: string;
     label: string;
-    icon: React.ReactNode;
+    icon: React.ReactElement<{ className?: string }>;
     onClick?: () => void;
 }
 
@@ -24,7 +24,7 @@ const AdminNavItem: React.FC<AdminNavItemProps> = ({ to, label, icon, onClick })
         {({ isActive }) => (
             <>
                 <div className={`${isActive ? 'text-indigo-400' : 'text-indigo-300 group-hover:text-white'}`}>
-                    {icon}
+                    {React.cloneElement(icon, { className: "w-5 h-5" })}
                 </div>
                 <span className="font-medium text-sm tracking-wide">{label}</span>
             </>

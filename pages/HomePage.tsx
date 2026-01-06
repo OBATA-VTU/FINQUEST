@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Announcement, GalleryItem } from '../types';
 import { db } from '../firebase';
-// FIX: Added 'where' to the import to resolve a reference error.
 import { collection, query, orderBy, limit, getDocs, doc, getDoc, getCountFromServer, where } from 'firebase/firestore';
 import { AdBanner } from '../components/AdBanner';
 
