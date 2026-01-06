@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
@@ -38,6 +37,7 @@ export const Layout: React.FC = () => {
                 {/* We use h-full and overflow-y-auto here so normal pages scroll, 
                     but pages like Chat (Community) can opt to hide overflow and manage scrolling internally */}
                 <main 
+                    id="main-content"
                     className={`flex-1 relative z-0 animate-fade-in ${pathname === '/community' ? 'overflow-hidden' : 'overflow-y-auto'}`}
                 >
                     <div className={pathname === '/community' ? 'h-full' : 'min-h-full flex flex-col'}>
