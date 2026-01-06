@@ -3,9 +3,10 @@ import { doc, setDoc, increment, getDoc, updateDoc } from 'firebase/firestore';
 
 const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || "a4aa97ad337019899bb59b4e94b149e0";
 const DROPBOX_ACCESS_TOKEN = process.env.DROPBOX_ACCESS_TOKEN;
-const GOOGLE_DRIVE_CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID;
 
-// --- GOOGLE DRIVE CLIENT-SIDE OAUTH ---
+// Credentials for client-side refresh flow
+const GOOGLE_DRIVE_CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID;
+const GOOGLE_DRIVE_CLIENT_SECRET = process.env.GOOGLE_DRIVE_CLIENT_SECRET;
 
 interface DriveTokenData {
   access_token: string;
@@ -13,7 +14,6 @@ interface DriveTokenData {
   expires_at: number;
 }
 
-// Function to get a valid access token, refreshing if necessary
 const getGoogleAuthToken = async (): Promise<string> => {
     const tokenDocRef = doc(db, 'config', 'google_drive_settings');
     const tokenDoc = await getDoc(tokenDocRef);
@@ -24,40 +24,43 @@ const getGoogleAuthToken = async (): Promise<string> => {
 
     const tokenData = tokenDoc.data() as DriveTokenData;
 
-    if (Date.now() < tokenData.expires_at) {
+    // Check if the token is still valid (with a 60-second buffer).
+    if (Date.now() < tokenData.expires_at - 60000) {
         return tokenData.access_token;
     }
 
-    // Token is expired, refresh it
-    const response = await fetch('https://oauth2.googleapis.com/token', {
+    // --- Token has expired, use the refresh token to get a new one ---
+    if (!tokenData.refresh_token) {
+        throw new Error("Google Drive connection has expired and requires re-authentication. Please ask an admin to reconnect.");
+    }
+
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
             client_id: GOOGLE_DRIVE_CLIENT_ID,
+            client_secret: GOOGLE_DRIVE_CLIENT_SECRET,
             refresh_token: tokenData.refresh_token,
             grant_type: 'refresh_token',
         }),
     });
 
-    if (!response.ok) {
-        throw new Error("Failed to refresh Google Drive token. Please reconnect.");
+    const newTokens = await tokenResponse.json();
+    if (!tokenResponse.ok) {
+        console.error("Failed to refresh Google token:", newTokens);
+        throw new Error("Failed to refresh Google Drive connection. Please ask an admin to reconnect.");
     }
 
-    const newTokens = await response.json();
-    const newAccessToken = newTokens.access_token;
-    const newExpiresAt = Date.now() + (newTokens.expires_in * 1000);
-
+    // Update Firestore with the new access token and expiry time
+    const newExpiry = Date.now() + (newTokens.expires_in * 1000);
     await updateDoc(tokenDocRef, {
-        access_token: newAccessToken,
-        expires_at: newExpiresAt,
+        access_token: newTokens.access_token,
+        expires_at: newExpiry,
     });
 
-    return newAccessToken;
+    return newTokens.access_token;
 };
 
-// --- END GOOGLE DRIVE OAUTH ---
-
-// Helper to track AI Usage for Admin Dashboard
 export const trackAiUsage = async () => {
     try {
         const today = new Date().toISOString().split('T')[0];
@@ -100,9 +103,6 @@ export const forceDownload = async (url: string, filename: string) => {
   }
 };
 
-/**
- * Re-engineered Dropbox upload function using direct `fetch` calls.
- */
 export const uploadFile = (file: File, folder: string = 'materials', onProgress?: (progress: number) => void): Promise<{ url: string, path: string }> => {
     return new Promise(async (resolve, reject) => {
         try {
@@ -158,9 +158,6 @@ export const uploadFile = (file: File, folder: string = 'materials', onProgress?
     });
 };
 
-/**
- * NEW: Uploads a file to Google Drive using client-side OAuth token.
- */
 export const uploadFileToGoogleDrive = async (file: File, onProgress?: (progress: number) => void): Promise<{ url: string, path: string }> => {
     try {
         onProgress?.(10);
@@ -191,7 +188,6 @@ export const uploadFileToGoogleDrive = async (file: File, onProgress?: (progress
         const result = await response.json();
         const fileId = result.id;
         
-        // Make file public
         await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
@@ -208,8 +204,6 @@ export const uploadFileToGoogleDrive = async (file: File, onProgress?: (progress
     }
 };
 
-
-// Main upload function that decides which service to use
 export const uploadDocument = async (file: File, folder: string = 'materials', onProgress?: (progress: number) => void): Promise<{ url: string, path: string }> => {
     try {
         const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
@@ -238,9 +232,6 @@ export const deleteFile = async (path: string): Promise<void> => {
     }
 };
 
-/**
- * NEW: Deletes a file from Google Drive using client-side OAuth token.
- */
 export const deleteFileFromGoogleDrive = async (fileId: string): Promise<void> => {
     try {
         const accessToken = await getGoogleAuthToken();
@@ -253,7 +244,6 @@ export const deleteFileFromGoogleDrive = async (fileId: string): Promise<void> =
     }
 };
 
-// Main delete function that decides which service to use
 export const deleteDocument = async (path: string): Promise<void> => {
     try {
         const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));

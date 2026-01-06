@@ -16,3 +16,7 @@ exports.sendWelcomeEmail = functions.auth.user().onCreate(async (user) => {
 });
 
 // ... (all other existing email functions remain here)
+
+
+// The exchangeAuthCode function has been removed as it's no longer needed
+// with the client-side 'token' authentication flow.

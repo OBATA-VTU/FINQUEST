@@ -6,8 +6,8 @@ import { deleteDocument } from '../utils/api';
 import { AuthContext } from '../contexts/AuthContext';
 
 const GOOGLE_DRIVE_CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID;
+const GOOGLE_DRIVE_CLIENT_SECRET = process.env.GOOGLE_DRIVE_CLIENT_SECRET;
 
-// FIX: Extend the Window interface to include the google object from the GSI script
 declare global {
   interface Window {
     google?: any;
@@ -22,11 +22,9 @@ export const AdminSettingsPage: React.FC = () => {
   const [socialLinks, setSocialLinks] = useState({ facebook: '', twitter: '', instagram: '', whatsapp: '', telegram: '', tiktok: '' });
   const [siteSettings, setSiteSettings] = useState({ session: '2025/2026', showExecutives: true, uploadService: 'dropbox' });
   
-  // New Google Drive State
   const [driveSettings, setDriveSettings] = useState({ folder_id: '', connected_email: '' });
   const [tokenClient, setTokenClient] = useState<any>(null);
 
-  // Modal States
   const [isWipeModalOpen, setIsWipeModalOpen] = useState(false);
   const [wipeConfirmText, setWipeConfirmText] = useState('');
   const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
@@ -51,13 +49,13 @@ export const AdminSettingsPage: React.FC = () => {
     };
     fetchSettings();
 
-    // Load Google GSI script
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
     script.onload = () => {
         if (window.google) {
+            // Revert to the 'code' flow which provides a code to be exchanged for tokens.
             const client = window.google.accounts.oauth2.initCodeClient({
                 client_id: GOOGLE_DRIVE_CLIENT_ID,
                 scope: 'https://www.googleapis.com/auth/drive.file',
@@ -73,34 +71,32 @@ export const AdminSettingsPage: React.FC = () => {
     return () => { document.body.removeChild(script); };
   }, []);
 
+  // Reverted to the client-side code exchange flow, using the client secret from env vars.
   const handleGoogleAuthCallback = async (response: any) => {
-      showNotification("Authorization successful. Fetching tokens...", "info");
+      showNotification("Authorization code received. Exchanging for tokens...", "info");
       try {
+          if (!GOOGLE_DRIVE_CLIENT_SECRET) {
+              throw new Error("Google Client Secret is not configured in Vercel environment variables.");
+          }
+
           const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
               method: 'POST',
               headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
               body: new URLSearchParams({
                   code: response.code,
                   client_id: GOOGLE_DRIVE_CLIENT_ID,
-                  // FIX: Explicitly set the redirect_uri to 'postmessage'.
-                  // This tells Google's OAuth server that this is a client-side JavaScript
-                  // application that does not use a traditional redirect and, crucially,
-                  // does not have a client_secret. This resolves the "Client_secret is missing" error.
-                  redirect_uri: 'postmessage',
+                  client_secret: GOOGLE_DRIVE_CLIENT_SECRET,
+                  redirect_uri: 'postmessage', 
                   grant_type: 'authorization_code',
               }),
           });
           
-          if (!tokenResponse.ok) {
-              const errorData = await tokenResponse.json();
-              console.error("Google Token Exchange Error:", errorData);
-              const errorMessage = errorData.error_description || "Could not get tokens. Ensure your Google Client ID is correct and the website's URL is listed as an 'Authorized redirect URI' in your Google Cloud project.";
-              throw new Error(errorMessage);
-          }
-          
           const tokens = await tokenResponse.json();
-          
-          // Get user email
+          if (!tokenResponse.ok) throw new Error(tokens.error_description || "Token exchange failed.");
+          if (!tokens.refresh_token) {
+              showNotification("Re-authentication required. Please disconnect and reconnect your Google account to grant offline access.", "warning");
+          }
+
           const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
               headers: { Authorization: `Bearer ${tokens.access_token}` },
           });
@@ -109,14 +105,16 @@ export const AdminSettingsPage: React.FC = () => {
           const settingsRef = doc(db, 'config', 'google_drive_settings');
           await setDoc(settingsRef, {
               access_token: tokens.access_token,
-              refresh_token: tokens.refresh_token,
+              refresh_token: tokens.refresh_token, // This enables long-term access
               expires_at: Date.now() + (tokens.expires_in * 1000),
               folder_id: driveSettings.folder_id,
               connected_email: profile.email,
           }, { merge: true });
+
           setDriveSettings(prev => ({...prev, connected_email: profile.email}));
-          showNotification(`Connected to Google Drive as ${profile.email}`, "success");
-      } catch (error: any) { 
+          showNotification(`Successfully connected to Google Drive as ${profile.email}.`, "success");
+      } catch (error: any) {
+          console.error("Google Connection Error:", error);
           showNotification(error.message || "Failed to connect Google Drive.", "error"); 
       }
   };
@@ -152,14 +150,12 @@ export const AdminSettingsPage: React.FC = () => {
               uploadService: siteSettings.uploadService
           }, { merge: true });
 
-          // Also save the Folder ID if it changed
           await setDoc(doc(db, 'config', 'google_drive_settings'), { folder_id: driveSettings.folder_id }, { merge: true });
           
           showNotification("Settings saved successfully", "success");
       } catch (e) { showNotification("Failed to save settings", "error"); }
   };
 
-  // Other handlers (wipe, advance) remain the same
   const handleWipeRecords = async () => { /* ... unchanged ... */ };
   const handleAdvanceLevels = async () => { /* ... unchanged ... */ };
 
@@ -168,7 +164,6 @@ export const AdminSettingsPage: React.FC = () => {
     <div className="animate-fade-in max-w-3xl pb-20">
         <h1 className="text-2xl font-bold text-slate-900 mb-6">Platform Settings</h1>
         
-        {/* Upload Service */}
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
             <h3 className="text-xl font-bold text-slate-800 mb-6">File Upload Service</h3>
             <p className="text-sm text-slate-500 mb-4">Select the primary service for document uploads.</p>
@@ -205,13 +200,11 @@ export const AdminSettingsPage: React.FC = () => {
             )}
         </div>
 
-        {/* General Site Config */}
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
              <h3 className="text-xl font-bold text-slate-800 mb-6">General Configuration</h3>
              <div><label className="block text-xs font-bold uppercase mb-1">Current Academic Session</label><input className="w-full border p-2 rounded" value={siteSettings.session} onChange={e => setSiteSettings({...siteSettings, session: e.target.value})} /></div>
         </div>
 
-        {/* Module Visibility */}
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
              <h3 className="text-xl font-bold text-slate-800 mb-6">Module Visibility</h3>
              <div className="flex items-center justify-between">
@@ -223,18 +216,17 @@ export const AdminSettingsPage: React.FC = () => {
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
              <h3 className="text-xl font-bold text-slate-800 mb-6">Social Media & Community Links</h3>
              <div className="space-y-4">
-                 <div><label className="block text-xs font-bold uppercase mb-1">WhatsApp</label><input className="w-full border p-2 rounded" value={socialLinks.whatsapp} onChange={e => setSocialLinks({...socialLinks, whatsapp: e.target.value})} /></div>
-                 <div><label className="block text-xs font-bold uppercase mb-1">Telegram</label><input className="w-full border p-2 rounded" value={socialLinks.telegram} onChange={e => setSocialLinks({...socialLinks, telegram: e.target.value})} /></div>
-                 <div><label className="block text-xs font-bold uppercase mb-1">Facebook</label><input className="w-full border p-2 rounded" value={socialLinks.facebook} onChange={e => setSocialLinks({...socialLinks, facebook: e.target.value})} /></div>
-                 <div><label className="block text-xs font-bold uppercase mb-1">Instagram</label><input className="w-full border p-2 rounded" value={socialLinks.instagram} onChange={e => setSocialLinks({...socialLinks, instagram: e.target.value})} /></div>
-                 <div><label className="block text-xs font-bold uppercase mb-1">Twitter / X</label><input className="w-full border p-2 rounded" value={socialLinks.twitter} onChange={e => setSocialLinks({...socialLinks, twitter: e.target.value})} /></div>
-                 <div><label className="block text-xs font-bold uppercase mb-1">TikTok</label><input className="w-full border p-2 rounded" value={socialLinks.tiktok} onChange={e => setSocialLinks({...socialLinks, tiktok: e.target.value})} /></div>
+                 <div><label>WhatsApp</label><input className="w-full border p-2 rounded" value={socialLinks.whatsapp} onChange={e => setSocialLinks({...socialLinks, whatsapp: e.target.value})} /></div>
+                 <div><label>Telegram</label><input className="w-full border p-2 rounded" value={socialLinks.telegram} onChange={e => setSocialLinks({...socialLinks, telegram: e.target.value})} /></div>
+                 <div><label>Facebook</label><input className="w-full border p-2 rounded" value={socialLinks.facebook} onChange={e => setSocialLinks({...socialLinks, facebook: e.target.value})} /></div>
+                 <div><label>Instagram</label><input className="w-full border p-2 rounded" value={socialLinks.instagram} onChange={e => setSocialLinks({...socialLinks, instagram: e.target.value})} /></div>
+                 <div><label>Twitter / X</label><input className="w-full border p-2 rounded" value={socialLinks.twitter} onChange={e => setSocialLinks({...socialLinks, twitter: e.target.value})} /></div>
+                 <div><label>TikTok</label><input className="w-full border p-2 rounded" value={socialLinks.tiktok} onChange={e => setSocialLinks({...socialLinks, tiktok: e.target.value})} /></div>
              </div>
         </div>
 
         <button onClick={handleSaveSettings} className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow hover:bg-indigo-700">Save All Settings</button>
 
-        {/* Danger Zone */}
         {isSuperAdmin && (
             <div className="bg-rose-50 p-8 rounded-2xl border-2 border-dashed border-rose-200 mt-12">
                 <h3 className="text-xl font-bold text-rose-800 mb-4">Danger Zone</h3>
@@ -246,7 +238,6 @@ export const AdminSettingsPage: React.FC = () => {
         )}
     </div>
 
-    {/* Modals remain unchanged */}
     </>
   );
 };
