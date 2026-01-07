@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
-import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch, deleteDoc, updateDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
 import { AuthContext } from '../contexts/AuthContext';
 
@@ -160,9 +160,11 @@ export const AdminSettingsPage: React.FC = () => {
     }
     setIsProcessing(true);
 
-    const collectionsToWipe = ['test_results', 'community_messages', 'leaderboard'];
+    // Corrected list of collections to wipe
+    const collectionsToWipe = ['test_results', 'community_messages'];
 
     try {
+        // --- Step 1: Wipe specified collections ---
         for (const coll of collectionsToWipe) {
             const q = query(collection(db, coll));
             const snapshot = await getDocs(q);
@@ -173,7 +175,7 @@ export const AdminSettingsPage: React.FC = () => {
             for (const doc of snapshot.docs) {
                 batch.delete(doc.ref);
                 count++;
-                if (count === 499) {
+                if (count === 499) { // Commit batch every 499 deletes to stay under limits
                     await batch.commit();
                     batch = writeBatch(db);
                     count = 0;
@@ -183,6 +185,27 @@ export const AdminSettingsPage: React.FC = () => {
                 await batch.commit();
             }
         }
+        
+        // --- Step 2: Reset user contribution points to wipe leaderboard ---
+        const usersQuery = query(collection(db, 'users'));
+        const usersSnapshot = await getDocs(usersQuery);
+        if (!usersSnapshot.empty) {
+            let userBatch = writeBatch(db);
+            let userCount = 0;
+            for (const userDoc of usersSnapshot.docs) {
+                userBatch.update(userDoc.ref, { contributionPoints: 0 });
+                userCount++;
+                if (userCount === 499) {
+                    await userBatch.commit();
+                    userBatch = writeBatch(db);
+                    userCount = 0;
+                }
+            }
+            if (userCount > 0) {
+                await userBatch.commit();
+            }
+        }
+
         showNotification("Session data has been wiped successfully.", "success");
     } catch (e) {
         console.error(e);

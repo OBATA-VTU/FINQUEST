@@ -188,16 +188,16 @@ export const TestPage: React.FC = () => {
         }
     };
 
-    if (view === 'loading') return <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4"><div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div><p className="font-bold text-slate-600">Loading Session...</p></div>;
+    if (view === 'loading') return <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4"><div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div><p className="font-bold text-slate-600 dark:text-slate-300">Loading Session...</p></div>;
 
     if (view === 'results') return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-950">
             <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl shadow-2xl w-full max-w-lg text-center border animate-pop-in">
-                <h2 className="text-2xl font-serif font-bold mb-2">Session Summary</h2>
+                <h2 className="text-2xl font-serif font-bold mb-2 text-slate-800 dark:text-slate-100">Session Summary</h2>
                 <div className={`text-7xl font-black my-4 ${score >= 70 ? 'text-emerald-500' : score >= 40 ? 'text-amber-500' : 'text-rose-500'}`}>{score}%</div>
-                <p className="text-slate-500 mb-8">You've completed the practice session.</p>
+                <p className="text-slate-500 dark:text-slate-400 mb-8">You've completed the practice session.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <button onClick={resetState} className="py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700">New Session</button>
+                    <button onClick={resetState} className="py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100">New Session</button>
                     {questions.length > 0 && <button onClick={() => generateTestReviewPDF(questions, userAnswers, score, auth?.user)} className="py-3 bg-indigo-600 text-white rounded-xl font-bold">Review PDF</button>}
                 </div>
             </div>
@@ -233,8 +233,8 @@ export const TestPage: React.FC = () => {
                         </div>
                         <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-lg">
                             <div className="flex justify-between items-center mb-4">
-                               <h3 className="font-bold">Progress</h3>
-                               <button onClick={() => setShowCalculator(true)} className="text-xs font-bold flex items-center gap-1 text-slate-500 hover:text-indigo-600">🧮 Calculator</button>
+                               <h3 className="font-bold text-slate-800 dark:text-slate-100">Progress</h3>
+                               <button onClick={() => setShowCalculator(true)} className="text-xs font-bold flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400">🧮 Calculator</button>
                             </div>
                             <div className="grid grid-cols-5 gap-2 mb-6">
                                 {questions.map((_, i) => <button key={i} onClick={() => setCurrentQuestionIndex(i)} className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${currentQuestionIndex === i ? 'bg-indigo-600 text-white scale-110' : userAnswers[i] !== undefined ? 'bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200' : 'bg-slate-100 dark:bg-slate-800'}`}>{i+1}</button>)}
