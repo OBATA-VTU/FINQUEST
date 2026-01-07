@@ -1,28 +1,20 @@
 
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Logo } from './Logo';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useNotification } from '../contexts/NotificationContext';
 import { AuthContext } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { collection, query, where, limit, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, limit, onSnapshot, doc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
+import { Notification as FirestoreNotification } from '../types';
 
 interface HeaderProps {
   onOpenSidebar: () => void;
 }
 
-interface FirestoreNotification {
-    id: string;
-    message: string;
-    type: 'info' | 'success' | 'warning' | 'error';
-    createdAt: string;
-    read: boolean;
-    userId: string;
-}
-
 export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
-  const { notifications: toastNotifications } = useNotification();
+  const navigate = useNavigate();
   const auth = useContext(AuthContext);
   const { theme, toggleTheme } = useTheme();
   
@@ -42,31 +34,20 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
   }, []);
 
   // Fetch Notifications from Firestore
-  // Simplified query to avoid "Missing Index" errors for composite queries (userId in [...] + orderBy)
   useEffect(() => {
       if (!auth?.user) return;
 
-      // We query for messages targeted to this user OR all users. 
-      // We removed 'orderBy' from the firestore query to prevent index errors. 
-      // We will sort in Javascript instead.
       const q = query(
           collection(db, 'notifications'), 
           where('userId', 'in', [auth.user.id, 'all']),
-          limit(50) 
+          where('read', '==', false),
+          limit(20) 
       );
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
-          const now = Date.now();
-          const oneDayMs = 24 * 60 * 60 * 1000;
-
           const notes = snapshot.docs
             .map(d => ({ id: d.id, ...d.data() } as FirestoreNotification))
-            .filter(note => {
-                // Filter: Keep only if created within the last 24 hours
-                const createdTime = new Date(note.createdAt).getTime();
-                return (now - createdTime) < oneDayMs;
-            })
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Sort Descending
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
             
           setDbNotifications(notes);
       });
@@ -74,18 +55,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
       return () => unsubscribe();
   }, [auth?.user]);
 
-  const clearDbNotification = async (id: string) => {
-      try {
-          // This deletes the notification permanently (Marks as read/cleared)
-          await deleteDoc(doc(db, 'notifications', id));
-      } catch (e) { console.error("Error clearing note", e); }
-  };
-
   const handleClearAll = async () => {
-      const deletionPromises = dbNotifications.map(note => 
-          deleteDoc(doc(db, 'notifications', note.id))
-      );
-      await Promise.all(deletionPromises);
+      const batch = writeBatch(db);
+      dbNotifications.forEach(note => {
+          const noteRef = doc(db, 'notifications', note.id);
+          batch.update(noteRef, { read: true });
+      });
+      await batch.commit();
+  };
+  
+  const handleNotificationClick = (notification: FirestoreNotification) => {
+      setShowNotifications(false);
+      navigate('/notifications', { state: { highlightId: notification.id } });
   };
 
   const handleToggle = (e: React.MouseEvent) => {
@@ -163,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
                                             onClick={handleClearAll}
                                             className="text-xs font-bold text-slate-500 hover:text-rose-500 dark:text-slate-400 dark:hover:text-rose-400 transition-colors"
                                         >
-                                            Clear All
+                                            Mark all as read
                                         </button>
                                     )}
                                 </div>
@@ -175,28 +156,24 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
                                         </div>
                                     ) : (
                                         <ul className="divide-y divide-slate-50 dark:divide-slate-800">
-                                            {dbNotifications.map((note) => (
-                                                <li key={note.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-start gap-3 relative group animate-fade-in">
+                                            {dbNotifications.slice(0, 5).map((note) => (
+                                                <li key={note.id} onClick={() => handleNotificationClick(note)} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-start gap-3 relative group animate-fade-in cursor-pointer">
                                                     <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
                                                         note.type === 'success' ? 'bg-emerald-500' : 
-                                                        note.type === 'error' ? 'bg-rose-500' : 
-                                                        note.type === 'warning' ? 'bg-amber-500' : 'bg-indigo-500'
+                                                        note.type === 'error' || note.type === 'warning' ? 'bg-rose-500' : 
+                                                        'bg-indigo-500'
                                                     }`}></div>
                                                     <div className="flex-1 pr-4">
-                                                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-snug font-medium">{note.message}</p>
+                                                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-snug font-medium line-clamp-2">{note.message}</p>
                                                         <p className="text-xs text-slate-400 mt-1">{new Date(note.createdAt).toLocaleDateString()} {new Date(note.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                                                     </div>
-                                                    <button 
-                                                        onClick={(e) => { e.stopPropagation(); clearDbNotification(note.id); }}
-                                                        className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all absolute top-2 right-2 p-1"
-                                                        title="Mark as read"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                                                    </button>
                                                 </li>
                                             ))}
                                         </ul>
                                     )}
+                                </div>
+                                <div className="p-2 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-800">
+                                    <Link to="/notifications" onClick={() => setShowNotifications(false)} className="block w-full text-center py-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg">View All Notifications</Link>
                                 </div>
                             </div>
                         )}
