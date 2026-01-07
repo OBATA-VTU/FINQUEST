@@ -72,7 +72,7 @@ export const MarketplacePage: React.FC = () => {
             setIsModalOpen(false);
             setFormData({ title: '', description: '', price: '', category: 'Goods', contact: '' });
             setImageFile(null);
-            fetchItems();
+            fetchItems(); // Refresh the list after posting
         } catch (error: any) {
             showNotification("Failed to post: " + error.message, "error");
         } finally {
@@ -129,7 +129,7 @@ export const MarketplacePage: React.FC = () => {
                         <h3 className="p-6 font-bold text-xl">Create Listing</h3>
                         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                             <input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="Item/Service Title" required />
-                            <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="Description" rows={3} required />
+                            <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="Description" rows={3} />
                             <div className="grid grid-cols-2 gap-4">
                                 <input type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="Price (₦)" required />
                                 <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full p-3 border rounded-xl bg-white">{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select>

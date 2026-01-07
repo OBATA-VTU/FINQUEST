@@ -2,7 +2,6 @@ import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch, deleteDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
-import { deleteDocument } from '../utils/api';
 import { AuthContext } from '../contexts/AuthContext';
 
 const GOOGLE_DRIVE_CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID;
@@ -55,7 +54,6 @@ export const AdminSettingsPage: React.FC = () => {
     script.defer = true;
     script.onload = () => {
         if (window.google) {
-            // Revert to the 'code' flow which provides a code to be exchanged for tokens.
             const client = window.google.accounts.oauth2.initCodeClient({
                 client_id: GOOGLE_DRIVE_CLIENT_ID,
                 scope: 'https://www.googleapis.com/auth/drive',
@@ -71,7 +69,6 @@ export const AdminSettingsPage: React.FC = () => {
     return () => { document.body.removeChild(script); };
   }, []);
 
-  // Reverted to the client-side code exchange flow, using the client secret from env vars.
   const handleGoogleAuthCallback = async (response: any) => {
       showNotification("Authorization code received. Exchanging for tokens...", "info");
       try {
@@ -105,7 +102,7 @@ export const AdminSettingsPage: React.FC = () => {
           const settingsRef = doc(db, 'config', 'google_drive_settings');
           await setDoc(settingsRef, {
               access_token: tokens.access_token,
-              refresh_token: tokens.refresh_token, // This enables long-term access
+              refresh_token: tokens.refresh_token,
               expires_at: Date.now() + (tokens.expires_in * 1000),
               folder_id: driveSettings.folder_id,
               connected_email: profile.email,
@@ -155,9 +152,90 @@ export const AdminSettingsPage: React.FC = () => {
           showNotification("Settings saved successfully", "success");
       } catch (e) { showNotification("Failed to save settings", "error"); }
   };
+  
+  const handleWipeRecords = async () => {
+    if (wipeConfirmText !== 'FINSA WIPE') {
+        showNotification("Confirmation text does not match.", "error");
+        return;
+    }
+    setIsProcessing(true);
 
-  const handleWipeRecords = async () => { /* ... unchanged ... */ };
-  const handleAdvanceLevels = async () => { /* ... unchanged ... */ };
+    const collectionsToWipe = ['test_results', 'community_messages', 'leaderboard'];
+
+    try {
+        for (const coll of collectionsToWipe) {
+            const q = query(collection(db, coll));
+            const snapshot = await getDocs(q);
+            if (snapshot.empty) continue;
+            
+            let batch = writeBatch(db);
+            let count = 0;
+            for (const doc of snapshot.docs) {
+                batch.delete(doc.ref);
+                count++;
+                if (count === 499) {
+                    await batch.commit();
+                    batch = writeBatch(db);
+                    count = 0;
+                }
+            }
+            if (count > 0) {
+                await batch.commit();
+            }
+        }
+        showNotification("Session data has been wiped successfully.", "success");
+    } catch (e) {
+        console.error(e);
+        showNotification("An error occurred during wipe.", "error");
+    } finally {
+        setIsProcessing(false);
+        setIsWipeModalOpen(false);
+        setWipeConfirmText('');
+    }
+  };
+  
+  const handleAdvanceLevels = async () => {
+    setIsProcessing(true);
+    try {
+        const q = query(collection(db, 'users'), where('role', '==', 'student'));
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) {
+            showNotification("No student records to advance.", "info");
+            setIsProcessing(false);
+            setIsAdvanceModalOpen(false);
+            return;
+        }
+
+        let batch = writeBatch(db);
+        let count = 0;
+        for (const userDoc of snapshot.docs) {
+            const user = userDoc.data();
+            const currentLevel = user.level;
+            if (currentLevel === 400) {
+                batch.update(userDoc.ref, { role: 'alumni', level: 'General' });
+            } else if ([100, 200, 300].includes(currentLevel)) {
+                batch.update(userDoc.ref, { level: currentLevel + 100 });
+            }
+            count++;
+            if (count === 499) {
+                await batch.commit();
+                batch = writeBatch(db);
+                count = 0;
+            }
+        }
+        if (count > 0) {
+            await batch.commit();
+        }
+
+        showNotification("All student levels have been advanced for the new session.", "success");
+    } catch (e) {
+        console.error(e);
+        showNotification("An error occurred during level advancement.", "error");
+    } finally {
+        setIsProcessing(false);
+        setIsAdvanceModalOpen(false);
+    }
+  };
 
   return (
     <>
@@ -238,6 +316,26 @@ export const AdminSettingsPage: React.FC = () => {
         )}
     </div>
 
+    {isWipeModalOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setIsWipeModalOpen(false)}>
+            <div className="bg-white rounded-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+                <h3 className="font-bold text-lg text-rose-700">Confirm Data Wipe</h3>
+                <p className="text-sm text-slate-600 my-4">This will permanently delete all test results, leaderboard entries, and community messages. To proceed, type <strong className="font-mono">FINSA WIPE</strong> below.</p>
+                <input value={wipeConfirmText} onChange={e => setWipeConfirmText(e.target.value)} className="w-full border p-2 rounded font-mono" />
+                <div className="flex gap-2 mt-4"><button onClick={() => setIsWipeModalOpen(false)} className="flex-1 py-2 border rounded">Cancel</button><button onClick={handleWipeRecords} disabled={isProcessing || wipeConfirmText !== 'FINSA WIPE'} className="flex-1 py-2 bg-rose-600 text-white rounded disabled:opacity-50">{isProcessing ? 'Wiping...' : 'Confirm'}</button></div>
+            </div>
+        </div>
+    )}
+
+    {isAdvanceModalOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setIsAdvanceModalOpen(false)}>
+            <div className="bg-white rounded-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+                <h3 className="font-bold text-lg text-rose-700">Confirm Level Advancement</h3>
+                <p className="text-sm text-slate-600 my-4">This will move all students to their next level (100 to 200, 400 to Alumni). This action cannot be undone and signifies the start of a new session.</p>
+                <div className="flex gap-2 mt-4"><button onClick={() => setIsAdvanceModalOpen(false)} className="flex-1 py-2 border rounded">Cancel</button><button onClick={handleAdvanceLevels} disabled={isProcessing} className="flex-1 py-2 bg-rose-600 text-white rounded disabled:opacity-50">{isProcessing ? 'Processing...' : 'Advance Session'}</button></div>
+            </div>
+        </div>
+    )}
     </>
   );
 };
