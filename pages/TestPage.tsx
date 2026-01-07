@@ -1,4 +1,3 @@
-
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { GoogleGenAI } from "@google/genai";
@@ -10,7 +9,7 @@ import { Level, User } from '../types';
 import { generateTestReviewPDF } from '../utils/pdfGenerator';
 import { trackAiUsage } from '../utils/api';
 import { Calculator } from '../components/Calculator';
-import { fallbackQuestions, triviaQuestions, timelineEvents, TimelineEvent } from '../utils/fallbackQuestions';
+import { fallbackQuestions, triviaQuestions, timelineQuestions } from '../utils/fallbackQuestions';
 import { checkAndAwardBadges } from '../utils/badges';
 
 interface Question {
@@ -40,20 +39,28 @@ export const TestPage: React.FC = () => {
     const [currentTriviaIdx, setCurrentTriviaIdx] = useState(0);
     const [triviaScore, setTriviaScore] = useState(0);
     const [triviaTime, setTriviaTime] = useState(15);
+    const [shuffledTrivia, setShuffledTrivia] = useState<Question[]>([]);
 
     // TIMELINE STATE
-    const [userTimeline, setUserTimeline] = useState<TimelineEvent[]>([]);
-    const [timelineStatus, setTimelineStatus] = useState<'playing' | 'correct' | 'wrong'>('playing');
+    const [currentTimelineIdx, setCurrentTimelineIdx] = useState(0);
+    const [timelineScore, setTimelineScore] = useState(0);
+    const [timelineTime, setTimelineTime] = useState(20);
+    const [shuffledTimeline, setShuffledTimeline] = useState<Question[]>([]);
 
     useEffect(() => {
         let timer: any;
-        if (view === 'mock_exam' || view === 'ai_exam') {
-            timer = setInterval(() => setTimeLeft(prev => (prev <= 1 ? (endTest(), 0) : prev - 1)), 1000);
-        } else if (view === 'trivia') {
-            timer = setInterval(() => setTriviaTime(p => (p <= 1 ? (handleTriviaAnswer(-1), 15) : p - 1)), 1000);
-        }
+        const tick = () => {
+            if (view === 'mock_exam' || view === 'ai_exam') {
+                setTimeLeft(prev => (prev <= 1 ? (endTest(), 0) : prev - 1));
+            } else if (view === 'trivia') {
+                setTriviaTime(p => (p <= 1 ? (handleTriviaAnswer(-1), 15) : p - 1));
+            } else if (view === 'timeline') {
+                setTimelineTime(p => (p <= 1 ? (handleTimelineAnswer(-1), 20) : p - 1));
+            }
+        };
+        timer = setInterval(tick, 1000);
         return () => clearInterval(timer);
-    }, [view, triviaTime]);
+    }, [view]);
 
     const resetState = () => {
       setView('setup');
@@ -112,6 +119,7 @@ export const TestPage: React.FC = () => {
 
     // --- TRIVIA LOGIC ---
     const startTrivia = () => {
+        setShuffledTrivia([...triviaQuestions].sort(() => 0.5 - Math.random()));
         setCurrentTriviaIdx(0);
         setTriviaScore(0);
         setTriviaTime(15);
@@ -119,10 +127,10 @@ export const TestPage: React.FC = () => {
     };
 
     const handleTriviaAnswer = (idx: number) => {
-        const correct = triviaQuestions[currentTriviaIdx].correctAnswer === idx;
+        const correct = shuffledTrivia[currentTriviaIdx].correctAnswer === idx;
         if (correct) setTriviaScore(p => p + 10);
 
-        if (currentTriviaIdx < triviaQuestions.length - 1) {
+        if (currentTriviaIdx < shuffledTrivia.length - 1) {
             setCurrentTriviaIdx(p => p + 1);
             setTriviaTime(15);
         } else {
@@ -133,39 +141,38 @@ export const TestPage: React.FC = () => {
 
     // --- TIMELINE LOGIC ---
     const startTimeline = () => {
-        setUserTimeline([...timelineEvents].sort(() => 0.5 - Math.random()));
-        setTimelineStatus('playing');
+        setShuffledTimeline([...timelineQuestions].sort(() => 0.5 - Math.random()).slice(0, 10));
+        setCurrentTimelineIdx(0);
+        setTimelineScore(0);
+        setTimelineTime(20);
         setView('timeline');
     };
-
-    const moveTimelineItem = (from: number, to: number) => {
-        const copy = [...userTimeline];
-        const [removed] = copy.splice(from, 1);
-        copy.splice(to, 0, removed);
-        setUserTimeline(copy);
-    };
-
-    const checkTimeline = () => {
-        const userMatches = userTimeline.every((val, index) => val.id === timelineEvents[index].id);
-        if (userMatches) {
-            setTimelineStatus('correct');
-            showNotification("Master Historian! +25 Points", "success");
-            if (auth?.user) updateDoc(doc(db, 'users', auth.user.id), { contributionPoints: increment(25) });
+    
+    const handleTimelineAnswer = (idx: number) => {
+        const correct = shuffledTimeline[currentTimelineIdx].correctAnswer === idx;
+        if (correct) setTimelineScore(p => p + 1);
+    
+        if (currentTimelineIdx < 9) { // 10 questions total (0-9)
+            setCurrentTimelineIdx(p => p + 1);
+            setTimelineTime(20);
         } else {
-            setTimelineStatus('wrong');
-            showNotification("Timeline is fractured. Try again.", "error");
+            const finalScore = (timelineScore + (correct ? 1 : 0)); // Add score for the last question
+            if (auth?.user) updateDoc(doc(db, 'users', auth.user.id), { contributionPoints: increment(finalScore * 2) });
+            setScore(finalScore * 10); // Display score as a percentage
+            setView('results');
         }
     };
 
     if (view === 'loading') return <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4"><div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div><p className="font-bold text-slate-600">Loading Session...</p></div>;
 
     if (view === 'results') return (
-        <div className="min-h-[80vh] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl shadow-2xl w-full max-w-lg text-center border">
+        <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-950">
+            <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl shadow-2xl w-full max-w-lg text-center border animate-pop-in">
                 <h2 className="text-2xl font-serif font-bold mb-2">Session Summary</h2>
-                <div className={`text-7xl font-black mb-4 ${score >= 70 ? 'text-emerald-500' : 'text-indigo-500'}`}>{score}%</div>
-                <div className="grid grid-cols-2 gap-4">
-                    <button onClick={resetState} className="py-3 bg-slate-100 rounded-xl font-bold">New Session</button>
+                <div className={`text-7xl font-black my-4 ${score >= 70 ? 'text-emerald-500' : score >= 40 ? 'text-amber-500' : 'text-rose-500'}`}>{score}%</div>
+                <p className="text-slate-500 mb-8">You've completed the practice session.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button onClick={resetState} className="py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700">New Session</button>
                     {questions.length > 0 && <button onClick={() => generateTestReviewPDF(questions, userAnswers, score, auth?.user)} className="py-3 bg-indigo-600 text-white rounded-xl font-bold">Review PDF</button>}
                 </div>
             </div>
@@ -175,29 +182,44 @@ export const TestPage: React.FC = () => {
     if (view === 'mock_exam' || view === 'ai_exam') {
         const q = questions[currentQuestionIndex];
         return (
-            <div className="max-w-5xl mx-auto p-4 md:p-8">
+            <div className="min-h-screen bg-slate-100 dark:bg-slate-950 p-4 md:p-8">
                 {showCalculator && <Calculator onClose={() => setShowCalculator(false)} />}
-                <div className="flex flex-col lg:flex-row gap-8">
-                    <div className="flex-1 bg-white dark:bg-slate-900 rounded-3xl p-10">
-                        <div className="flex justify-between items-center mb-8">
-                            <span>Question {currentQuestionIndex + 1}/{questions.length}</span>
-                            <div className="flex items-center gap-4">
-                                <button onClick={() => setShowCalculator(true)} title="Calculator">🧮</button>
-                                <div className="font-mono text-xl font-bold text-rose-500">{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div>
-                            </div>
-                        </div>
-                        <p className="text-xl mb-10 min-h-[120px]">{q.text}</p>
+                <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8">
+                    {/* Main Question Panel */}
+                    <div className="flex-1 bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-10 shadow-lg animate-fade-in-up">
+                        <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mb-4">Question {currentQuestionIndex + 1} of {questions.length}</p>
+                        <p className="text-lg md:text-xl font-medium text-slate-800 dark:text-slate-100 mb-10 min-h-[100px]">{q.text}</p>
                         <div className="space-y-4">
-                            {q.options.map((opt, idx) => <button key={idx} onClick={() => setUserAnswers({...userAnswers, [currentQuestionIndex]: idx})} className={`w-full text-left p-5 rounded-2xl border-2 ${userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600' : ''}`}>{opt}</button>)}
-                        </div>
-                        <div className="flex justify-between mt-12 pt-8 border-t">
-                            <button disabled={currentQuestionIndex === 0} onClick={() => setCurrentQuestionIndex(p => p - 1)}>Previous</button>
-                            {currentQuestionIndex === (questions.length - 1) ? <button onClick={endTest}>Submit</button> : <button onClick={() => setCurrentQuestionIndex(p => p + 1)}>Next</button>}
+                            {q.options.map((opt, idx) => (
+                                <button key={idx} onClick={() => setUserAnswers({...userAnswers, [currentQuestionIndex]: idx})} className={`w-full text-left p-5 rounded-2xl border-2 transition-all flex items-center gap-4 group ${userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600'}`}>
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 dark:border-slate-600 group-hover:border-indigo-400'}`}>
+                                        {userAnswers[currentQuestionIndex] === idx && <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                                    </div>
+                                    <span className="font-medium text-slate-700 dark:text-slate-300">{opt}</span>
+                                </button>
+                            ))}
                         </div>
                     </div>
-                    <div className="w-full lg:w-64">
-                        <div className="grid grid-cols-5 gap-2">
-                            {questions.map((_, i) => <button key={i} onClick={() => setCurrentQuestionIndex(i)} className={`w-10 h-10 rounded-lg ${currentQuestionIndex === i ? 'bg-indigo-600 text-white' : userAnswers[i] !== undefined ? 'bg-emerald-200' : 'bg-slate-200'}`}>{i+1}</button>)}
+                    {/* Sidebar Panel */}
+                    <div className="w-full lg:w-80">
+                        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-lg mb-6 text-center">
+                            <p className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-2">Time Remaining</p>
+                            <div className="font-mono text-5xl font-black text-rose-500">{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div>
+                        </div>
+                        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-lg">
+                            <div className="flex justify-between items-center mb-4">
+                               <h3 className="font-bold">Progress</h3>
+                               <button onClick={() => setShowCalculator(true)} className="text-xs font-bold flex items-center gap-1 text-slate-500 hover:text-indigo-600">🧮 Calculator</button>
+                            </div>
+                            <div className="grid grid-cols-5 gap-2 mb-6">
+                                {questions.map((_, i) => <button key={i} onClick={() => setCurrentQuestionIndex(i)} className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${currentQuestionIndex === i ? 'bg-indigo-600 text-white scale-110' : userAnswers[i] !== undefined ? 'bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200' : 'bg-slate-100 dark:bg-slate-800'}`}>{i+1}</button>)}
+                            </div>
+                            <div className="flex justify-between border-t border-slate-100 dark:border-slate-800 pt-4">
+                                <button disabled={currentQuestionIndex === 0} onClick={() => setCurrentQuestionIndex(p => p - 1)} className="px-5 py-2 rounded-lg font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50">Previous</button>
+                                {currentQuestionIndex === (questions.length - 1) 
+                                    ? <button onClick={endTest} className="px-6 py-2 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700">Submit</button> 
+                                    : <button onClick={() => setCurrentQuestionIndex(p => p + 1)} className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">Next</button>}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -205,60 +227,52 @@ export const TestPage: React.FC = () => {
         );
     }
     
-    if (view === 'trivia') return (
-        <div className="min-h-screen bg-slate-950 text-white p-6 flex flex-col items-center justify-center">
-            <div className="max-w-2xl w-full bg-slate-900 rounded-[3rem] p-10 border border-white/10 shadow-2xl animate-pop-in">
-                <div className="flex justify-between items-center mb-10">
-                    <div className="px-4 py-1.5 bg-white/10 rounded-full text-[10px] font-black uppercase">TRIVIA • {currentTriviaIdx+1}/{triviaQuestions.length}</div>
-                    <div className={`w-14 h-14 rounded-full border-4 flex items-center justify-center font-black text-xl ${triviaTime <= 5 ? 'border-rose-500 text-rose-500' : 'border-indigo-500'}`}>{triviaTime}</div>
-                </div>
-                <h2 className="text-3xl font-serif font-bold mb-12 text-center">{triviaQuestions[currentTriviaIdx].text}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {triviaQuestions[currentTriviaIdx].options.map((opt: string, i: number) => <button key={i} onClick={() => handleTriviaAnswer(i)} className="p-6 bg-white/5 border border-white/10 rounded-[2rem] font-bold hover:bg-indigo-600">{opt}</button>)}
-                </div>
-            </div>
-        </div>
-    );
+    if (view === 'trivia' || view === 'timeline') {
+        const isTrivia = view === 'trivia';
+        const gameData = isTrivia ? shuffledTrivia : shuffledTimeline;
+        const currentIndex = isTrivia ? currentTriviaIdx : currentTimelineIdx;
+        const time = isTrivia ? triviaTime : timelineTime;
+        const maxTime = isTrivia ? 15 : 20;
+        const handleAnswer = isTrivia ? handleTriviaAnswer : handleTimelineAnswer;
 
-    if (view === 'timeline') return (
-        <div className="min-h-screen bg-slate-950 text-white p-6 flex flex-col items-center justify-center">
-            <div className="max-w-xl w-full">
-                <h2 className="text-3xl font-serif font-bold text-center mb-2">Timeline Tussle</h2>
-                <p className="text-indigo-300 text-center text-sm mb-10">Arrange events from oldest to newest.</p>
-                <div className="space-y-3 mb-10">
-                    {userTimeline.map((item, idx) => (
-                        <div key={item.id} className="flex items-center gap-4 bg-white/5 p-5 rounded-2xl border border-white/10">
-                            <div className="flex flex-col gap-1">
-                                <button onClick={() => idx > 0 && moveTimelineItem(idx, idx-1)}>▲</button>
-                                <button onClick={() => idx < userTimeline.length - 1 && moveTimelineItem(idx, idx+1)}>▼</button>
-                            </div>
-                            <div className="flex-1 font-bold text-sm">{item.text}</div>
+        if (gameData.length === 0) return <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4"><div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div><p className="font-bold text-slate-600">Loading Session...</p></div>;
+        const currentQ = gameData[currentIndex];
+
+        return (
+            <div className="min-h-screen bg-slate-950 text-white p-4 sm:p-6 flex flex-col items-center justify-center">
+                <div className="w-full max-w-2xl bg-slate-900 rounded-[2.5rem] p-6 sm:p-10 border border-white/10 shadow-2xl animate-pop-in">
+                    <div className="flex justify-between items-center mb-8">
+                        <div className="px-4 py-1.5 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest">{isTrivia ? 'Trivia' : 'Timeline'} • {currentIndex + 1}/{isTrivia ? gameData.length : 10}</div>
+                        <div className="relative w-16 h-16 flex items-center justify-center">
+                            <svg className="w-full h-full transform -rotate-90"><circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-white/10" /><circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="transparent" strokeDasharray={176} strokeDashoffset={176 - (176 * time) / maxTime} className={`${time <= 5 ? 'text-rose-500' : 'text-indigo-500'} transition-all duration-1000`} /></svg>
+                            <span className="absolute font-black text-xl">{time}</span>
                         </div>
-                    ))}
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-serif font-bold mb-10 text-center min-h-[100px]">{currentQ.text}</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {currentQ.options.map((opt: string, i: number) => <button key={i} onClick={() => handleAnswer(i)} className="p-6 bg-white/5 border border-white/10 rounded-3xl font-bold hover:bg-indigo-600 transition-colors text-center">{opt}</button>)}
+                    </div>
                 </div>
-                <div className="flex gap-4">
-                    <button onClick={resetState} className="flex-1 py-4 border rounded-2xl">Back</button>
-                    <button onClick={checkTimeline} className="flex-[2] py-4 bg-indigo-600 rounded-2xl">Check Order</button>
-                </div>
-                {timelineStatus === 'correct' && <div className="mt-8 p-6 bg-emerald-500/20 border text-center animate-pop-in"><p>PERFECT CHRONOLOGY!</p><button onClick={startTimeline} className="mt-4 text-xs font-bold underline">Next Challenge</button></div>}
-                {timelineStatus === 'wrong' && <div className="mt-8 p-6 bg-rose-500/20 border text-center animate-shake"><p>INCORRECT ORDER. TRY AGAIN.</p></div>}
             </div>
-        </div>
-    );
+        );
+    }
 
     // SETUP VIEW
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-8 animate-fade-in">
             <div className="max-w-6xl mx-auto">
-                <div className="text-center mb-12"><h1 className="text-4xl font-serif font-bold">CBT & Practice Center</h1><p>Select your preferred session to begin.</p></div>
-                <div className="flex flex-wrap justify-center gap-4 mb-10">
-                    {LEVELS.filter(l => typeof l === 'number').map(l => <button key={l} onClick={() => setLevel(l as Level)} className={`px-8 py-2.5 rounded-full font-black border-2 ${level === l ? 'bg-indigo-600 text-white' : 'bg-white'}`}>{l} Level</button>)}
+                <div className="text-center mb-12">
+                    <h1 className="text-4xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white">FINQUEST Practice Center</h1>
+                    <p className="text-slate-500 dark:text-slate-400 mt-2">Select your preferred session to begin your quest.</p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col group"><h3 className="text-2xl font-bold mb-2">Standard Mock Exam</h3><p className="text-sm mb-8 flex-1">A comprehensive test mirroring the official exam format for your level.</p><button onClick={startStandardMock} className="w-full py-4 bg-emerald-600 text-white font-bold rounded-2xl">Start Mock Exam</button></div>
-                    <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col group"><h3 className="text-2xl font-bold mb-2">AI Topic Mastery</h3><p className="text-sm mb-6 flex-1">Focus your study on a single topic. Our AI will generate custom questions.</p><input type="text" placeholder="Enter Topic (e.g. Leverage)" value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-2xl mb-4" /><button onClick={startAiMastery} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl">Generate Session</button></div>
-                    <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col group"><h3 className="text-2xl font-bold mb-2">Financial Trivia</h3><p className="text-sm mb-8 flex-1">A fast-paced trivia challenge on Nigerian and global financial history.</p><button onClick={startTrivia} className="w-full py-4 bg-rose-600 text-white font-bold rounded-2xl">Play Trivia</button></div>
-                    <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col group"><h3 className="text-2xl font-bold mb-2">Timeline Tussle</h3><p className="text-sm mb-8 flex-1">Arrange key Nigerian financial events in the correct chronological order.</p><button onClick={startTimeline} className="w-full py-4 bg-amber-600 text-white font-bold rounded-2xl">Start Timeline</button></div>
+                <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-4 mb-10 bg-slate-100 dark:bg-slate-900 p-2 rounded-full">
+                    {LEVELS.filter(l => typeof l === 'number').map(l => <button key={l} onClick={() => setLevel(l as Level)} className={`px-6 sm:px-8 py-2.5 rounded-full text-sm font-black transition-all ${level === l ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}>{l}L</button>)}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-800 flex flex-col group transition-all hover:border-emerald-500/50 hover:shadow-xl"><h3 className="text-2xl font-bold mb-2 text-slate-900 dark:text-white flex items-center gap-3"><span className="text-emerald-500">🧑‍🏫</span>Standard Mock</h3><p className="text-sm text-slate-500 dark:text-slate-400 mb-8 flex-1">A 10-question test mirroring the official exam format for your level.</p><button onClick={startStandardMock} className="w-full py-4 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 transition-transform hover:-translate-y-1">Start Mock Exam</button></div>
+                    <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-800 flex flex-col group transition-all hover:border-indigo-500/50 hover:shadow-xl"><h3 className="text-2xl font-bold mb-2 text-slate-900 dark:text-white flex items-center gap-3"><span className="text-indigo-500">💡</span>AI Topic Mastery</h3><p className="text-sm text-slate-500 dark:text-slate-400 mb-6 flex-1">Our AI will generate custom questions on any topic you choose.</p><input type="text" placeholder="Enter Topic (e.g. Capital Budgeting)" value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 rounded-2xl mb-4" /><button onClick={startAiMastery} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-transform hover:-translate-y-1">Generate Session</button></div>
+                    <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-800 flex flex-col group transition-all hover:border-rose-500/50 hover:shadow-xl"><h3 className="text-2xl font-bold mb-2 text-slate-900 dark:text-white flex items-center gap-3"><span className="text-rose-500">⚡</span>Financial Trivia</h3><p className="text-sm text-slate-500 dark:text-slate-400 mb-8 flex-1">A fast-paced challenge on Nigerian and global financial facts.</p><button onClick={startTrivia} className="w-full py-4 bg-rose-600 text-white font-bold rounded-2xl hover:bg-rose-700 transition-transform hover:-translate-y-1">Play Trivia</button></div>
+                    <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-800 flex flex-col group transition-all hover:border-amber-500/50 hover:shadow-xl"><h3 className="text-2xl font-bold mb-2 text-slate-900 dark:text-white flex items-center gap-3"><span className="text-amber-500">⏳</span>Timeline Tussle</h3><p className="text-sm text-slate-500 dark:text-slate-400 mb-8 flex-1">Answer questions about key dates in financial history.</p><button onClick={startTimeline} className="w-full py-4 bg-amber-600 text-white font-bold rounded-2xl hover:bg-amber-700 transition-transform hover:-translate-y-1">Start Timeline</button></div>
                 </div>
             </div>
         </div>

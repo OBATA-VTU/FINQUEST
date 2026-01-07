@@ -1,4 +1,3 @@
-
 // This file contains a larger, more robust set of fallback questions for the CBT practice test.
 // These questions are used when the AI generation fails for any reason.
 
@@ -9,7 +8,7 @@ export interface FallbackQuestion {
   text: string;
   options: string[];
   correctAnswer: number;
-  level: Level;
+  level: Level | 'General';
   topic: string;
 }
 
@@ -120,18 +119,17 @@ export const triviaQuestions: FallbackQuestion[] = [
   { id: 110, text: "When was the Asset Management Corporation of Nigeria (AMCON) established to resolve the non-performing loan assets of banks?", options: ["2005", "2008", "2010", "2015"], correctAnswer: 2, level: 'General', topic: 'Nigerian Finance History' }
 ];
 
-export interface TimelineEvent {
-    id: number;
-    text: string;
-    year: number;
-}
-
-export const timelineEvents: TimelineEvent[] = [
-  { id: 1, text: "Nigeria gains independence from Great Britain.", year: 1960 },
-  { id: 2, text: "The Nigerian Stock Exchange is founded in Lagos.", year: 1960 },
-  { id: 3, text: "The Nigerian Naira is introduced, replacing the Pound.", year: 1973 },
-  { id: 4, text: "The Structural Adjustment Programme (SAP) is introduced.", year: 1986 },
-  { id: 5, text: "Banking sector consolidation raises capital base to ₦25 billion.", year: 2004 },
-  { id: 6, text: "Asset Management Corporation of Nigeria (AMCON) is established.", year: 2010 },
-  { id: 7, text: "The Treasury Single Account (TSA) policy is fully implemented.", year: 2015 },
+export const timelineQuestions: FallbackQuestion[] = [
+    { id: 201, text: "In what year did Nigeria gain independence from Great Britain, a pivotal moment for its future economy?", options: ["1958", "1960", "1963", "1966"], correctAnswer: 1, level: 'General', topic: 'Timeline' },
+    { id: 202, text: "The Nigerian Stock Exchange was founded in Lagos in which year, laying the groundwork for the nation's capital market?", options: ["1960", "1965", "1970", "1977"], correctAnswer: 0, level: 'General', topic: 'Timeline' },
+    { id: 203, text: "The Nigerian Naira was introduced, replacing the Pound and marking a shift to a decimal currency system, in what year?", options: ["1970", "1973", "1975", "1980"], correctAnswer: 1, level: 'General', topic: 'Timeline' },
+    { id: 204, text: "Ibrahim Babangida's administration introduced the controversial Structural Adjustment Programme (SAP) in which year?", options: ["1983", "1985", "1986", "1990"], correctAnswer: 2, level: 'General', topic: 'Timeline' },
+    { id: 205, text: "In what year did the CBN, under Governor Charles Soludo, mandate the banking sector consolidation, raising the capital base to ₦25 billion?", options: ["2001", "2004", "2006", "2009"], correctAnswer: 1, level: 'General', topic: 'Timeline' },
+    { id: 206, text: "The Asset Management Corporation of Nigeria (AMCON) was established to manage the bad loans of banks in which year?", options: ["2008", "2010", "2012", "2014"], correctAnswer: 1, level: 'General', topic: 'Timeline' },
+    { id: 207, text: "The Treasury Single Account (TSA) policy, consolidating all government revenue, was fully implemented in what year?", options: ["2012", "2014", "2015", "2016"], correctAnswer: 2, level: 'General', topic: 'Timeline' },
+    { id: 208, text: "The 'Great Recession', a global financial crisis that impacted economies worldwide, began in which year?", options: ["2005", "2008", "2010", "2012"], correctAnswer: 1, level: 'General', topic: 'Timeline' },
+    { id: 209, text: "Bitcoin, the first decentralized cryptocurrency, was created by the pseudonymous Satoshi Nakamoto in what year?", options: ["2001", "2005", "2009", "2013"], correctAnswer: 2, level: 'General', topic: 'Timeline' },
+    { id: 210, text: "The Companies and Allied Matters Act (CAMA), a major legislative reform for Nigerian businesses, was signed into law in what year?", options: ["2018", "2019", "2020", "2021"], correctAnswer: 2, level: 'General', topic: 'Timeline' },
+    { id: 211, text: "When was the World Trade Organization (WTO) established?", options: ["1985", "1995", "2001", "2005"], correctAnswer: 1, level: 'General', topic: 'Timeline' },
+    { id: 212, text: "The Bretton Woods Agreement, which established a new international monetary system, was signed in what year?", options: ["1933", "1944", "1955", "1966"], correctAnswer: 1, level: 'General', topic: 'Timeline' },
 ];
