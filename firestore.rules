@@ -142,11 +142,15 @@ service cloud.firestore {
 
     // --- PUBLIC CONTENT (Managed by Admin) ---
     // Includes: Announcements, Gallery, Executives, Lecturers, Site Settings
+    match /content/{docId} {
+      allow read: if true;
+      // Allow admin to write anything, and allow ANYONE to write to the impression poll
+      allow write: if isAdmin() || docId == 'impression_poll';
+    }
     match /announcements/{docId} { allow read: if true; allow write: if isAdmin(); }
     match /gallery/{docId} { allow read: if true; allow write: if isAdmin(); }
     match /executives/{docId} { allow read: if true; allow write: if isAdmin(); }
     match /lecturers/{docId} { allow read: if true; allow write: if isAdmin(); }
-    match /content/{docId} { allow read: if true; allow write: if isAdmin(); }
     match /groups/{docId} { allow read: if true; allow write: if isAdmin(); }
   }
 }
