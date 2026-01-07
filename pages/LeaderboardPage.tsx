@@ -77,13 +77,13 @@ export const LeaderboardPage: React.FC = () => {
                             return (
                                 <div 
                                     key={user.id} 
-                                    className={`relative flex items-center p-4 md:p-6 rounded-2xl transition-all duration-500 hover:scale-[1.02] hover:shadow-xl group overflow-hidden
+                                    className={`relative flex items-center p-4 md:p-6 rounded-2xl transition-all duration-500 hover:scale-[1.02] hover:shadow-xl group overflow-hidden animate-slide-in-up
                                         ${rank === 1 ? 'bg-gradient-to-r from-amber-200 to-yellow-100 border-2 border-amber-400 shadow-amber-200/50 z-10' : 
                                           rank === 2 ? 'bg-gradient-to-r from-slate-200 to-slate-100 border-2 border-slate-400 shadow-slate-200/50' : 
                                           rank === 3 ? 'bg-gradient-to-r from-orange-200 to-orange-100 border-2 border-orange-400 shadow-orange-200/50' : 
                                           'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm'}
                                     `}
-                                    style={{ animationDelay: `${idx * 100}ms` }}
+                                    style={{ animationDelay: `${idx * 70}ms` }}
                                 >
                                     {/* Rank Badge */}
                                     <div className="flex-shrink-0 w-12 text-center mr-4">

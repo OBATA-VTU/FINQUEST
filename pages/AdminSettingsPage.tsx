@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch, deleteDoc, updateDoc } from 'firebase/firestore';
@@ -260,35 +261,40 @@ export const AdminSettingsPage: React.FC = () => {
     }
   };
 
+  const inputStyles = "w-full border p-2 rounded bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none";
+  const labelStyles = "block text-xs font-bold uppercase mb-1 text-slate-600 dark:text-slate-400";
+  const sectionStyles = "bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 mb-8";
+  const headingStyles = "text-xl font-bold text-slate-800 dark:text-white mb-6";
+
   return (
     <>
     <div className="animate-fade-in max-w-3xl pb-20">
-        <h1 className="text-2xl font-bold text-slate-900 mb-6">Platform Settings</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Platform Settings</h1>
         
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
-            <h3 className="text-xl font-bold text-slate-800 mb-6">File Upload Service</h3>
-            <p className="text-sm text-slate-500 mb-4">Select the primary service for document uploads.</p>
+        <div className={sectionStyles}>
+            <h3 className={headingStyles}>File Upload Service</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Select the primary service for document uploads.</p>
             <div className="space-y-2">
-                <label className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                <label className="flex items-center gap-3 p-4 border dark:border-slate-600 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                     <input type="radio" name="uploadService" value="dropbox" checked={siteSettings.uploadService === 'dropbox'} onChange={e => setSiteSettings({...siteSettings, uploadService: e.target.value})} className="h-4 w-4 text-indigo-600" />
-                    <span className="font-bold">Dropbox</span>
+                    <span className="font-bold dark:text-slate-200">Dropbox</span>
                 </label>
-                <label className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                <label className="flex items-center gap-3 p-4 border dark:border-slate-600 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                     <input type="radio" name="uploadService" value="google_drive" checked={siteSettings.uploadService === 'google_drive'} onChange={e => setSiteSettings({...siteSettings, uploadService: e.target.value})} className="h-4 w-4 text-indigo-600" />
-                    <span className="font-bold">Google Drive</span>
+                    <span className="font-bold dark:text-slate-200">Google Drive</span>
                 </label>
             </div>
             
             {siteSettings.uploadService === 'google_drive' && (
-                <div className="mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg space-y-4">
-                    <h4 className="font-bold text-indigo-800">Google Drive Configuration</h4>
+                <div className="mt-6 p-4 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg space-y-4">
+                    <h4 className="font-bold text-indigo-800 dark:text-indigo-300">Google Drive Configuration</h4>
                     <div>
-                        <label className="block text-xs font-bold uppercase mb-1">Google Drive Folder ID</label>
-                        <input className="w-full border p-2 rounded" placeholder="Paste Folder ID from URL" value={driveSettings.folder_id} onChange={e => setDriveSettings({...driveSettings, folder_id: e.target.value})} />
+                        <label className={labelStyles}>Google Drive Folder ID</label>
+                        <input className={inputStyles} placeholder="Paste Folder ID from URL" value={driveSettings.folder_id} onChange={e => setDriveSettings({...driveSettings, folder_id: e.target.value})} />
                     </div>
                     {driveSettings.connected_email ? (
-                        <div className="flex items-center justify-between bg-green-100 p-3 rounded-lg">
-                            <p className="text-sm text-green-800">Connected as: <strong>{driveSettings.connected_email}</strong></p>
+                        <div className="flex items-center justify-between bg-green-100 dark:bg-green-900/40 p-3 rounded-lg">
+                            <p className="text-sm text-green-800 dark:text-green-300">Connected as: <strong>{driveSettings.connected_email}</strong></p>
                             <button onClick={handleGoogleDisconnect} className="text-xs font-bold text-red-600 hover:underline">Disconnect</button>
                         </div>
                     ) : (
@@ -301,39 +307,39 @@ export const AdminSettingsPage: React.FC = () => {
             )}
         </div>
 
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
-             <h3 className="text-xl font-bold text-slate-800 mb-6">General Configuration</h3>
-             <div><label className="block text-xs font-bold uppercase mb-1">Current Academic Session</label><input className="w-full border p-2 rounded" value={siteSettings.session} onChange={e => setSiteSettings({...siteSettings, session: e.target.value})} /></div>
+        <div className={sectionStyles}>
+             <h3 className={headingStyles}>General Configuration</h3>
+             <div><label className={labelStyles}>Current Academic Session</label><input className={inputStyles} value={siteSettings.session} onChange={e => setSiteSettings({...siteSettings, session: e.target.value})} /></div>
         </div>
 
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
-             <h3 className="text-xl font-bold text-slate-800 mb-6">Module Visibility</h3>
+        <div className={sectionStyles}>
+             <h3 className={headingStyles}>Module Visibility</h3>
              <div className="flex items-center justify-between">
-                 <div><h4 className="font-bold">Show Executives Page</h4><p className="text-xs text-slate-500">Toggle to hide the executive list from the public.</p></div>
-                 <button onClick={() => setSiteSettings({...siteSettings, showExecutives: !siteSettings.showExecutives})} className={`w-14 h-8 rounded-full p-1 ${siteSettings.showExecutives ? 'bg-indigo-600' : 'bg-slate-300'}`}><div className={`w-6 h-6 bg-white rounded-full shadow-md transform ${siteSettings.showExecutives ? 'translate-x-6' : 'translate-x-0'}`}></div></button>
+                 <div><h4 className="font-bold dark:text-white">Show Executives Page</h4><p className="text-xs text-slate-500 dark:text-slate-400">Toggle to hide the executive list from the public.</p></div>
+                 <button onClick={() => setSiteSettings({...siteSettings, showExecutives: !siteSettings.showExecutives})} className={`w-14 h-8 rounded-full p-1 ${siteSettings.showExecutives ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform ${siteSettings.showExecutives ? 'translate-x-6' : 'translate-x-0'}`}></div></button>
              </div>
         </div>
 
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
-             <h3 className="text-xl font-bold text-slate-800 mb-6">Social Media & Community Links</h3>
+        <div className={sectionStyles}>
+             <h3 className={headingStyles}>Social Media & Community Links</h3>
              <div className="space-y-4">
-                 <div><label>WhatsApp</label><input className="w-full border p-2 rounded" value={socialLinks.whatsapp} onChange={e => setSocialLinks({...socialLinks, whatsapp: e.target.value})} /></div>
-                 <div><label>Telegram</label><input className="w-full border p-2 rounded" value={socialLinks.telegram} onChange={e => setSocialLinks({...socialLinks, telegram: e.target.value})} /></div>
-                 <div><label>Facebook</label><input className="w-full border p-2 rounded" value={socialLinks.facebook} onChange={e => setSocialLinks({...socialLinks, facebook: e.target.value})} /></div>
-                 <div><label>Instagram</label><input className="w-full border p-2 rounded" value={socialLinks.instagram} onChange={e => setSocialLinks({...socialLinks, instagram: e.target.value})} /></div>
-                 <div><label>Twitter / X</label><input className="w-full border p-2 rounded" value={socialLinks.twitter} onChange={e => setSocialLinks({...socialLinks, twitter: e.target.value})} /></div>
-                 <div><label>TikTok</label><input className="w-full border p-2 rounded" value={socialLinks.tiktok} onChange={e => setSocialLinks({...socialLinks, tiktok: e.target.value})} /></div>
+                 <div><label className={labelStyles}>WhatsApp</label><input className={inputStyles} value={socialLinks.whatsapp} onChange={e => setSocialLinks({...socialLinks, whatsapp: e.target.value})} /></div>
+                 <div><label className={labelStyles}>Telegram</label><input className={inputStyles} value={socialLinks.telegram} onChange={e => setSocialLinks({...socialLinks, telegram: e.target.value})} /></div>
+                 <div><label className={labelStyles}>Facebook</label><input className={inputStyles} value={socialLinks.facebook} onChange={e => setSocialLinks({...socialLinks, facebook: e.target.value})} /></div>
+                 <div><label className={labelStyles}>Instagram</label><input className={inputStyles} value={socialLinks.instagram} onChange={e => setSocialLinks({...socialLinks, instagram: e.target.value})} /></div>
+                 <div><label className={labelStyles}>Twitter / X</label><input className={inputStyles} value={socialLinks.twitter} onChange={e => setSocialLinks({...socialLinks, twitter: e.target.value})} /></div>
+                 <div><label className={labelStyles}>TikTok</label><input className={inputStyles} value={socialLinks.tiktok} onChange={e => setSocialLinks({...socialLinks, tiktok: e.target.value})} /></div>
              </div>
         </div>
 
         <button onClick={handleSaveSettings} className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow hover:bg-indigo-700">Save All Settings</button>
 
         {isSuperAdmin && (
-            <div className="bg-rose-50 p-8 rounded-2xl border-2 border-dashed border-rose-200 mt-12">
-                <h3 className="text-xl font-bold text-rose-800 mb-4">Danger Zone</h3>
+            <div className="bg-rose-50 dark:bg-rose-900/20 p-8 rounded-2xl border-2 border-dashed border-rose-200 dark:border-rose-500/30 mt-12">
+                <h3 className="text-xl font-bold text-rose-800 dark:text-rose-200 mb-4">Danger Zone</h3>
                 <div className="space-y-6">
-                    <div><h4 className="font-bold text-rose-700">Advance Academic Session</h4><p className="text-sm text-rose-600 mb-3">Promote all students to the next level. 400L students become Alumni. This cannot be undone.</p><button onClick={() => setIsAdvanceModalOpen(true)} className="px-5 py-2 bg-rose-500 text-white font-bold rounded-lg">Advance Levels</button></div>
-                    <div className="pt-6 border-t border-rose-200"><h4 className="font-bold text-rose-700">Wipe Session Records</h4><p className="text-sm text-rose-600 mb-3">Permanently delete Leaderboard, test results, and community chat. This is irreversible.</p><button onClick={() => setIsWipeModalOpen(true)} className="px-5 py-2 bg-rose-700 text-white font-bold rounded-lg">Wipe Session Data</button></div>
+                    <div><h4 className="font-bold text-rose-700 dark:text-rose-300">Advance Academic Session</h4><p className="text-sm text-rose-600 dark:text-rose-400 mb-3">Promote all students to the next level. 400L students become Alumni. This cannot be undone.</p><button onClick={() => setIsAdvanceModalOpen(true)} className="px-5 py-2 bg-rose-500 text-white font-bold rounded-lg">Advance Levels</button></div>
+                    <div className="pt-6 border-t border-rose-200 dark:border-rose-500/30"><h4 className="font-bold text-rose-700 dark:text-rose-300">Wipe Session Records</h4><p className="text-sm text-rose-600 dark:text-rose-400 mb-3">Permanently delete Leaderboard, test results, and community chat. This is irreversible.</p><button onClick={() => setIsWipeModalOpen(true)} className="px-5 py-2 bg-rose-700 text-white font-bold rounded-lg">Wipe Session Data</button></div>
                 </div>
             </div>
         )}
@@ -341,21 +347,21 @@ export const AdminSettingsPage: React.FC = () => {
 
     {isWipeModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setIsWipeModalOpen(false)}>
-            <div className="bg-white rounded-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
-                <h3 className="font-bold text-lg text-rose-700">Confirm Data Wipe</h3>
-                <p className="text-sm text-slate-600 my-4">This will permanently delete all test results, leaderboard entries, and community messages. To proceed, type <strong className="font-mono">FINSA WIPE</strong> below.</p>
-                <input value={wipeConfirmText} onChange={e => setWipeConfirmText(e.target.value)} className="w-full border p-2 rounded font-mono" />
-                <div className="flex gap-2 mt-4"><button onClick={() => setIsWipeModalOpen(false)} className="flex-1 py-2 border rounded">Cancel</button><button onClick={handleWipeRecords} disabled={isProcessing || wipeConfirmText !== 'FINSA WIPE'} className="flex-1 py-2 bg-rose-600 text-white rounded disabled:opacity-50">{isProcessing ? 'Wiping...' : 'Confirm'}</button></div>
+            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+                <h3 className="font-bold text-lg text-rose-700 dark:text-rose-300">Confirm Data Wipe</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-300 my-4">This will permanently delete all test results, leaderboard entries, and community messages. To proceed, type <strong className="font-mono text-rose-500">FINSA WIPE</strong> below.</p>
+                <input value={wipeConfirmText} onChange={e => setWipeConfirmText(e.target.value)} className={`${inputStyles} font-mono`} />
+                <div className="flex gap-2 mt-4"><button onClick={() => setIsWipeModalOpen(false)} className="flex-1 py-2 border dark:border-slate-600 rounded">Cancel</button><button onClick={handleWipeRecords} disabled={isProcessing || wipeConfirmText !== 'FINSA WIPE'} className="flex-1 py-2 bg-rose-600 text-white rounded disabled:opacity-50">{isProcessing ? 'Wiping...' : 'Confirm'}</button></div>
             </div>
         </div>
     )}
 
     {isAdvanceModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setIsAdvanceModalOpen(false)}>
-            <div className="bg-white rounded-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
-                <h3 className="font-bold text-lg text-rose-700">Confirm Level Advancement</h3>
-                <p className="text-sm text-slate-600 my-4">This will move all students to their next level (100 to 200, 400 to Alumni). This action cannot be undone and signifies the start of a new session.</p>
-                <div className="flex gap-2 mt-4"><button onClick={() => setIsAdvanceModalOpen(false)} className="flex-1 py-2 border rounded">Cancel</button><button onClick={handleAdvanceLevels} disabled={isProcessing} className="flex-1 py-2 bg-rose-600 text-white rounded disabled:opacity-50">{isProcessing ? 'Processing...' : 'Advance Session'}</button></div>
+            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+                <h3 className="font-bold text-lg text-rose-700 dark:text-rose-300">Confirm Level Advancement</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-300 my-4">This will move all students to their next level (100 to 200, 400 to Alumni). This action cannot be undone and signifies the start of a new session.</p>
+                <div className="flex gap-2 mt-4"><button onClick={() => setIsAdvanceModalOpen(false)} className="flex-1 py-2 border dark:border-slate-600 rounded">Cancel</button><button onClick={handleAdvanceLevels} disabled={isProcessing} className="flex-1 py-2 bg-rose-600 text-white rounded disabled:opacity-50">{isProcessing ? 'Processing...' : 'Advance Session'}</button></div>
             </div>
         </div>
     )}

@@ -254,7 +254,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
 
   const checkUsernameAvailability = async (username: string): Promise<boolean> => {
       if (!username || username.length < 3) return false;
-      const cleanName = username.trim().toLowerCase();
+      const cleanName = username.trim().toLowerCase().replace(/\s/g, '');
       try {
         const q = query(collection(db, 'users'), where('username', '==', cleanName));
         const querySnapshot = await getDocs(q);
@@ -266,8 +266,11 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
 
   const signup = async (data: { name: string; email: string; pass: string; level: Level; username: string; matricNumber: string; avatarUrl?: string }) => {
       try {
-          const cleanUsername = data.username.trim().toLowerCase();
-          await checkUsernameAvailability(cleanUsername);
+          const cleanUsername = data.username.trim().toLowerCase().replace(/\s/g, '');
+          const isAvailable = await checkUsernameAvailability(cleanUsername);
+          if (!isAvailable) {
+              throw new Error("Username is already taken.");
+          }
           
           const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.pass);
           const firebaseUser = userCredential.user;

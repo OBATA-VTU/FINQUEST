@@ -1,3 +1,4 @@
+
 import React, { useState, useContext } from 'react';
 import { PastQuestion } from '../types';
 import { downloadPDF, generatePDF } from '../utils/pdfGenerator';
@@ -112,7 +113,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question, uploaderNa
 
   return (
     <>
-      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-500 transition-all duration-200 flex flex-col h-full group relative">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-500 transition-all duration-200 flex flex-col h-full group relative hover:-translate-y-1">
         <div className="flex justify-between items-start mb-2">
              <div className="flex gap-2 flex-wrap">
                 <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600">

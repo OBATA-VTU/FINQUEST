@@ -214,13 +214,13 @@ export const AdminLayout: React.FC = () => {
             </aside>
 
             {/* Main Content Area */}
-            <div className="flex-1 min-w-0 flex flex-col h-full bg-slate-50">
+            <div className="flex-1 min-w-0 flex flex-col h-full bg-slate-50 dark:bg-slate-950">
                 {/* Mobile Header Toggle */}
-                <div className="xl:hidden bg-white border-b border-slate-200 p-4 flex items-center gap-4">
-                    <button onClick={() => setIsOpen(true)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg">
+                <div className="xl:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center gap-4">
+                    <button onClick={() => setIsOpen(true)} className="p-2 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
                     </button>
-                    <span className="font-bold text-slate-800">{panelTitle}</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{panelTitle}</span>
                 </div>
 
                 <main className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12">

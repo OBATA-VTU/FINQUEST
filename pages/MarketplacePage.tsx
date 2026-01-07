@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { collection, addDoc, getDocs, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
@@ -79,6 +80,8 @@ export const MarketplacePage: React.FC = () => {
             setIsSubmitting(false);
         }
     };
+    
+    const modalInputStyles = "w-full p-3 border rounded-xl dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none";
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4">
@@ -96,8 +99,8 @@ export const MarketplacePage: React.FC = () => {
                     <p className="text-sm">This is a student-run marketplace. For your safety, prioritize transactions with <span className="font-bold">verified users</span> (those with a blue badge). The FINSA executive body and the department are not responsible for any issues arising from transactions.</p>
                 </div>
 
-                {loading ? <div className="text-center py-20">Loading listings...</div> : items.length === 0 ? (
-                    <div className="text-center py-20">No items listed yet.</div>
+                {loading ? <div className="text-center py-20 dark:text-slate-400">Loading listings...</div> : items.length === 0 ? (
+                    <div className="text-center py-20 dark:text-slate-400">No items listed yet.</div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {items.map(item => (
@@ -133,18 +136,18 @@ export const MarketplacePage: React.FC = () => {
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setIsModalOpen(false)}>
                     <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
-                        <h3 className="p-6 font-bold text-xl">Create Listing</h3>
+                        <h3 className="p-6 font-bold text-xl dark:text-white">Create Listing</h3>
                         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                            <input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="Item/Service Title" required />
-                            <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="Description" rows={3} />
+                            <input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className={modalInputStyles} placeholder="Item/Service Title" required />
+                            <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className={modalInputStyles} placeholder="Description" rows={3} />
                             <div className="grid grid-cols-2 gap-4">
-                                <input type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="Price (₦)" required />
-                                <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full p-3 border rounded-xl bg-white">{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select>
+                                <input type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className={modalInputStyles} placeholder="Price (₦)" required />
+                                <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className={`${modalInputStyles} bg-white`}>{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select>
                             </div>
-                            <input value={formData.contact} onChange={e => setFormData({...formData, contact: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="WhatsApp Number (e.g., 080...)" required />
-                            <input type="file" onChange={e => e.target.files && setImageFile(e.target.files[0])} accept="image/*" className="w-full border p-3 rounded-xl" required />
+                            <input value={formData.contact} onChange={e => setFormData({...formData, contact: e.target.value})} className={modalInputStyles} placeholder="WhatsApp Number (e.g., 080...)" required />
+                            <input type="file" onChange={e => e.target.files && setImageFile(e.target.files[0])} accept="image/*" className={`${modalInputStyles} file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100`} required />
                         </div>
-                        <div className="p-4 bg-slate-50 flex justify-end gap-3"><button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 rounded-lg font-bold">Cancel</button><button type="submit" disabled={isSubmitting} className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg">{isSubmitting ? 'Posting...' : 'Post Ad'}</button></div>
+                        <div className="p-4 bg-slate-50 dark:bg-slate-900 flex justify-end gap-3"><button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 rounded-lg font-bold dark:text-slate-300">Cancel</button><button type="submit" disabled={isSubmitting} className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg">{isSubmitting ? 'Posting...' : 'Post Ad'}</button></div>
                     </form>
                 </div>
             )}

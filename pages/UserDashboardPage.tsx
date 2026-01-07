@@ -98,7 +98,7 @@ export const UserDashboardPage: React.FC = () => {
       <div className="max-w-7xl mx-auto space-y-6">
           
           {isPasswordAccount && !isGoogleAccount && showLinkBanner && (
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 relative">
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 relative animate-fade-in-down">
                   <button onClick={() => setShowLinkBanner(false)} className="absolute top-2 right-2 p-1 text-green-700/50 hover:text-green-700 dark:text-green-300/50 dark:hover:text-green-300 transition-colors">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
@@ -113,7 +113,7 @@ export const UserDashboardPage: React.FC = () => {
               </div>
           )}
 
-          <div className="rounded-3xl overflow-hidden relative shadow-xl bg-indigo-900 text-white min-h-[220px] flex flex-col justify-center p-8 md:p-12">
+          <div className="rounded-3xl overflow-hidden relative shadow-xl bg-indigo-900 text-white min-h-[220px] flex flex-col justify-center p-8 md:p-12 animate-fade-in-down">
               <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&q=80')] bg-cover opacity-20 mix-blend-overlay"></div>
               <div className="absolute inset-0 bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900/80"></div>
               
@@ -152,29 +152,29 @@ export const UserDashboardPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
               
-              <div className="md:col-span-2 lg:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+              <div className="md:col-span-2 lg:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col animate-slide-in-up">
                   <h3 className="font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><span className="w-2 h-2 bg-indigo-500 rounded-full"></span>Quick Access</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 h-full">
-                      <button onClick={() => navigate('/test')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors group">
+                      <button onClick={() => navigate('/test')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors group animate-slide-in-up" style={{animationDelay: '100ms'}}>
                           <div className="w-10 h-10 bg-white dark:bg-indigo-900 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-300 shadow-sm mb-3 group-hover:scale-110 transition-transform"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg></div>
                           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">CBT</span>
                       </button>
-                      <button onClick={() => navigate('/questions')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors group">
+                      <button onClick={() => navigate('/questions')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors group animate-slide-in-up" style={{animationDelay: '200ms'}}>
                           <div className="w-10 h-10 bg-white dark:bg-emerald-900 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-300 shadow-sm mb-3 group-hover:scale-110 transition-transform"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg></div>
                           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Archives</span>
                       </button>
-                      <button onClick={() => navigate('/community')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors group">
+                      <button onClick={() => navigate('/community')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors group animate-slide-in-up" style={{animationDelay: '300ms'}}>
                           <div className="w-10 h-10 bg-white dark:bg-rose-900 rounded-full flex items-center justify-center text-rose-600 dark:text-rose-300 shadow-sm mb-3 group-hover:scale-110 transition-transform"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg></div>
                           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Community</span>
                       </button>
-                      <button onClick={() => navigate('/lecturers')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors group">
+                      <button onClick={() => navigate('/lecturers')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors group animate-slide-in-up" style={{animationDelay: '400ms'}}>
                           <div className="w-10 h-10 bg-white dark:bg-amber-900 rounded-full flex items-center justify-center text-amber-600 dark:text-amber-300 shadow-sm mb-3 group-hover:scale-110 transition-transform"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg></div>
                           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Directory</span>
                       </button>
                   </div>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-center items-center">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-center items-center animate-slide-in-up">
                   <h3 className="font-bold text-slate-800 dark:text-white mb-4 text-sm w-full text-left">Performance</h3>
                   <div className="relative w-24 h-24 flex items-center justify-center mb-2">
                       <svg className="w-full h-full transform -rotate-90"><circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100 dark:text-slate-800" /><circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray={251.2} strokeDashoffset={251.2 - (251.2 * avgScore) / 100} className={`text-indigo-600 dark:text-indigo-500 transition-all duration-1000 ease-out`} /></svg>
@@ -183,7 +183,7 @@ export const UserDashboardPage: React.FC = () => {
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Average Score</p>
               </div>
 
-              <div className="md:col-span-3 lg:col-span-1 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-6 shadow-lg flex flex-col">
+              <div className="md:col-span-3 lg:col-span-1 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-6 shadow-lg flex flex-col animate-slide-in-up">
                   <h3 className="font-bold text-white mb-4 flex items-center gap-2"><span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>For You</h3>
                   <div className="flex-1 space-y-3">
                       {recommendedQuestions.length > 0 ? recommendedQuestions.map(q => (
@@ -196,7 +196,7 @@ export const UserDashboardPage: React.FC = () => {
                   <button onClick={() => navigate('/questions')} className="mt-4 w-full py-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold transition-colors">Browse Archive</button>
               </div>
 
-              <div className="md:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm min-h-[300px]">
+              <div className="md:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm min-h-[300px] animate-slide-in-up" style={{animationDelay: '150ms'}}>
                   <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2"><svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Timeline</h3><button onClick={() => navigate('/test')} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">View History</button></div>
                   {loading ? <div className="text-center text-xs text-slate-400 py-10">Loading...</div> : recentTests.length === 0 ? (
                       <div className="text-center py-12 text-slate-400 text-sm">No activity recorded yet. Start practicing!</div>
@@ -215,7 +215,7 @@ export const UserDashboardPage: React.FC = () => {
                   )}
               </div>
 
-              <div className="md:col-span-1 lg:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="md:col-span-1 lg:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm animate-slide-in-up" style={{animationDelay: '300ms'}}>
                   <h3 className="font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><svg className="w-5 h-5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>Latest Updates</h3>
                   <div className="space-y-4">
                       {recentNews.length > 0 ? recentNews.map(news => (

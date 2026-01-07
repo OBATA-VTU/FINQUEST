@@ -54,7 +54,7 @@ export const LoginPage: React.FC = () => {
 
   useEffect(() => {
       if ((isLogin && viewState === 'auth') || !username) { setUsernameStatus('idle'); return; }
-      const cleanUsername = username.trim().toLowerCase();
+      const cleanUsername = username.trim().toLowerCase().replace(/\s/g, '');
       if (cleanUsername.length < 3) { setUsernameStatus('short'); return; }
       
       const timer = setTimeout(async () => {
@@ -74,6 +74,11 @@ export const LoginPage: React.FC = () => {
       if (val.length <= 9) setMatricNumber(val);
   };
 
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      // Automatically remove spaces and convert to lowercase
+      setUsername(e.target.value.replace(/\s/g, '').toLowerCase());
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -84,15 +89,18 @@ export const LoginPage: React.FC = () => {
         } else {
             if (usernameStatus === 'taken' || usernameStatus === 'short') {
                 showNotification("Invalid username selection.", "error");
+                setIsLoading(false);
                 return;
             }
             if (matricNumber.length !== 9) {
                 showNotification("Matric number must be 9 digits.", "error");
+                setIsLoading(false);
                 return;
             }
             await auth.signup({ 
                 name, email, pass: password, level, 
-                username: username.trim().toLowerCase(), matricNumber 
+                username: username, // Already sanitized by onChange
+                matricNumber 
             });
             setViewState('upload_photo');
         }
@@ -128,15 +136,17 @@ export const LoginPage: React.FC = () => {
           const updates: any = { avatarUrl: url };
           
           if (viewState === 'google_setup') { 
-              if (!username || usernameStatus === 'taken') throw new Error("Invalid username");
-              if (matricNumber.length !== 9) throw new Error("Invalid matric number");
+              if (!username || usernameStatus !== 'available') throw new Error("Invalid or unavailable username.");
+              if (matricNumber.length !== 9) throw new Error("Invalid matric number (must be 9 digits).");
               updates.level = level; 
               updates.matricNumber = matricNumber; 
-              updates.username = username.trim().toLowerCase();
+              updates.username = username; // Already sanitized
           }
           
           await updateDoc(userRef, updates);
-          window.location.href = '/dashboard';
+          // Manually update context before navigating to avoid flash of old data
+          auth.updateUser(updates);
+          navigate('/dashboard', { replace: true });
       } catch (error: any) {
           showNotification(error.message || "Failed to save profile.", "error");
       } finally { setIsLoading(false); }
@@ -170,7 +180,7 @@ export const LoginPage: React.FC = () => {
                         <div>
                             <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Username</label>
                             <div className="relative">
-                                <input value={username} onChange={e => setUsername(e.target.value)} className={`w-full p-3 rounded-lg border ${usernameStatus === 'taken' ? 'border-red-500' : 'border-slate-300'} dark:bg-slate-700`} placeholder="Choose username" />
+                                <input value={username} onChange={handleUsernameChange} className={`w-full p-3 rounded-lg border ${usernameStatus === 'taken' ? 'border-red-500' : 'border-slate-300'} dark:bg-slate-700`} placeholder="Choose a unique username" />
                                 {usernameStatus === 'checking' && <span className="absolute right-3 top-3 text-xs text-slate-400">Checking...</span>}
                                 {usernameStatus === 'available' && <span className="absolute right-3 top-3 text-xs text-emerald-500 font-bold">Available</span>}
                                 {usernameStatus === 'taken' && <span className="absolute right-3 top-3 text-xs text-red-500 font-bold">Taken</span>}
@@ -178,7 +188,7 @@ export const LoginPage: React.FC = () => {
                         </div>
                         <input value={matricNumber} onChange={handleMatricChange} className="w-full p-3 rounded-lg border border-slate-300 dark:bg-slate-700" placeholder="Matric Number (9 digits)" />
                         <select value={level} onChange={e => setLevel(Number(e.target.value) as Level)} className="w-full p-3 rounded-lg border border-slate-300 dark:bg-slate-700">
-                            {LEVELS.map(l => <option key={l} value={l}>{l} Level</option>)}
+                            {LEVELS.filter(l => typeof l === 'number').map(l => <option key={l} value={l}>{l} Level</option>)}
                         </select>
                     </div>
                 )}
@@ -247,7 +257,7 @@ export const LoginPage: React.FC = () => {
                             <div className="space-y-1">
                                 <label className="text-xs font-bold uppercase text-slate-500 ml-1">Username</label>
                                 <div className="relative">
-                                    <input required value={username} onChange={e => setUsername(e.target.value)} className={`w-full px-4 py-3 rounded-xl border ${usernameStatus === 'taken' ? 'border-red-500' : 'border-slate-200'} dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none`} placeholder="username" />
+                                    <input required value={username} onChange={handleUsernameChange} className={`w-full px-4 py-3 rounded-xl border ${usernameStatus === 'taken' ? 'border-red-500' : 'border-slate-200'} dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none`} placeholder="Choose a unique username" />
                                     {usernameStatus === 'available' && <span className="absolute right-3 top-3.5 text-xs text-emerald-500 font-bold">✓ Available</span>}
                                     {usernameStatus === 'taken' && <span className="absolute right-3 top-3.5 text-xs text-red-500 font-bold">✕ Taken</span>}
                                 </div>
@@ -256,7 +266,7 @@ export const LoginPage: React.FC = () => {
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold uppercase text-slate-500 ml-1">Level</label>
                                     <select value={level} onChange={e => setLevel(Number(e.target.value) as Level)} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white outline-none">
-                                        {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                                        {LEVELS.filter(l => typeof l === 'number').map(l => <option key={l} value={l}>{l} Level</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-1">
