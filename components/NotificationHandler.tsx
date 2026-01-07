@@ -28,23 +28,28 @@ export const NotificationHandler = () => {
     useEffect(() => {
         if (!auth?.user || permission !== 'granted') return;
 
-        const now = Timestamp.now();
+        // --- REAL-TIME LISTENERS ---
+        // These listeners will only fire for documents *added* after the listener is attached.
+        // This is more reliable than using a time-based query.
 
         // Listener for admin broadcasts
         const broadcastQuery = query(
             collection(db, 'notifications'),
-            where('userId', '==', 'all'),
-            where('createdAt', '>', new Date(now.toMillis() - 5000).toISOString()) // only new
+            where('userId', '==', 'all')
         );
 
         const unsubBroadcasts = onSnapshot(broadcastQuery, (snapshot) => {
             snapshot.docChanges().forEach((change) => {
                 if (change.type === "added" && document.hidden) {
                     const data = change.doc.data();
-                    new Notification('FINSA Announcement', {
-                        body: data.message,
-                        icon: '/logo.svg'
-                    });
+                    // Ensure it's a reasonably new notification to avoid old ones firing on first load
+                    const notificationTime = new Date(data.createdAt).getTime();
+                    if (Date.now() - notificationTime < 60000) { // Check if created in the last minute
+                        new Notification('FINSA Announcement', {
+                            body: data.message,
+                            icon: '/logo.svg'
+                        });
+                    }
                 }
             });
         });
@@ -52,19 +57,20 @@ export const NotificationHandler = () => {
         // Listener for new lost & found items
         const lostAndFoundQuery = query(
             collection(db, 'lost_items'),
-            where('status', '==', 'approved'),
-            where('dateFound', '>', new Date(now.toMillis() - 5000).toISOString()) // only new
+            where('status', '==', 'approved')
         );
 
         const unsubLostFound = onSnapshot(lostAndFoundQuery, (snapshot) => {
             snapshot.docChanges().forEach((change) => {
                 const data = change.doc.data();
-                // Prevent showing notification for your own post
                 if (change.type === "added" && document.hidden && data.finderId !== auth.user?.id) {
-                    new Notification('New Lost & Found Item', {
-                        body: `A ${data.itemName} was found at ${data.locationFound}.`,
-                        icon: '/logo.svg'
-                    });
+                    const itemTime = new Date(data.dateFound).getTime();
+                    if (Date.now() - itemTime < 60000) { // Check if found in the last minute
+                         new Notification('New Lost & Found Item', {
+                            body: `A ${data.itemName} was found at ${data.locationFound}.`,
+                            icon: '/logo.svg'
+                        });
+                    }
                 }
             });
         });

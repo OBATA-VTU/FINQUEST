@@ -1,9 +1,10 @@
+
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Logo } from './Logo';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { collection, query, where, limit, onSnapshot, doc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, limit, onSnapshot, doc, writeBatch, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Notification as FirestoreNotification } from '../types';
 
@@ -18,6 +19,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
   
   const [showNotifications, setShowNotifications] = useState(false);
   const [dbNotifications, setDbNotifications] = useState<FirestoreNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,31 +37,36 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
       const q = query(
           collection(db, 'notifications'), 
           where('userId', 'in', [auth.user.id, 'all']),
-          where('read', '==', false),
+          orderBy('createdAt', 'desc'),
           limit(20) 
       );
       const unsubscribe = onSnapshot(q, (snapshot) => {
-          const notes = snapshot.docs
-            .map(d => ({ id: d.id, ...d.data() } as FirestoreNotification))
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          const notes = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as FirestoreNotification));
           setDbNotifications(notes);
+          setUnreadCount(notes.filter(note => !note.read).length);
       });
       return () => unsubscribe();
   }, [auth?.user]);
 
   const handleClearAll = async () => {
-      if (dbNotifications.length === 0) return;
+      if (unreadCount === 0) return;
       const batch = writeBatch(db);
       dbNotifications.forEach(note => {
-          const noteRef = doc(db, 'notifications', note.id);
-          batch.update(noteRef, { read: true });
+          if (!note.read) {
+              const noteRef = doc(db, 'notifications', note.id);
+              batch.update(noteRef, { read: true });
+          }
       });
       await batch.commit();
-      setDbNotifications([]); // Optimistic clear
+      setDbNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
   };
   
-  const handleNotificationClick = (notification: FirestoreNotification) => {
+  const handleNotificationClick = async (notification: FirestoreNotification) => {
       setShowNotifications(false);
+      if (!notification.read) {
+          await updateDoc(doc(db, 'notifications', notification.id), { read: true });
+      }
       navigate('/notifications', { state: { highlightId: notification.id } });
   };
 
@@ -87,24 +94,24 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
                     <div className="relative" ref={dropdownRef}>
                         <button type="button" onClick={() => setShowNotifications(!showNotifications)} className={`p-2 rounded-full border relative transition-colors ${showNotifications ? 'bg-indigo-50 dark:bg-indigo-900 border-indigo-200 text-indigo-600' : 'bg-white dark:bg-slate-900 border-slate-200 text-slate-600'}`}>
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                            {dbNotifications.length > 0 && <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></span>}
+                            {unreadCount > 0 && <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></span>}
                         </button>
                         {showNotifications && (
                             <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden animate-fade-in-down origin-top-right z-[100]">
                                 <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 flex justify-between items-center">
                                     <h3 className="font-bold text-sm">Notifications</h3>
-                                    {dbNotifications.length > 0 && <button onClick={handleClearAll} className="text-xs font-bold text-slate-500 hover:text-rose-500 transition-colors">Mark all as read</button>}
+                                    {unreadCount > 0 && <button onClick={handleClearAll} className="text-xs font-bold text-slate-500 hover:text-rose-500 transition-colors">Mark all as read</button>}
                                 </div>
                                 <div className="max-h-80 overflow-y-auto">
                                     {dbNotifications.length === 0 ? (
-                                        <div className="p-8 text-center text-slate-400 text-sm">No new notifications</div>
+                                        <div className="p-8 text-center text-slate-400 text-sm">No notifications yet</div>
                                     ) : (
                                         <ul className="divide-y divide-slate-50 dark:divide-slate-800">
                                             {dbNotifications.slice(0, 5).map((note) => (
-                                                <li key={note.id} onClick={() => handleNotificationClick(note)} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-start gap-3 cursor-pointer">
-                                                    <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${note.type === 'success' ? 'bg-emerald-500' : 'bg-indigo-500'}`}></div>
+                                                <li key={note.id} onClick={() => handleNotificationClick(note)} className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-start gap-3 cursor-pointer ${!note.read ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''}`}>
+                                                    <div className={`mt-1 w-2.5 h-2.5 rounded-full shrink-0 ${!note.read ? 'bg-indigo-500' : 'bg-transparent'}`}></div>
                                                     <div className="flex-1">
-                                                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-snug font-medium line-clamp-2">{note.message}</p>
+                                                        <p className={`text-sm leading-snug line-clamp-2 ${!note.read ? 'font-bold text-slate-800 dark:text-slate-200' : 'font-medium text-slate-600 dark:text-slate-400'}`}>{note.message}</p>
                                                         <p className="text-[10px] text-slate-400 mt-1">{new Date(note.createdAt).toLocaleDateString()}</p>
                                                     </div>
                                                 </li>
