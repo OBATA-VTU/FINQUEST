@@ -20,7 +20,7 @@ interface Question {
   correctAnswer: number;
 }
 
-type ViewState = 'setup' | 'mock_exam' | 'ai_exam' | 'trivia' | 'timeline' | 'results';
+type ViewState = 'setup' | 'loading' | 'mock_exam' | 'ai_exam' | 'trivia' | 'timeline' | 'results';
 
 export const TestPage: React.FC = () => {
     const auth = useContext(AuthContext);
