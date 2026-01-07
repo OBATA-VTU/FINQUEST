@@ -109,13 +109,22 @@ export const MarketplacePage: React.FC = () => {
                                      )}
                                 </div>
                                 <div className="p-4 flex flex-col flex-1">
-                                    <h3 className="font-bold text-slate-800 dark:text-white line-clamp-2 mb-2">{item.title}</h3>
-                                    <p className="text-lg font-black text-indigo-600 dark:text-indigo-400 mb-4">₦{item.price.toLocaleString()}</p>
-                                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
-                                        <span>@{item.sellerName}</span>
-                                        {item.sellerVerified && <VerificationBadge role="student" isVerified={true} />}
+                                    <div className="flex-grow">
+                                        <h3 className="font-bold text-slate-800 dark:text-white line-clamp-2 mb-2">{item.title}</h3>
+                                        {item.description && (
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 line-clamp-3">
+                                                {item.description}
+                                            </p>
+                                        )}
                                     </div>
-                                    <a href={`https://wa.me/${item.contact.replace('+', '')}`} target="_blank" rel="noopener noreferrer" className="mt-4 w-full text-center py-2 bg-green-500 text-white font-bold text-sm rounded-lg hover:bg-green-600">Contact Seller</a>
+                                    <div>
+                                        <p className="text-lg font-black text-indigo-600 dark:text-indigo-400 mb-4">₦{item.price.toLocaleString()}</p>
+                                        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-700">
+                                            <span>@{item.sellerName}</span>
+                                            {item.sellerVerified && <VerificationBadge role="student" isVerified={true} />}
+                                        </div>
+                                        <a href={`https://wa.me/${item.contact.replace('+', '')}`} target="_blank" rel="noopener noreferrer" className="mt-4 w-full text-center py-2 bg-green-500 text-white font-bold text-sm rounded-lg hover:bg-green-600">Contact Seller</a>
+                                    </div>
                                 </div>
                             </div>
                         ))}
