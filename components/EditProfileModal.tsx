@@ -29,6 +29,21 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
     }
   }, [isOpen, auth?.user]);
 
+  // FIX: Implement robust "click outside" logic to prevent modal from closing on inner clicks.
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+        if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+            onClose();
+        }
+    };
+    if (isOpen) {
+        document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen || !auth?.user) return null;
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,11 +66,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
         }
 
         const userRef = doc(db, 'users', auth.user!.id);
-        // Level and Matric Number are intentionally omitted to prevent user changes.
         const updates = { name, avatarUrl: photoURL }; 
         await updateDoc(userRef, updates);
         
-        // Optimistically update context
         auth.updateUser(updates);
 
         showNotification("Profile updated successfully!", "success");
@@ -71,7 +84,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
   const disabledInputStyles = "w-full px-4 py-2 border rounded-lg outline-none bg-slate-100 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 cursor-not-allowed";
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
         <div ref={modalRef} className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-down">
             <div className="px-6 py-4 flex justify-between items-center border-b dark:border-slate-700">
                 <h3 className="text-slate-900 dark:text-white font-bold text-lg">Edit Profile</h3>
@@ -109,7 +122,6 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                     </div>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 -mt-2 px-1">To update your level or matric number, please contact an administrator.</p>
-
 
                 <div className="pt-4 flex gap-3">
                     <button type="button" onClick={onClose} className="flex-1 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-bold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700">Cancel</button>
