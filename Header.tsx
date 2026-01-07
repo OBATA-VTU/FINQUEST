@@ -1,14 +1,13 @@
 
-
 import React, { useState, useRef, useEffect, useContext } from 'react';
-import { Logo } from './Logo';
+import { Logo } from './components/Logo';
 import { Link, useNavigate } from 'react-router-dom';
-import { useNotification } from '../contexts/NotificationContext';
-import { AuthContext } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
+import { useNotification } from './contexts/NotificationContext';
+import { AuthContext } from './contexts/AuthContext';
+import { useTheme } from './contexts/ThemeContext';
 import { collection, query, where, limit, onSnapshot, deleteDoc, doc, writeBatch } from 'firebase/firestore';
-import { db } from '../firebase';
-import { Notification as FirestoreNotification } from '../types';
+import { db } from './firebase';
+import { Notification as FirestoreNotification } from './types';
 
 interface HeaderProps {
   onOpenSidebar: () => void;
