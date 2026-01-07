@@ -107,7 +107,7 @@ export const fallbackQuestions: FallbackQuestion[] = [
   })
 ];
 
-export const timelineFallbackQuestions: FallbackQuestion[] = [
+export const triviaQuestions: FallbackQuestion[] = [
   { id: 101, text: "In what year was the Nigerian Naira introduced to replace the Nigerian Pound?", options: ["1963", "1973", "1983", "1993"], correctAnswer: 1, level: 'General', topic: 'Nigerian Finance History' },
   { id: 102, text: "The Structural Adjustment Programme (SAP) was introduced under which Nigerian Head of State?", options: ["Shehu Shagari", "Muhammadu Buhari", "Ibrahim Babangida", "Sani Abacha"], correctAnswer: 2, level: 'General', topic: 'Nigerian Finance History' },
   { id: 103, text: "The banking sector consolidation exercise, requiring a ₦25 billion minimum capital base, was led by which CBN Governor?", options: ["Sanusi Lamido Sanusi", "Godwin Emefiele", "Charles Soludo", "Joseph Oladele Sanusi"], correctAnswer: 2, level: 'General', topic: 'Nigerian Finance History' },
@@ -118,4 +118,20 @@ export const timelineFallbackQuestions: FallbackQuestion[] = [
   { id: 108, text: "Nigeria gained its independence from Great Britain in which year?", options: ["1958", "1960", "1963", "1966"], correctAnswer: 1, level: 'General', topic: 'Nigerian Finance History' },
   { id: 109, text: "The 'Oil Boom' era, which significantly shaped Nigeria's economy, occurred primarily in the:", options: ["1960s", "1970s", "1980s", "1990s"], correctAnswer: 1, level: 'General', topic: 'Nigerian Finance History' },
   { id: 110, text: "When was the Asset Management Corporation of Nigeria (AMCON) established to resolve the non-performing loan assets of banks?", options: ["2005", "2008", "2010", "2015"], correctAnswer: 2, level: 'General', topic: 'Nigerian Finance History' }
+];
+
+export interface TimelineEvent {
+    id: number;
+    text: string;
+    year: number;
+}
+
+export const timelineEvents: TimelineEvent[] = [
+  { id: 1, text: "Nigeria gains independence from Great Britain.", year: 1960 },
+  { id: 2, text: "The Nigerian Stock Exchange is founded in Lagos.", year: 1960 },
+  { id: 3, text: "The Nigerian Naira is introduced, replacing the Pound.", year: 1973 },
+  { id: 4, text: "The Structural Adjustment Programme (SAP) is introduced.", year: 1986 },
+  { id: 5, text: "Banking sector consolidation raises capital base to ₦25 billion.", year: 2004 },
+  { id: 6, text: "Asset Management Corporation of Nigeria (AMCON) is established.", year: 2010 },
+  { id: 7, text: "The Treasury Single Account (TSA) policy is fully implemented.", year: 2015 },
 ];

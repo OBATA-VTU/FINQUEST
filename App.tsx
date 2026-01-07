@@ -1,5 +1,4 @@
 
-
 import React, { useContext, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
@@ -105,7 +104,6 @@ const AppContent: React.FC = () => {
                 <Route path="/notes" element={<RequireAuth><NotesPage /></RequireAuth>} />
                 <Route path="/leaderboard" element={<RequireAuth><LeaderboardPage /></RequireAuth>} />
                 <Route path="/upload" element={<RequireAuth><UploadPage /></RequireAuth>} />
-                <Route path="/arcade" element={<RequireAuth><ArcadePage /></RequireAuth>} />
                 <Route path="/marketplace" element={<RequireAuth><MarketplacePage /></RequireAuth>} />
                 <Route path="/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
 
@@ -120,7 +118,6 @@ const AppContent: React.FC = () => {
                 <Route index element={<Navigate to="/admin/dashboard" replace />} />
                 <Route path="dashboard" element={<AdminPage />} />
                 <Route path="approvals" element={<AdminApprovalsPage />} />
-                {/* REMOVED: <Route path="content" element={<AdminContentPage />} /> */}
                 <Route path="materials" element={<AdminMaterialsPage />} />
                 <Route path="news" element={<AdminNewsPage />} />
                 <Route path="executives" element={<AdminExecutivesPage />} />

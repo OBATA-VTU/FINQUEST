@@ -1,3 +1,4 @@
+
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { GoogleGenAI } from "@google/genai";
@@ -9,7 +10,7 @@ import { Level, User } from '../types';
 import { generateTestReviewPDF } from '../utils/pdfGenerator';
 import { trackAiUsage } from '../utils/api';
 import { Calculator } from '../components/Calculator';
-import { fallbackQuestions } from '../utils/fallbackQuestions';
+import { fallbackQuestions, triviaQuestions, timelineEvents, TimelineEvent } from '../utils/fallbackQuestions';
 import { checkAndAwardBadges } from '../utils/badges';
 
 interface Question {
@@ -18,12 +19,13 @@ interface Question {
   options: string[];
   correctAnswer: number;
 }
-type GameState = 'setup' | 'loading' | 'testing' | 'results';
+
+type ViewState = 'setup' | 'mock_exam' | 'ai_exam' | 'trivia' | 'timeline' | 'results';
 
 export const TestPage: React.FC = () => {
     const auth = useContext(AuthContext);
     const { showNotification } = useNotification();
-    const [gameState, setGameState] = useState<GameState>('setup');
+    const [view, setView] = useState<ViewState>('setup');
     const [level, setLevel] = useState<Level>(auth?.user?.level || 100);
     const [topic, setTopic] = useState('');
     const [questions, setQuestions] = useState<Question[]>([]);
@@ -34,32 +36,56 @@ export const TestPage: React.FC = () => {
     const [showCalculator, setShowCalculator] = useState(false);
     const timerRef = useRef<any>(null);
 
-    useEffect(() => {
-        if (gameState === 'testing') {
-            timerRef.current = setInterval(() => {
-                setTimeLeft(prev => {
-                    if (prev <= 1) { endTest(); return 0; }
-                    return prev - 1;
-                });
-            }, 1000);
-        }
-        return () => clearInterval(timerRef.current);
-    }, [gameState]);
+    // TRIVIA STATE
+    const [currentTriviaIdx, setCurrentTriviaIdx] = useState(0);
+    const [triviaScore, setTriviaScore] = useState(0);
+    const [triviaTime, setTriviaTime] = useState(15);
 
-    const startTest = async () => {
+    // TIMELINE STATE
+    const [userTimeline, setUserTimeline] = useState<TimelineEvent[]>([]);
+    const [timelineStatus, setTimelineStatus] = useState<'playing' | 'correct' | 'wrong'>('playing');
+
+    useEffect(() => {
+        let timer: any;
+        if (view === 'mock_exam' || view === 'ai_exam') {
+            timer = setInterval(() => setTimeLeft(prev => (prev <= 1 ? (endTest(), 0) : prev - 1)), 1000);
+        } else if (view === 'trivia') {
+            timer = setInterval(() => setTriviaTime(p => (p <= 1 ? (handleTriviaAnswer(-1), 15) : p - 1)), 1000);
+        }
+        return () => clearInterval(timer);
+    }, [view, triviaTime]);
+
+    const resetState = () => {
+      setView('setup');
+      setQuestions([]);
+      setCurrentQuestionIndex(0);
+      setUserAnswers({});
+      setScore(0);
+    };
+
+    // --- MOCK & AI EXAM LOGIC ---
+    const startStandardMock = () => {
+        setView('loading');
+        setTimeLeft(600);
+        const filtered = fallbackQuestions.filter(q => q.level === level).sort(() => 0.5 - Math.random()).slice(0, 10);
+        setQuestions(filtered.length > 0 ? filtered : fallbackQuestions.slice(0, 10));
+        setView('mock_exam');
+    };
+
+    const startAiMastery = async () => {
         if (!topic.trim()) { showNotification("Please enter a study topic.", "warning"); return; }
-        setGameState('loading');
+        setView('loading');
+        setTimeLeft(900);
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const prompt = `Generate 10 university-level multiple-choice finance questions for level ${level} on topic: "${topic}". Return JSON: Array<{id:number, text:string, options:string[4], correctAnswer:number(0-3)}>.`;
             const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt, config: { responseMimeType: 'application/json' } });
             trackAiUsage();
             setQuestions(JSON.parse(result.text.trim()));
-            setGameState('testing');
+            setView('ai_exam');
         } catch (error) {
-            showNotification("AI unavailable, using standard mock questions.", "info");
-            setQuestions(fallbackQuestions.filter(q => q.level === level).sort(() => 0.5 - Math.random()).slice(0, 10));
-            setGameState('testing');
+            showNotification("AI engine busy. Starting a standard mock instead.", "info");
+            startStandardMock();
         }
     };
 
@@ -68,98 +94,171 @@ export const TestPage: React.FC = () => {
         const correct = questions.reduce((acc, q, i) => acc + (userAnswers[i] === q.correctAnswer ? 1 : 0), 0);
         const finalScore = Math.round((correct / questions.length) * 100);
         setScore(finalScore);
-        setGameState('results');
+        setView('results');
+        
         if (auth?.user) {
-            await addDoc(collection(db, 'test_results'), { userId: auth.user.id, score: finalScore, level, topic, date: new Date().toISOString() });
+            await addDoc(collection(db, 'test_results'), { userId: auth.user.id, score: finalScore, level, topic: view === 'ai_exam' ? topic : 'Standard Mock', date: new Date().toISOString(), totalQuestions: questions.length });
             if (finalScore >= 50) {
                 const userRef = doc(db, 'users', auth.user.id);
                 await updateDoc(userRef, { contributionPoints: increment(finalScore >= 80 ? 10 : 5) });
                 const snap = await getDoc(userRef);
                 if (snap.exists()) {
                     const newBadges = await checkAndAwardBadges({ id: snap.id, ...snap.data() } as User);
-                    if (newBadges.length > 0) await updateDoc(userRef, { badges: increment(0) /* triggering update */, badges_list: [...(snap.data().badges || []), ...newBadges] });
+                    if (newBadges.length > 0) await updateDoc(userRef, { badges: [...(snap.data().badges || []), ...newBadges] });
                 }
             }
         }
     };
 
-    if (gameState === 'setup') return (
-        <div className="min-h-[80vh] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-xl w-full max-w-md border border-slate-100 dark:border-slate-800">
-                <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900 rounded-2xl flex items-center justify-center mx-auto text-indigo-600 mb-4"><svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg></div>
-                    <h2 className="text-2xl font-serif font-bold text-slate-900 dark:text-white">CBT Practice</h2>
-                    <p className="text-slate-500 text-sm">Prepare for exams with AI-generated mocks.</p>
-                </div>
-                <div className="space-y-4">
-                    <div><label className="block text-xs font-bold uppercase text-slate-400 mb-1">Academic Level</label><select value={level} onChange={e => setLevel(Number(e.target.value) as Level)} className="w-full p-3 bg-slate-50 dark:bg-slate-800 border-0 rounded-xl focus:ring-2 focus:ring-indigo-500">{LEVELS.map(l => <option key={l} value={l}>{l} Level</option>)}</select></div>
-                    <div><label className="block text-xs font-bold uppercase text-slate-400 mb-1">Study Topic</label><input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="e.g. Capital Structure" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border-0 rounded-xl focus:ring-2 focus:ring-indigo-500" /></div>
-                    <button onClick={startTest} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all">Start Examination</button>
-                </div>
-            </div>
-        </div>
-    );
+    // --- TRIVIA LOGIC ---
+    const startTrivia = () => {
+        setCurrentTriviaIdx(0);
+        setTriviaScore(0);
+        setTriviaTime(15);
+        setView('trivia');
+    };
 
-    if (gameState === 'loading') return <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4"><div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div><p className="font-bold text-slate-600">Generating Questions...</p></div>;
+    const handleTriviaAnswer = (idx: number) => {
+        const correct = triviaQuestions[currentTriviaIdx].correctAnswer === idx;
+        if (correct) setTriviaScore(p => p + 10);
 
-    if (gameState === 'results') return (
+        if (currentTriviaIdx < triviaQuestions.length - 1) {
+            setCurrentTriviaIdx(p => p + 1);
+            setTriviaTime(15);
+        } else {
+            if (auth?.user) updateDoc(doc(db, 'users', auth.user.id), { contributionPoints: increment(Math.floor(triviaScore / 2)) });
+            setView('results');
+        }
+    };
+
+    // --- TIMELINE LOGIC ---
+    const startTimeline = () => {
+        setUserTimeline([...timelineEvents].sort(() => 0.5 - Math.random()));
+        setTimelineStatus('playing');
+        setView('timeline');
+    };
+
+    const moveTimelineItem = (from: number, to: number) => {
+        const copy = [...userTimeline];
+        const [removed] = copy.splice(from, 1);
+        copy.splice(to, 0, removed);
+        setUserTimeline(copy);
+    };
+
+    const checkTimeline = () => {
+        const userMatches = userTimeline.every((val, index) => val.id === timelineEvents[index].id);
+        if (userMatches) {
+            setTimelineStatus('correct');
+            showNotification("Master Historian! +25 Points", "success");
+            if (auth?.user) updateDoc(doc(db, 'users', auth.user.id), { contributionPoints: increment(25) });
+        } else {
+            setTimelineStatus('wrong');
+            showNotification("Timeline is fractured. Try again.", "error");
+        }
+    };
+
+    if (view === 'loading') return <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4"><div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div><p className="font-bold text-slate-600">Loading Session...</p></div>;
+
+    if (view === 'results') return (
         <div className="min-h-[80vh] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl shadow-2xl w-full max-w-lg text-center border border-slate-100 dark:border-slate-800 animate-pop-in">
-                <h2 className="text-2xl font-serif font-bold mb-2">Examination Finished</h2>
-                <p className="text-slate-500 mb-8">Performance Summary for {topic}</p>
-                <div className={`text-7xl font-black mb-4 ${score >= 70 ? 'text-emerald-500' : score >= 50 ? 'text-indigo-500' : 'text-rose-500'}`}>{score}%</div>
-                <p className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest text-xs mb-8">{score >= 70 ? 'Excellent' : score >= 50 ? 'Good Pass' : 'Needs Review'}</p>
+            <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl shadow-2xl w-full max-w-lg text-center border">
+                <h2 className="text-2xl font-serif font-bold mb-2">Session Summary</h2>
+                <div className={`text-7xl font-black mb-4 ${score >= 70 ? 'text-emerald-500' : 'text-indigo-500'}`}>{score}%</div>
                 <div className="grid grid-cols-2 gap-4">
-                    <button onClick={() => setGameState('setup')} className="py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold">Try Again</button>
-                    <button onClick={() => generateTestReviewPDF(questions, userAnswers, score, auth?.user)} className="py-3 bg-indigo-600 text-white rounded-xl font-bold">Download Review</button>
+                    <button onClick={resetState} className="py-3 bg-slate-100 rounded-xl font-bold">New Session</button>
+                    {questions.length > 0 && <button onClick={() => generateTestReviewPDF(questions, userAnswers, score, auth?.user)} className="py-3 bg-indigo-600 text-white rounded-xl font-bold">Review PDF</button>}
                 </div>
             </div>
         </div>
     );
 
-    const q = questions[currentQuestionIndex];
-    return (
-        <div className="max-w-5xl mx-auto p-4 md:p-8">
-            {showCalculator && <Calculator onClose={() => setShowCalculator(false)} />}
-            <div className="flex flex-col lg:flex-row gap-8">
-                <div className="flex-1 bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 p-6 md:p-10 relative">
-                    <div className="flex justify-between items-center mb-8">
-                        <span className="px-4 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-black rounded-full">QUESTION {currentQuestionIndex + 1} OF 10</span>
-                        <div className="flex items-center gap-4">
-                            <button onClick={() => setShowCalculator(true)} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m2 10h-8a2 2 0 01-2-2V5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 01-2 2z" /></svg></button>
-                            <div className="font-mono text-xl font-bold text-rose-500">{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div>
+    if (view === 'mock_exam' || view === 'ai_exam') {
+        const q = questions[currentQuestionIndex];
+        return (
+            <div className="max-w-5xl mx-auto p-4 md:p-8">
+                {showCalculator && <Calculator onClose={() => setShowCalculator(false)} />}
+                <div className="flex flex-col lg:flex-row gap-8">
+                    <div className="flex-1 bg-white dark:bg-slate-900 rounded-3xl p-10">
+                        <div className="flex justify-between items-center mb-8">
+                            <span>Question {currentQuestionIndex + 1}/{questions.length}</span>
+                            <div className="flex items-center gap-4">
+                                <button onClick={() => setShowCalculator(true)} title="Calculator">🧮</button>
+                                <div className="font-mono text-xl font-bold text-rose-500">{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div>
+                            </div>
+                        </div>
+                        <p className="text-xl mb-10 min-h-[120px]">{q.text}</p>
+                        <div className="space-y-4">
+                            {q.options.map((opt, idx) => <button key={idx} onClick={() => setUserAnswers({...userAnswers, [currentQuestionIndex]: idx})} className={`w-full text-left p-5 rounded-2xl border-2 ${userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600' : ''}`}>{opt}</button>)}
+                        </div>
+                        <div className="flex justify-between mt-12 pt-8 border-t">
+                            <button disabled={currentQuestionIndex === 0} onClick={() => setCurrentQuestionIndex(p => p - 1)}>Previous</button>
+                            {currentQuestionIndex === (questions.length - 1) ? <button onClick={endTest}>Submit</button> : <button onClick={() => setCurrentQuestionIndex(p => p + 1)}>Next</button>}
                         </div>
                     </div>
-                    <p className="text-xl md:text-2xl font-medium text-slate-800 dark:text-white mb-10 leading-relaxed min-h-[120px]">{q.text}</p>
-                    <div className="space-y-4">
-                        {q.options.map((opt, idx) => (
-                            <button key={idx} onClick={() => setUserAnswers({...userAnswers, [currentQuestionIndex]: idx})} className={`w-full text-left p-5 rounded-2xl border-2 transition-all flex items-center gap-4 ${userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-200' : 'border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400'}`}>
-                                <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold shrink-0 ${userAnswers[currentQuestionIndex] === idx ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}>{String.fromCharCode(65+idx)}</span>
-                                <span className="font-medium">{opt}</span>
-                            </button>
-                        ))}
-                    </div>
-                    <div className="flex justify-between mt-12 pt-8 border-t border-slate-50 dark:border-slate-800">
-                        <button disabled={currentQuestionIndex === 0} onClick={() => setCurrentQuestionIndex(prev => prev - 1)} className="px-6 py-2 text-slate-500 font-bold hover:text-indigo-600 disabled:opacity-30">Previous</button>
-                        {currentQuestionIndex === 9 ? <button onClick={endTest} className="px-10 py-3 bg-rose-600 text-white font-bold rounded-xl shadow-lg hover:bg-rose-700">Submit Exam</button> : <button onClick={() => setCurrentQuestionIndex(prev => prev + 1)} className="px-10 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700">Next Question</button>}
+                    <div className="w-full lg:w-64">
+                        <div className="grid grid-cols-5 gap-2">
+                            {questions.map((_, i) => <button key={i} onClick={() => setCurrentQuestionIndex(i)} className={`w-10 h-10 rounded-lg ${currentQuestionIndex === i ? 'bg-indigo-600 text-white' : userAnswers[i] !== undefined ? 'bg-emerald-200' : 'bg-slate-200'}`}>{i+1}</button>)}
+                        </div>
                     </div>
                 </div>
-                <div className="w-full lg:w-64 space-y-6">
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-                        <h4 className="text-xs font-black uppercase text-slate-400 mb-4 tracking-widest">Question Matrix</h4>
-                        <div className="grid grid-cols-5 gap-2">
-                            {questions.map((_, i) => (
-                                <button key={i} onClick={() => setCurrentQuestionIndex(i)} className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${currentQuestionIndex === i ? 'bg-indigo-600 text-white shadow-lg ring-4 ring-indigo-100 dark:ring-indigo-900' : userAnswers[i] !== undefined ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}>{i+1}</button>
-                            ))}
+            </div>
+        );
+    }
+    
+    if (view === 'trivia') return (
+        <div className="min-h-screen bg-slate-950 text-white p-6 flex flex-col items-center justify-center">
+            <div className="max-w-2xl w-full bg-slate-900 rounded-[3rem] p-10 border border-white/10 shadow-2xl animate-pop-in">
+                <div className="flex justify-between items-center mb-10">
+                    <div className="px-4 py-1.5 bg-white/10 rounded-full text-[10px] font-black uppercase">TRIVIA • {currentTriviaIdx+1}/{triviaQuestions.length}</div>
+                    <div className={`w-14 h-14 rounded-full border-4 flex items-center justify-center font-black text-xl ${triviaTime <= 5 ? 'border-rose-500 text-rose-500' : 'border-indigo-500'}`}>{triviaTime}</div>
+                </div>
+                <h2 className="text-3xl font-serif font-bold mb-12 text-center">{triviaQuestions[currentTriviaIdx].text}</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {triviaQuestions[currentTriviaIdx].options.map((opt: string, i: number) => <button key={i} onClick={() => handleTriviaAnswer(i)} className="p-6 bg-white/5 border border-white/10 rounded-[2rem] font-bold hover:bg-indigo-600">{opt}</button>)}
+                </div>
+            </div>
+        </div>
+    );
+
+    if (view === 'timeline') return (
+        <div className="min-h-screen bg-slate-950 text-white p-6 flex flex-col items-center justify-center">
+            <div className="max-w-xl w-full">
+                <h2 className="text-3xl font-serif font-bold text-center mb-2">Timeline Tussle</h2>
+                <p className="text-indigo-300 text-center text-sm mb-10">Arrange events from oldest to newest.</p>
+                <div className="space-y-3 mb-10">
+                    {userTimeline.map((item, idx) => (
+                        <div key={item.id} className="flex items-center gap-4 bg-white/5 p-5 rounded-2xl border border-white/10">
+                            <div className="flex flex-col gap-1">
+                                <button onClick={() => idx > 0 && moveTimelineItem(idx, idx-1)}>▲</button>
+                                <button onClick={() => idx < userTimeline.length - 1 && moveTimelineItem(idx, idx+1)}>▼</button>
+                            </div>
+                            <div className="flex-1 font-bold text-sm">{item.text}</div>
                         </div>
-                    </div>
-                    <div className="p-6 bg-indigo-950 rounded-3xl text-white shadow-xl relative overflow-hidden">
-                        <div className="relative z-10">
-                            <h4 className="font-bold mb-2">Exam Integrity</h4>
-                            <p className="text-[10px] text-indigo-300 leading-relaxed">Questions are verified and updated regularly. Progress is saved only upon submission.</p>
-                        </div>
-                        <div className="absolute -right-4 -bottom-4 opacity-10"><svg className="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 4.925-3.467 9.47-8 10.655-4.533-1.185-8-5.73-8-10.655 0-.681.056-1.35.166-2.001zm11.548 4.708a1 1 0 00-1.414-1.414L9 11.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg></div>
-                    </div>
+                    ))}
+                </div>
+                <div className="flex gap-4">
+                    <button onClick={resetState} className="flex-1 py-4 border rounded-2xl">Back</button>
+                    <button onClick={checkTimeline} className="flex-[2] py-4 bg-indigo-600 rounded-2xl">Check Order</button>
+                </div>
+                {timelineStatus === 'correct' && <div className="mt-8 p-6 bg-emerald-500/20 border text-center animate-pop-in"><p>PERFECT CHRONOLOGY!</p><button onClick={startTimeline} className="mt-4 text-xs font-bold underline">Next Challenge</button></div>}
+                {timelineStatus === 'wrong' && <div className="mt-8 p-6 bg-rose-500/20 border text-center animate-shake"><p>INCORRECT ORDER. TRY AGAIN.</p></div>}
+            </div>
+        </div>
+    );
+
+    // SETUP VIEW
+    return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-8 animate-fade-in">
+            <div className="max-w-6xl mx-auto">
+                <div className="text-center mb-12"><h1 className="text-4xl font-serif font-bold">CBT & Practice Center</h1><p>Select your preferred session to begin.</p></div>
+                <div className="flex flex-wrap justify-center gap-4 mb-10">
+                    {LEVELS.filter(l => typeof l === 'number').map(l => <button key={l} onClick={() => setLevel(l as Level)} className={`px-8 py-2.5 rounded-full font-black border-2 ${level === l ? 'bg-indigo-600 text-white' : 'bg-white'}`}>{l} Level</button>)}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col group"><h3 className="text-2xl font-bold mb-2">Standard Mock Exam</h3><p className="text-sm mb-8 flex-1">A comprehensive test mirroring the official exam format for your level.</p><button onClick={startStandardMock} className="w-full py-4 bg-emerald-600 text-white font-bold rounded-2xl">Start Mock Exam</button></div>
+                    <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col group"><h3 className="text-2xl font-bold mb-2">AI Topic Mastery</h3><p className="text-sm mb-6 flex-1">Focus your study on a single topic. Our AI will generate custom questions.</p><input type="text" placeholder="Enter Topic (e.g. Leverage)" value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-2xl mb-4" /><button onClick={startAiMastery} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl">Generate Session</button></div>
+                    <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col group"><h3 className="text-2xl font-bold mb-2">Financial Trivia</h3><p className="text-sm mb-8 flex-1">A fast-paced trivia challenge on Nigerian and global financial history.</p><button onClick={startTrivia} className="w-full py-4 bg-rose-600 text-white font-bold rounded-2xl">Play Trivia</button></div>
+                    <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col group"><h3 className="text-2xl font-bold mb-2">Timeline Tussle</h3><p className="text-sm mb-8 flex-1">Arrange key Nigerian financial events in the correct chronological order.</p><button onClick={startTimeline} className="w-full py-4 bg-amber-600 text-white font-bold rounded-2xl">Start Timeline</button></div>
                 </div>
             </div>
         </div>
