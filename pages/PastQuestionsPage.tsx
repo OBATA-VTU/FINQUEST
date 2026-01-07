@@ -97,14 +97,14 @@ export const PastQuestionsPage: React.FC = () => {
         {/* Redesigned Filters with Dropdowns */}
         <div>
             <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">Category</label>
-            <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
+            <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
                 {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
         </div>
         
         <div>
             <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">Level</label>
-            <select value={selectedLevel} onChange={e => setSelectedLevel(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
+            <select value={selectedLevel} onChange={e => setSelectedLevel(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
                 <option value="all">All Levels</option>
                 {LEVELS.map(l => <option key={l} value={String(l)}>{l === 'General' ? l : `${l} Level`}</option>)}
             </select>
@@ -113,7 +113,7 @@ export const PastQuestionsPage: React.FC = () => {
         {/* Sort */}
         <div>
             <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">Sort by</label>
-            <select value={sortOrder} onChange={e => setSortOrder(e.target.value as any)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
+            <select value={sortOrder} onChange={e => setSortOrder(e.target.value as any)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
             </select>

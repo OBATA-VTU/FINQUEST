@@ -7,15 +7,7 @@ import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { TestResult, Announcement, PastQuestion } from '../types';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { getBadge } from '../utils/badges';
-
-const QUOTES = [
-    "The stock market is filled with individuals who know the price of everything, but the value of nothing. - Philip Fisher",
-    "Rule No. 1: Never lose money. Rule No. 2: Never forget Rule No. 1. - Warren Buffett",
-    "In investing, what is comfortable is rarely profitable. - Robert Arnott",
-    "Compound interest is the eighth wonder of the world. - Albert Einstein",
-    "Risk comes from not knowing what you are doing. - Warren Buffett",
-    "Financial freedom is available to those who learn about it and work for it. - Robert Kiyosaki"
-];
+import { GoogleGenAI } from '@google/genai';
 
 export const UserDashboardPage: React.FC = () => {
   const auth = useContext(AuthContext);
@@ -27,19 +19,53 @@ export const UserDashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [testCount, setTestCount] = useState(0);
   const [avgScore, setAvgScore] = useState(0);
-  const [quote, setQuote] = useState('');
+  const [quote, setQuote] = useState('Loading daily quote...');
   const [recentNews, setRecentNews] = useState<Announcement[]>([]);
   const [recommendedQuestions, setRecommendedQuestions] = useState<PastQuestion[]>([]);
   const [showLinkBanner, setShowLinkBanner] = useState(true);
 
   useEffect(() => {
+    // Set Greeting
     const hour = new Date().getHours();
     if (hour < 12) setGreeting('Good Morning');
     else if (hour < 18) setGreeting('Good Afternoon');
     else setGreeting('Good Evening');
 
-    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
-    setQuote(QUOTES[dayOfYear % QUOTES.length]);
+    // Fetch Daily AI Quote
+    const fetchDailyQuote = async () => {
+        const today = new Date().toISOString().split('T')[0];
+        try {
+            const cachedQuoteData = localStorage.getItem('dailyQuote');
+            if (cachedQuoteData) {
+                const { date, quote } = JSON.parse(cachedQuoteData);
+                if (date === today && quote) {
+                    setQuote(quote);
+                    return;
+                }
+            }
+        } catch (e) {
+            console.error("Failed to parse cached quote", e);
+        }
+
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const prompt = "Generate a single, unique, and insightful quote about finance, investing, or wealth. The quote should be inspiring, concise (under 25 words), and suitable for a university students' dashboard. Do not include author attribution.";
+            const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
+            const newQuote = result.text.trim().replace(/^"|"$/g, ''); // Remove quotes if AI adds them
+
+            if (newQuote) {
+                setQuote(newQuote);
+                localStorage.setItem('dailyQuote', JSON.stringify({ date: today, quote: newQuote }));
+            } else {
+                setQuote("The best investment you can make is in yourself.");
+            }
+        } catch (error) {
+            console.error("Failed to fetch AI quote:", error);
+            setQuote("Risk comes from not knowing what you are doing.");
+        }
+    };
+
+    fetchDailyQuote();
   }, []);
 
   useEffect(() => {
