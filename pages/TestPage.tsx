@@ -118,34 +118,59 @@ export const TestPage: React.FC = () => {
     };
 
     // --- TRIVIA LOGIC ---
-    const startTrivia = () => {
-        setShuffledTrivia([...triviaQuestions].sort(() => 0.5 - Math.random()));
+    const startTrivia = async () => {
+        setView('loading');
         setCurrentTriviaIdx(0);
         setTriviaScore(0);
         setTriviaTime(15);
-        setView('trivia');
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const prompt = `Generate 10 unique, multiple-choice questions about Nigerian and global financial facts and history. Return ONLY a valid JSON array: Array<{id:number, text:string, options:string[4], correctAnswer:number(0-3)}>.`;
+            const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt, config: { responseMimeType: 'application/json' } });
+            trackAiUsage();
+            setShuffledTrivia(JSON.parse(result.text.trim()));
+            setView('trivia');
+        } catch (error) {
+            showNotification("AI engine busy. Starting a standard trivia round.", "info");
+            setShuffledTrivia([...triviaQuestions].sort(() => 0.5 - Math.random()));
+            setView('trivia');
+        }
     };
 
     const handleTriviaAnswer = (idx: number) => {
         const correct = shuffledTrivia[currentTriviaIdx].correctAnswer === idx;
-        if (correct) setTriviaScore(p => p + 10);
-
         if (currentTriviaIdx < shuffledTrivia.length - 1) {
+            if (correct) setTriviaScore(p => p + 10);
             setCurrentTriviaIdx(p => p + 1);
             setTriviaTime(15);
         } else {
-            if (auth?.user) updateDoc(doc(db, 'users', auth.user.id), { contributionPoints: increment(Math.floor(triviaScore / 2)) });
+            const finalScore = triviaScore + (correct ? 10 : 0);
+            setScore(finalScore);
+            if (auth?.user) {
+                updateDoc(doc(db, 'users', auth.user.id), { contributionPoints: increment(Math.floor(finalScore / 2)) });
+            }
             setView('results');
         }
     };
 
     // --- TIMELINE LOGIC ---
-    const startTimeline = () => {
-        setShuffledTimeline([...timelineQuestions].sort(() => 0.5 - Math.random()).slice(0, 10));
+    const startTimeline = async () => {
+        setView('loading');
         setCurrentTimelineIdx(0);
         setTimelineScore(0);
         setTimelineTime(20);
-        setView('timeline');
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const prompt = `Generate 10 unique, multiple-choice questions about key dates and events in financial history. Return ONLY a valid JSON array: Array<{id:number, text:string, options:string[4], correctAnswer:number(0-3)}>.`;
+            const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt, config: { responseMimeType: 'application/json' } });
+            trackAiUsage();
+            setShuffledTimeline(JSON.parse(result.text.trim()));
+            setView('timeline');
+        } catch (error) {
+            showNotification("AI engine busy. Starting a standard timeline round.", "info");
+            setShuffledTimeline([...timelineQuestions].sort(() => 0.5 - Math.random()).slice(0, 10));
+            setView('timeline');
+        }
     };
     
     const handleTimelineAnswer = (idx: number) => {
