@@ -261,7 +261,7 @@ export const AdminSettingsPage: React.FC = () => {
     }
   };
 
-  const inputStyles = "w-full border p-2 rounded bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none";
+  const inputStyles = "w-full border border-slate-300 p-2 rounded bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none";
   const labelStyles = "block text-xs font-bold uppercase mb-1 text-slate-600 dark:text-slate-400";
   const sectionStyles = "bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 mb-8";
   const headingStyles = "text-xl font-bold text-slate-800 dark:text-white mb-6";
@@ -351,7 +351,7 @@ export const AdminSettingsPage: React.FC = () => {
                 <h3 className="font-bold text-lg text-rose-700 dark:text-rose-300">Confirm Data Wipe</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-300 my-4">This will permanently delete all test results, leaderboard entries, and community messages. To proceed, type <strong className="font-mono text-rose-500">FINSA WIPE</strong> below.</p>
                 <input value={wipeConfirmText} onChange={e => setWipeConfirmText(e.target.value)} className={`${inputStyles} font-mono`} />
-                <div className="flex gap-2 mt-4"><button onClick={() => setIsWipeModalOpen(false)} className="flex-1 py-2 border dark:border-slate-600 rounded">Cancel</button><button onClick={handleWipeRecords} disabled={isProcessing || wipeConfirmText !== 'FINSA WIPE'} className="flex-1 py-2 bg-rose-600 text-white rounded disabled:opacity-50">{isProcessing ? 'Wiping...' : 'Confirm'}</button></div>
+                <div className="flex gap-2 mt-4"><button onClick={() => setIsWipeModalOpen(false)} className="flex-1 py-2 border border-slate-300 text-slate-700 dark:text-slate-300 dark:border-slate-600 rounded">Cancel</button><button onClick={handleWipeRecords} disabled={isProcessing || wipeConfirmText !== 'FINSA WIPE'} className="flex-1 py-2 bg-rose-600 text-white rounded disabled:opacity-50">{isProcessing ? 'Wiping...' : 'Confirm'}</button></div>
             </div>
         </div>
     )}
@@ -361,7 +361,7 @@ export const AdminSettingsPage: React.FC = () => {
             <div className="bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
                 <h3 className="font-bold text-lg text-rose-700 dark:text-rose-300">Confirm Level Advancement</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-300 my-4">This will move all students to their next level (100 to 200, 400 to Alumni). This action cannot be undone and signifies the start of a new session.</p>
-                <div className="flex gap-2 mt-4"><button onClick={() => setIsAdvanceModalOpen(false)} className="flex-1 py-2 border dark:border-slate-600 rounded">Cancel</button><button onClick={handleAdvanceLevels} disabled={isProcessing} className="flex-1 py-2 bg-rose-600 text-white rounded disabled:opacity-50">{isProcessing ? 'Processing...' : 'Advance Session'}</button></div>
+                <div className="flex gap-2 mt-4"><button onClick={() => setIsAdvanceModalOpen(false)} className="flex-1 py-2 border border-slate-300 text-slate-700 dark:text-slate-300 dark:border-slate-600 rounded">Cancel</button><button onClick={handleAdvanceLevels} disabled={isProcessing} className="flex-1 py-2 bg-rose-600 text-white rounded disabled:opacity-50">{isProcessing ? 'Processing...' : 'Advance Session'}</button></div>
             </div>
         </div>
     )}

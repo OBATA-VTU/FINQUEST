@@ -274,6 +274,7 @@ export const LoginPage: React.FC = () => {
                                     <input required value={matricNumber} onChange={handleMatricChange} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white outline-none" placeholder="9 digits" />
                                 </div>
                             </div>
+                            <p className="text-xs text-amber-600 dark:text-amber-500 px-1 mt-2 font-medium">Please ensure these details are correct. They cannot be changed later and are required for verification.</p>
                         </>
                     )}
 
