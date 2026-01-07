@@ -1,11 +1,8 @@
-
-
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { useNotification } from '../contexts/NotificationContext';
 import { db } from '../firebase';
-// FIX: Added missing import for getDoc
 import { collection, addDoc, doc, updateDoc, increment, getDoc } from 'firebase/firestore';
 import { LEVELS } from '../constants';
 import { Level, User } from '../types';
@@ -13,10 +10,8 @@ import { generateTestReviewPDF } from '../utils/pdfGenerator';
 import { trackAiUsage } from '../utils/api';
 import { Calculator } from '../components/Calculator';
 import { fallbackQuestions } from '../utils/fallbackQuestions';
-// FIX: Added missing import for checkAndAwardBadges
 import { checkAndAwardBadges } from '../utils/badges';
 
-// --- TYPES ---
 interface Question {
   id: number;
   text: string;
@@ -24,78 +19,26 @@ interface Question {
   correctAnswer: number;
 }
 type GameState = 'setup' | 'loading' | 'testing' | 'results';
-type GameMode = 'select' | 'cbt'; // Simplified for now
 
-// --- MAIN PAGE COMPONENT ---
 export const TestPage: React.FC = () => {
-    const auth = useContext(AuthContext);
-    const [gameMode, setGameMode] = useState<GameMode>('select');
-
-    if (!auth?.user) {
-        return <div className="p-8 text-center">Please log in to access tests.</div>;
-    }
-
-    if (gameMode === 'select') {
-        return <GameModeSelection onSelectMode={setGameMode} />;
-    }
-    if (gameMode === 'cbt') {
-        return <CBTTest onBack={() => setGameMode('select')} />;
-    }
-    return <div>Invalid Game Mode</div>;
-};
-
-
-// --- GAME MODE SELECTION ---
-const GameModeSelection: React.FC<{ onSelectMode: (mode: GameMode) => void; }> = ({ onSelectMode }) => (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 animate-fade-in transition-colors">
-        <div className="container mx-auto max-w-4xl pt-10">
-            <h1 className="text-3xl font-bold text-center text-slate-900 dark:text-white mb-2">Practice Center</h1>
-            <p className="text-center text-slate-500 dark:text-slate-400 mb-10">Choose a mode to test your knowledge.</p>
-            <div className="grid md:grid-cols-2 gap-6">
-                <button onClick={() => onSelectMode('cbt')} className="bg-white dark:bg-slate-900 p-8 rounded-3xl text-left border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
-                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Standard CBT</h3>
-                    <p className="text-slate-500 dark:text-slate-400">Classic mock exam. Choose a topic and level to start.</p>
-                </button>
-                <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl text-left border border-slate-200 dark:border-slate-700 shadow-sm opacity-50 relative">
-                     <div className="absolute top-4 right-4 text-xs font-bold bg-amber-100 text-amber-700 px-2 py-1 rounded-full">Coming Soon</div>
-                    <h3 className="text-2xl font-bold text-slate-400 dark:text-slate-600 mb-2">CFO Challenge</h3>
-                    <p className="text-slate-400 dark:text-slate-600">Roleplay as a CFO and make critical business decisions.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-);
-
-// --- CBT TEST COMPONENT ---
-const CBTTest: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const auth = useContext(AuthContext);
     const { showNotification } = useNotification();
     const [gameState, setGameState] = useState<GameState>('setup');
-
-    // Setup state
     const [level, setLevel] = useState<Level>(auth?.user?.level || 100);
     const [topic, setTopic] = useState('');
-
-    // Test state
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
     const [score, setScore] = useState(0);
-    const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
+    const [timeLeft, setTimeLeft] = useState(600);
+    const [showCalculator, setShowCalculator] = useState(false);
     const timerRef = useRef<any>(null);
 
-    // Tools
-    const [showCalculator, setShowCalculator] = useState(false);
-    
     useEffect(() => {
         if (gameState === 'testing') {
             timerRef.current = setInterval(() => {
                 setTimeLeft(prev => {
-                    if (prev <= 1) {
-                        clearInterval(timerRef.current);
-                        endTest();
-                        return 0;
-                    }
+                    if (prev <= 1) { endTest(); return 0; }
                     return prev - 1;
                 });
             }, 1000);
@@ -104,165 +47,119 @@ const CBTTest: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }, [gameState]);
 
     const startTest = async () => {
-        if (!topic) {
-            showNotification("Please enter a topic.", "warning");
-            return;
-        }
-
+        if (!topic.trim()) { showNotification("Please enter a study topic.", "warning"); return; }
         setGameState('loading');
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const prompt = `Generate 10 multiple-choice questions for a university ${level}-level finance exam on the topic "${topic}". Each question must have exactly 4 options. Format the response as a JSON array, where each object has keys "id" (number), "text" (string), "options" (array of 4 strings), and "correctAnswer" (number index 0-3).`;
-
-            const result = await ai.models.generateContent({
-                model: 'gemini-3-flash-preview',
-                contents: prompt,
-                config: { responseMimeType: 'application/json' }
-            });
+            const prompt = `Generate 10 university-level multiple-choice finance questions for level ${level} on topic: "${topic}". Return JSON: Array<{id:number, text:string, options:string[4], correctAnswer:number(0-3)}>.`;
+            const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt, config: { responseMimeType: 'application/json' } });
             trackAiUsage();
-            
-            let parsedQuestions = JSON.parse(result.text.trim());
-            setQuestions(parsedQuestions);
+            setQuestions(JSON.parse(result.text.trim()));
             setGameState('testing');
         } catch (error) {
-            console.error("AI Generation Failed:", error);
-            showNotification("AI failed, using standard questions.", "info");
-            const standardQuestions = fallbackQuestions
-                .filter(q => q.level === level)
-                .sort(() => 0.5 - Math.random())
-                .slice(0, 10);
-            setQuestions(standardQuestions);
+            showNotification("AI unavailable, using standard mock questions.", "info");
+            setQuestions(fallbackQuestions.filter(q => q.level === level).sort(() => 0.5 - Math.random()).slice(0, 10));
             setGameState('testing');
         }
     };
 
-    const handleAnswer = (optionIndex: number) => {
-        setUserAnswers(prev => ({ ...prev, [currentQuestionIndex]: optionIndex }));
-    };
-
-    const nextQuestion = () => {
-        if (currentQuestionIndex < questions.length - 1) {
-            setCurrentQuestionIndex(prev => prev + 1);
-        }
-    };
-    
     const endTest = async () => {
         clearInterval(timerRef.current);
-        let correctAnswers = 0;
-        for (let i = 0; i < questions.length; i++) {
-            if (userAnswers[i] === questions[i].correctAnswer) {
-                correctAnswers++;
-            }
-        }
-        const finalScore = (correctAnswers / questions.length) * 100;
+        const correct = questions.reduce((acc, q, i) => acc + (userAnswers[i] === q.correctAnswer ? 1 : 0), 0);
+        const finalScore = Math.round((correct / questions.length) * 100);
         setScore(finalScore);
         setGameState('results');
-
-        // Save result to Firestore
         if (auth?.user) {
-            try {
-                await addDoc(collection(db, 'test_results'), {
-                    userId: auth.user.id,
-                    username: auth.user.username,
-                    avatarUrl: auth.user.avatarUrl,
-                    score: finalScore,
-                    totalQuestions: questions.length,
-                    level,
-                    date: new Date().toISOString()
-                });
-
-                let points = 0;
-                if (finalScore >= 80) points = 5;
-                else if (finalScore >= 50) points = 2;
-
-                if (points > 0) {
-                    const userRef = doc(db, 'users', auth.user.id);
-                    await updateDoc(userRef, { contributionPoints: increment(points) });
-                    showNotification(`You earned ${points} contribution points!`, "success");
-                    
-                    const userDoc = await getDoc(userRef);
-                    if (userDoc.exists()) {
-                        const updatedUser = { id: userDoc.id, ...userDoc.data() } as User;
-                        const newBadges = await checkAndAwardBadges(updatedUser);
-                        if(newBadges.length > 0) {
-                           await updateDoc(userRef, { badges: [...(updatedUser.badges || []), ...newBadges] });
-                           showNotification(`Unlocked: ${newBadges.join(", ")}!`, 'success');
-                        }
-                    }
+            await addDoc(collection(db, 'test_results'), { userId: auth.user.id, score: finalScore, level, topic, date: new Date().toISOString() });
+            if (finalScore >= 50) {
+                const userRef = doc(db, 'users', auth.user.id);
+                await updateDoc(userRef, { contributionPoints: increment(finalScore >= 80 ? 10 : 5) });
+                const snap = await getDoc(userRef);
+                if (snap.exists()) {
+                    const newBadges = await checkAndAwardBadges({ id: snap.id, ...snap.data() } as User);
+                    if (newBadges.length > 0) await updateDoc(userRef, { badges: increment(0) /* triggering update */, badges_list: [...(snap.data().badges || []), ...newBadges] });
                 }
-            } catch (e) { console.error("Failed to save test result", e); }
+            }
         }
     };
 
-    const restartTest = () => {
-        setGameState('setup');
-        setCurrentQuestionIndex(0);
-        setUserAnswers({});
-        setScore(0);
-        setTimeLeft(600);
-    };
-
-    if (gameState === 'setup') {
-        return (
-            <div className="p-8 max-w-lg mx-auto">
-                <button onClick={onBack} className="text-sm text-indigo-600 dark:text-indigo-400 mb-4">&larr; Back to Modes</button>
-                <h2 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">CBT Setup</h2>
+    if (gameState === 'setup') return (
+        <div className="min-h-[80vh] flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-xl w-full max-w-md border border-slate-100 dark:border-slate-800">
+                <div className="text-center mb-8">
+                    <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900 rounded-2xl flex items-center justify-center mx-auto text-indigo-600 mb-4"><svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg></div>
+                    <h2 className="text-2xl font-serif font-bold text-slate-900 dark:text-white">CBT Practice</h2>
+                    <p className="text-slate-500 text-sm">Prepare for exams with AI-generated mocks.</p>
+                </div>
                 <div className="space-y-4">
-                    <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Level</label><select value={level} onChange={e => setLevel(Number(e.target.value) as Level)} className="w-full p-3 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-white mt-1">{LEVELS.map(l => <option key={l} value={l}>{l}</option>)}</select></div>
-                    <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Topic</label><input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="e.g., Capital Budgeting" className="w-full p-3 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-white mt-1" /></div>
-                    <button onClick={startTest} className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold">Start Test</button>
+                    <div><label className="block text-xs font-bold uppercase text-slate-400 mb-1">Academic Level</label><select value={level} onChange={e => setLevel(Number(e.target.value) as Level)} className="w-full p-3 bg-slate-50 dark:bg-slate-800 border-0 rounded-xl focus:ring-2 focus:ring-indigo-500">{LEVELS.map(l => <option key={l} value={l}>{l} Level</option>)}</select></div>
+                    <div><label className="block text-xs font-bold uppercase text-slate-400 mb-1">Study Topic</label><input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="e.g. Capital Structure" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border-0 rounded-xl focus:ring-2 focus:ring-indigo-500" /></div>
+                    <button onClick={startTest} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all">Start Examination</button>
                 </div>
             </div>
-        );
-    }
+        </div>
+    );
 
-    if (gameState === 'loading') {
-        return <div className="p-8 text-center text-slate-600 dark:text-slate-300">Generating questions with AI...</div>;
-    }
+    if (gameState === 'loading') return <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4"><div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div><p className="font-bold text-slate-600">Generating Questions...</p></div>;
 
-    if (gameState === 'results') {
-        return (
-            <div className="p-8 text-center max-w-md mx-auto">
-                <h2 className="text-3xl font-bold mb-4 text-slate-900 dark:text-white">Test Complete!</h2>
-                <p className="text-6xl font-bold mb-4" style={{ color: score >= 50 ? '#10B981' : '#EF4444' }}>{score}%</p>
-                <div className="flex gap-4 mt-8">
-                    <button onClick={restartTest} className="flex-1 py-3 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white rounded-lg font-bold">Try Again</button>
-                    <button onClick={onBack} className="flex-1 py-3 bg-indigo-600 text-white rounded-lg font-bold">Back to Menu</button>
+    if (gameState === 'results') return (
+        <div className="min-h-[80vh] flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl shadow-2xl w-full max-w-lg text-center border border-slate-100 dark:border-slate-800 animate-pop-in">
+                <h2 className="text-2xl font-serif font-bold mb-2">Examination Finished</h2>
+                <p className="text-slate-500 mb-8">Performance Summary for {topic}</p>
+                <div className={`text-7xl font-black mb-4 ${score >= 70 ? 'text-emerald-500' : score >= 50 ? 'text-indigo-500' : 'text-rose-500'}`}>{score}%</div>
+                <p className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest text-xs mb-8">{score >= 70 ? 'Excellent' : score >= 50 ? 'Good Pass' : 'Needs Review'}</p>
+                <div className="grid grid-cols-2 gap-4">
+                    <button onClick={() => setGameState('setup')} className="py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold">Try Again</button>
+                    <button onClick={() => generateTestReviewPDF(questions, userAnswers, score, auth?.user)} className="py-3 bg-indigo-600 text-white rounded-xl font-bold">Download Review</button>
                 </div>
-                 <button onClick={() => generateTestReviewPDF(questions, userAnswers, score, auth?.user)} className="mt-4 w-full py-2 border border-indigo-500 text-indigo-500 rounded-lg text-sm font-bold">Download Review PDF</button>
             </div>
-        );
-    }
-    
-    const currentQuestion = questions[currentQuestionIndex];
-    const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
-    
+        </div>
+    );
+
+    const q = questions[currentQuestionIndex];
     return (
-        <div className="p-4 md:p-8 max-w-4xl mx-auto relative">
+        <div className="max-w-5xl mx-auto p-4 md:p-8">
             {showCalculator && <Calculator onClose={() => setShowCalculator(false)} />}
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700">
-                <div className="flex justify-between items-center mb-4">
-                    <div className="text-sm font-bold text-slate-500 dark:text-slate-400">Question {currentQuestionIndex + 1} of {questions.length}</div>
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setShowCalculator(true)} className="text-slate-400 hover:text-indigo-500"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m2 10h-8a2 2 0 01-2-2V5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 01-2 2z" /></svg></button>
-                        <div className="font-mono font-bold text-lg text-indigo-600 dark:text-indigo-400">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</div>
+            <div className="flex flex-col lg:flex-row gap-8">
+                <div className="flex-1 bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 p-6 md:p-10 relative">
+                    <div className="flex justify-between items-center mb-8">
+                        <span className="px-4 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-black rounded-full">QUESTION {currentQuestionIndex + 1} OF 10</span>
+                        <div className="flex items-center gap-4">
+                            <button onClick={() => setShowCalculator(true)} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m2 10h-8a2 2 0 01-2-2V5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 01-2 2z" /></svg></button>
+                            <div className="font-mono text-xl font-bold text-rose-500">{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div>
+                        </div>
+                    </div>
+                    <p className="text-xl md:text-2xl font-medium text-slate-800 dark:text-white mb-10 leading-relaxed min-h-[120px]">{q.text}</p>
+                    <div className="space-y-4">
+                        {q.options.map((opt, idx) => (
+                            <button key={idx} onClick={() => setUserAnswers({...userAnswers, [currentQuestionIndex]: idx})} className={`w-full text-left p-5 rounded-2xl border-2 transition-all flex items-center gap-4 ${userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-200' : 'border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400'}`}>
+                                <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold shrink-0 ${userAnswers[currentQuestionIndex] === idx ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}>{String.fromCharCode(65+idx)}</span>
+                                <span className="font-medium">{opt}</span>
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex justify-between mt-12 pt-8 border-t border-slate-50 dark:border-slate-800">
+                        <button disabled={currentQuestionIndex === 0} onClick={() => setCurrentQuestionIndex(prev => prev - 1)} className="px-6 py-2 text-slate-500 font-bold hover:text-indigo-600 disabled:opacity-30">Previous</button>
+                        {currentQuestionIndex === 9 ? <button onClick={endTest} className="px-10 py-3 bg-rose-600 text-white font-bold rounded-xl shadow-lg hover:bg-rose-700">Submit Exam</button> : <button onClick={() => setCurrentQuestionIndex(prev => prev + 1)} className="px-10 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700">Next Question</button>}
                     </div>
                 </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full mb-6"><div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${progress}%` }}></div></div>
-                
-                <p className="text-lg font-semibold mb-6 min-h-[6em] text-slate-900 dark:text-white">{currentQuestion.text}</p>
-                
-                <div className="space-y-3">
-                    {currentQuestion.options.map((option, index) => (
-                        <button key={index} onClick={() => handleAnswer(index)} className={`w-full text-left p-4 border-2 rounded-lg transition-all ${userAnswers[currentQuestionIndex] === index ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' : 'border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
-                           <span className="font-bold mr-2">{String.fromCharCode(65 + index)}.</span> {option}
-                        </button>
-                    ))}
-                </div>
-
-                <div className="flex justify-between mt-8">
-                    <button onClick={endTest} className="px-6 py-2 bg-rose-500 text-white rounded-lg font-bold">End Test</button>
-                    <button onClick={nextQuestion} disabled={currentQuestionIndex === questions.length - 1} className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold disabled:opacity-50">Next</button>
+                <div className="w-full lg:w-64 space-y-6">
+                    <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+                        <h4 className="text-xs font-black uppercase text-slate-400 mb-4 tracking-widest">Question Matrix</h4>
+                        <div className="grid grid-cols-5 gap-2">
+                            {questions.map((_, i) => (
+                                <button key={i} onClick={() => setCurrentQuestionIndex(i)} className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${currentQuestionIndex === i ? 'bg-indigo-600 text-white shadow-lg ring-4 ring-indigo-100 dark:ring-indigo-900' : userAnswers[i] !== undefined ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}>{i+1}</button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="p-6 bg-indigo-950 rounded-3xl text-white shadow-xl relative overflow-hidden">
+                        <div className="relative z-10">
+                            <h4 className="font-bold mb-2">Exam Integrity</h4>
+                            <p className="text-[10px] text-indigo-300 leading-relaxed">Questions are verified and updated regularly. Progress is saved only upon submission.</p>
+                        </div>
+                        <div className="absolute -right-4 -bottom-4 opacity-10"><svg className="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 4.925-3.467 9.47-8 10.655-4.533-1.185-8-5.73-8-10.655 0-.681.056-1.35.166-2.001zm11.548 4.708a1 1 0 00-1.414-1.414L9 11.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg></div>
+                    </div>
                 </div>
             </div>
         </div>
