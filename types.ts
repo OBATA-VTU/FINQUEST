@@ -74,6 +74,7 @@ export interface User {
   isVerified?: boolean; // Added for blue tick
   isBanned?: boolean; // Added for suspension
   badges?: string[];
+  viewedSessionWrapTimestamp?: string;
 }
 
 export interface CommunityGroup {

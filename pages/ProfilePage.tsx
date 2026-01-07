@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { QuestionGrid } from '../components/QuestionGrid';
@@ -102,6 +103,11 @@ export const ProfilePage: React.FC = () => {
   }, [auth?.user?.id, auth?.user?.savedQuestions, activeTab]);
 
   if (!auth?.user) return null;
+  
+  const { isPasswordAccount, isGoogleAccount, linkGoogleAccount } = auth;
+  const needsPassword = isGoogleAccount && !isPasswordAccount;
+  const needsGoogleLink = isPasswordAccount && !isGoogleAccount;
+  const needsAvatar = !auth.user.avatarUrl;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 transition-colors">
@@ -132,6 +138,23 @@ export const ProfilePage: React.FC = () => {
                   </div>
               </div>
           </div>
+          
+          <div className="mb-8 animate-fade-in-up">
+              {needsPassword && (
+                  <div className="bg-blue-50 dark:bg-slate-800 border-2 border-dashed border-blue-200 dark:border-blue-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6">
+                      <div className="text-blue-500 text-3xl shrink-0"><svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg></div>
+                      <div className="flex-1 text-center sm:text-left"><h3 className="font-bold text-slate-800 dark:text-white">{needsAvatar ? 'Complete Your Profile' : 'Secure Your Account'}</h3><p className="text-sm text-slate-600 dark:text-slate-300 mt-1">Add a password for email sign-in. {needsAvatar && 'A profile picture will also help personalize your account.'}</p></div>
+                      <div className="flex gap-2"><button onClick={() => setIsAddPasswordModalOpen(true)} className="px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-lg hover:bg-blue-700">Add Password</button>{needsAvatar && <button onClick={() => setIsEditModalOpen(true)} className="px-4 py-2 bg-blue-100 text-blue-700 font-bold text-xs rounded-lg hover:bg-blue-200">Upload Photo</button>}</div>
+                  </div>
+              )}
+              {needsGoogleLink && (
+                  <div className="bg-green-50 dark:bg-slate-800 border-2 border-dashed border-green-200 dark:border-green-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6">
+                      <div className="text-green-500 text-3xl shrink-0"><img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-8 h-8" alt="Google"/></div>
+                      <div className="flex-1 text-center sm:text-left"><h3 className="font-bold text-slate-800 dark:text-white">{needsAvatar ? 'Complete Your Profile' : 'Enable One-Click Sign-In'}</h3><p className="text-sm text-slate-600 dark:text-slate-300 mt-1">Link your Google account for faster access. {needsAvatar && 'Don\'t forget to add a profile picture!'}</p></div>
+                      <div className="flex gap-2"><button onClick={linkGoogleAccount} className="px-4 py-2 bg-green-600 text-white font-bold text-xs rounded-lg hover:bg-green-700">Link Google</button>{needsAvatar && <button onClick={() => setIsEditModalOpen(true)} className="px-4 py-2 bg-green-100 text-green-700 font-bold text-xs rounded-lg hover:bg-green-200">Upload Photo</button>}</div>
+                  </div>
+              )}
+          </div>
 
           <div className="flex justify-center mb-8 bg-white dark:bg-slate-900 p-1 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 w-fit mx-auto">
               <button onClick={() => setActiveTab('overview')} className={`px-8 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'overview' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>Overview</button>
@@ -141,10 +164,10 @@ export const ProfilePage: React.FC = () => {
           {activeTab === 'overview' ? (
               <div className="space-y-8 animate-fade-in">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                      <StatCard icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>} label="Contribution" value={auth.user.contributionPoints || 0} colorClass="bg-indigo-100 text-indigo-600" />
-                      <StatCard icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>} label="Tests" value={loadingStats ? '...' : testCount} colorClass="bg-emerald-100 text-emerald-600" />
-                      <StatCard icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>} label="Avg Score" value={loadingStats ? '...' : `${avgScore}%`} colorClass="bg-blue-100 text-blue-600" />
-                      <StatCard icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>} label="Saved" value={auth.user.savedQuestions?.length || 0} colorClass="bg-amber-100 text-amber-600" />
+                      <StatCard icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>} label="Contribution" value={auth.user.contributionPoints || 0} colorClass="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300" />
+                      <StatCard icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>} label="Tests" value={loadingStats ? '...' : testCount} colorClass="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-300" />
+                      <StatCard icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>} label="Avg Score" value={loadingStats ? '...' : `${avgScore}%`} colorClass="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300" />
+                      <StatCard icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>} label="Saved" value={auth.user.savedQuestions?.length || 0} colorClass="bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300" />
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                       <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800">
@@ -161,7 +184,7 @@ export const ProfilePage: React.FC = () => {
                           ) : <p className="text-slate-400 text-center py-10">No tests taken yet.</p>}
                       </div>
                       <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800">
-                          <h3 className="font-bold mb-6">Achievements</h3>
+                          <h3 className="font-bold text-slate-900 dark:text-white mb-6">Achievements</h3>
                           <div className="grid grid-cols-3 gap-4">
                               {(auth.user.badges || []).slice(0, 6).map((id, i) => {
                                   const b = getBadge(id);
@@ -183,7 +206,7 @@ export const ProfilePage: React.FC = () => {
                       Install App
                   </button>
               )}
-              <button onClick={async () => { await auth.logout(); navigate('/login'); }} className="px-10 py-3 bg-rose-500/10 text-rose-600 font-black rounded-xl hover:bg-rose-600 hover:text-white transition-all">Logout Securely</button>
+              <button onClick={async () => { await auth.logout(); navigate('/login'); }} className="px-10 py-3 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 font-black rounded-xl hover:bg-rose-600 hover:text-white dark:hover:bg-rose-800 transition-all">Logout Securely</button>
           </div>
       </div>
       

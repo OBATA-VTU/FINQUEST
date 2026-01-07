@@ -25,11 +25,11 @@ export const BADGE_DEFINITIONS: Record<string, Omit<Badge, 'id'>> = {
   BOOKWORM_10: { name: 'Archivist', description: 'Saved 10+ past questions.', icon: '🗂️', rank: 20 },
   PERFECTIONIST: { name: 'Perfectionist', description: 'Scored a perfect 100% on a CBT practice.', icon: '💯', rank: 65 },
   FINQUEST_SURVIVOR: { name: 'FinQuest Survivor', description: 'Completed your first round of FinQuest.', icon: '🕹️', rank: 15 },
-  // NEW BADGES
   ARCHIVIST_PRO: { name: 'Archivist Pro', description: 'Saved 25+ past questions.', icon: '🗄️', rank: 45 },
   POWER_USER: { name: 'Power User', description: 'Used a power-up in FinQuest.', icon: '⚡', rank: 15 },
   BOSS_SLAYER: { name: 'Boss Slayer', description: 'Correctly answered a FinQuest Boss Question.', icon: '👹', rank: 70 },
   NIGHT_OWL: { name: 'Night Owl', description: 'Completed a test between 12 AM and 4 AM.', icon: '🦉', rank: 20 },
+  SESSION_MVP: { name: 'Session MVP', description: 'Recognized for outstanding activity during the last academic session.', icon: '🏆', rank: 80 },
 };
 
 export const getBadge = (id: string): Badge | undefined => {

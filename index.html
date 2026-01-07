@@ -145,6 +145,26 @@
         100% { transform: scale(1); }
       }
       .animate-pop-in { animation: pop-in 0.3s ease-out; }
+
+      /* Session Wrap Animations */
+      @keyframes slide-in-from-bottom {
+        0% { transform: translateY(100%); opacity: 0; }
+        100% { transform: translateY(0); opacity: 1; }
+      }
+      .animate-slide-in-from-bottom { animation: slide-in-from-bottom 0.7s cubic-bezier(0.25, 1, 0.5, 1); }
+      
+      @keyframes slide-out-to-top {
+        0% { transform: translateY(0); opacity: 1; }
+        100% { transform: translateY(-100%); opacity: 0; }
+      }
+      .animate-slide-out-to-top { animation: slide-out-to-top 0.7s cubic-bezier(0.5, 0, 0.75, 0); }
+      
+      @keyframes number-pop {
+        0% { transform: scale(0.5); opacity: 0; }
+        80% { transform: scale(1.1); opacity: 1; }
+        100% { transform: scale(1); }
+      }
+      .animate-number-pop { animation: number-pop 0.5s ease-out; }
     </style>
 <script type="importmap">
 {

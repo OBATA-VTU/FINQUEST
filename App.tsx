@@ -1,5 +1,5 @@
 
-import React, { useContext, useEffect } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
 import { UserDashboardPage } from './pages/UserDashboardPage';
@@ -33,7 +33,6 @@ import { CountdownPage } from './pages/CountdownPage';
 import ScrollToTop from './components/ScrollToTop';
 import { NotificationHandler } from './components/NotificationHandler';
 
-// NEW: Import new pages
 import { AdminMaterialsPage } from './pages/AdminMaterialsPage';
 import { AdminNewsPage } from './pages/AdminNewsPage';
 import { AdminExecutivesPage } from './pages/AdminExecutivesPage';
@@ -43,6 +42,9 @@ import { AdminGalleryPage } from './pages/AdminGalleryPage';
 import { ArcadePage } from './pages/ArcadePage';
 import { MarketplacePage } from './pages/MarketplacePage';
 import { NotificationsPage } from './pages/NotificationsPage';
+import { SessionWrapPage } from './pages/SessionWrapPage';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from './firebase';
 
 // Target launch date: Jan 10, 2026, 12:00 PM West Africa Time (UTC+1)
 const LAUNCH_DATE = new Date('2026-01-10T12:00:00+01:00');
@@ -75,17 +77,71 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
 };
 
 const AppContent: React.FC = () => {
+  const auth = useContext(AuthContext);
+  const [sessionWrapInfo, setSessionWrapInfo] = useState<{ start: string; end: string; session: string } | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      if (!auth?.user) {
+        setCheckingSession(false);
+        return;
+      }
+      try {
+        const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
+        if (settingsDoc.exists()) {
+          const settings = settingsDoc.data();
+          const { lastSessionEndTimestamp, secondToLastSessionEndTimestamp, session } = settings;
+          
+          if (lastSessionEndTimestamp) {
+            const lastWrapViewed = auth.user.viewedSessionWrapTimestamp ? new Date(auth.user.viewedSessionWrapTimestamp).getTime() : 0;
+            const sessionEndedTime = new Date(lastSessionEndTimestamp).getTime();
+            
+            if (sessionEndedTime > lastWrapViewed) {
+              const [currentStartYear] = session.split('/');
+              const previousSessionEndYear = Number(currentStartYear) - 1;
+              const previousSessionStartYear = previousSessionEndYear - 1;
+              const previousSessionString = `${previousSessionStartYear}/${previousSessionEndYear}`;
+              
+              setSessionWrapInfo({
+                start: secondToLastSessionEndTimestamp || new Date('2026-01-10T12:00:00+01:00').toISOString(),
+                end: lastSessionEndTimestamp,
+                session: previousSessionString,
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to check session wrap status", e);
+      } finally {
+        setCheckingSession(false);
+      }
+    };
+    checkSession();
+  }, [auth?.user]);
+
+  const handleFinishWrap = async () => {
+    if (auth?.user) {
+      await updateDoc(doc(db, 'users', auth.user.id), {
+        viewedSessionWrapTimestamp: new Date().toISOString()
+      });
+    }
+    setSessionWrapInfo(null);
+  };
+  
+  if (checkingSession) {
+    return <div className="h-screen w-screen bg-slate-950"></div>;
+  }
+
+  if (sessionWrapInfo) {
+    return <SessionWrapPage info={sessionWrapInfo} onFinish={handleFinishWrap} />;
+  }
+  
   return (
     <>
         <ScrollToTop />
         <NotificationHandler />
         <Routes>
-            {/* The special /cdq bypass is now handled by the main App component logic */}
-            
-            {/* Public Routes */}
-            <Route path="/login" element={<LoginPage />} />
-            
-            {/* Main App Routes */}
             <Route element={<Layout />}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/announcements" element={<AnnouncementsPage />} />
@@ -95,7 +151,6 @@ const AppContent: React.FC = () => {
                 <Route path="/faq" element={<FAQPage />} />
                 <Route path="/lost-and-found" element={<LostFoundPage />} />
                 
-                {/* Protected Routes */}
                 <Route path="/dashboard" element={<RequireAuth><UserDashboardPage /></RequireAuth>} />
                 <Route path="/questions" element={<RequireAuth><PastQuestionsPage /></RequireAuth>} />
                 <Route path="/community" element={<RequireAuth><CommunityPage /></RequireAuth>} />
@@ -106,14 +161,11 @@ const AppContent: React.FC = () => {
                 <Route path="/upload" element={<RequireAuth><UploadPage /></RequireAuth>} />
                 <Route path="/marketplace" element={<RequireAuth><MarketplacePage /></RequireAuth>} />
                 <Route path="/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
-
                 
-                {/* Gated Public-ish Pages */}
                 <Route path="/executives" element={<RequireAuth><ExecutivesPage /></RequireAuth>} />
                 <Route path="/lecturers" element={<RequireAuth><LecturersPage /></RequireAuth>} />
             </Route>
 
-            {/* Admin Routes */}
             <Route path="/admin" element={<RequireAuth adminOnly><AdminLayout /></RequireAuth>}>
                 <Route index element={<Navigate to="/admin/dashboard" replace />} />
                 <Route path="dashboard" element={<AdminPage />} />
@@ -129,7 +181,6 @@ const AppContent: React.FC = () => {
                 <Route path="settings" element={<AdminSettingsPage />} />
             </Route>
             
-            {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     </>
@@ -141,12 +192,9 @@ const App: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // This effect detects the bypass key, sets a session flag,
-  // and then cleans the URL to prevent refresh issues and loops.
   useEffect(() => {
     if (location.pathname.includes('/cdq')) {
       sessionStorage.setItem('FINSA_LAUNCH_BYPASS', 'true');
-      // Replace '/cdq' with nothing and redirect. If the path was just '/cdq', it becomes '/'.
       const newPath = location.pathname.replace(/\/cdq/g, '') || '/';
       navigate(newPath, { replace: true });
     }
@@ -154,7 +202,6 @@ const App: React.FC = () => {
 
   const isBypassActive = sessionStorage.getItem('FINSA_LAUNCH_BYPASS') === 'true';
 
-  // If it's before launch AND the bypass is NOT active, show the countdown.
   if (isBeforeLaunch && !isBypassActive) {
     return (
       <ThemeProvider>
@@ -163,7 +210,6 @@ const App: React.FC = () => {
     );
   }
 
-  // Otherwise, render the full application.
   return (
     <ThemeProvider>
         <NotificationProvider>

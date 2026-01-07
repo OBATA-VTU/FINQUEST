@@ -81,290 +81,187 @@ export const AdminSettingsPage: React.FC = () => {
               method: 'POST',
               headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
               body: new URLSearchParams({
-                  code: response.code,
-                  client_id: GOOGLE_DRIVE_CLIENT_ID,
-                  client_secret: GOOGLE_DRIVE_CLIENT_SECRET,
-                  redirect_uri: 'postmessage', 
-                  grant_type: 'authorization_code',
+                code: response.code,
+                client_id: GOOGLE_DRIVE_CLIENT_ID,
+                client_secret: GOOGLE_DRIVE_CLIENT_SECRET,
+                redirect_uri: window.location.origin,
+                grant_type: 'authorization_code',
               }),
           });
           
           const tokens = await tokenResponse.json();
           if (!tokenResponse.ok) throw new Error(tokens.error_description || "Token exchange failed.");
-          if (!tokens.refresh_token) {
-              showNotification("Re-authentication required. Please disconnect and reconnect your Google account to grant offline access.", "warning");
-          }
 
-          const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
               headers: { Authorization: `Bearer ${tokens.access_token}` },
           });
-          const profile = await profileResponse.json();
-
-          const settingsRef = doc(db, 'config', 'google_drive_settings');
-          await setDoc(settingsRef, {
+          const userProfile = await userResponse.json();
+          
+          await setDoc(doc(db, 'config', 'google_drive_settings'), {
               access_token: tokens.access_token,
               refresh_token: tokens.refresh_token,
               expires_at: Date.now() + (tokens.expires_in * 1000),
-              folder_id: driveSettings.folder_id,
-              connected_email: profile.email,
+              connected_email: userProfile.email,
           }, { merge: true });
 
-          setDriveSettings(prev => ({...prev, connected_email: profile.email}));
-          showNotification(`Successfully connected to Google Drive as ${profile.email}.`, "success");
+          showNotification(`Google Drive connected for ${userProfile.email}`, "success");
+          setDriveSettings(prev => ({ ...prev, connected_email: userProfile.email }));
+
       } catch (error: any) {
-          console.error("Google Connection Error:", error);
-          showNotification(error.message || "Failed to connect Google Drive.", "error"); 
+          console.error("Google Auth Error:", error);
+          showNotification(`Connection failed: ${error.message}`, "error");
       }
   };
 
-  const handleGoogleConnect = () => {
-      if (!driveSettings.folder_id) {
-          showNotification("Please enter a Google Drive Folder ID first.", "error");
-          return;
-      }
-      if (tokenClient) {
-          tokenClient.requestCode({ prompt: 'consent' });
-      } else {
-          showNotification("Google Auth is not ready. Please wait.", "info");
-      }
-  };
-
-  const handleGoogleDisconnect = async () => {
-      if (!window.confirm("Disconnect Google Drive? This will stop new uploads.")) return;
-      try {
-          await deleteDoc(doc(db, 'config', 'google_drive_settings'));
-          setDriveSettings({ folder_id: '', connected_email: '' });
-          showNotification("Google Drive disconnected.", "success");
-      } catch (e) { showNotification("Failed to disconnect.", "error"); }
-  };
-
-
-  const handleSaveSettings = async () => {
+  const handleSaveSocial = async () => {
       try {
           await setDoc(doc(db, 'content', 'social_links'), socialLinks);
-          await setDoc(doc(db, 'content', 'site_settings'), { 
-              session: siteSettings.session, 
-              showExecutives: siteSettings.showExecutives,
-              uploadService: siteSettings.uploadService
-          }, { merge: true });
-
-          await setDoc(doc(db, 'config', 'google_drive_settings'), { folder_id: driveSettings.folder_id }, { merge: true });
-          
-          showNotification("Settings saved successfully", "success");
-      } catch (e) { showNotification("Failed to save settings", "error"); }
+          showNotification("Social links updated", "success");
+      } catch(e) { showNotification("Update failed", "error"); }
   };
-  
-  const handleWipeRecords = async () => {
-    if (wipeConfirmText !== 'FINSA WIPE') {
-        showNotification("Confirmation text does not match.", "error");
+
+  const handleSaveSite = async () => {
+      try {
+          await setDoc(doc(db, 'content', 'site_settings'), siteSettings, { merge: true });
+          showNotification("Site settings updated", "success");
+      } catch(e) { showNotification("Update failed", "error"); }
+  };
+
+  const handleAdvanceSession = async () => {
+      setIsProcessing(true);
+      try {
+          const batch = writeBatch(db);
+          
+          // 1. Advance student levels
+          const usersSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'student')));
+          usersSnap.forEach(userDoc => {
+              const user = userDoc.data();
+              if (user.level === 400) {
+                  batch.update(userDoc.ref, { role: 'alumni' });
+              } else if (typeof user.level === 'number' && user.level < 400) {
+                  batch.update(userDoc.ref, { level: user.level + 100 });
+              }
+          });
+
+          // 2. Update session year and timestamps
+          const settingsRef = doc(db, 'content', 'site_settings');
+          const oldSettingsSnap = await getDoc(settingsRef);
+          const oldSettings = oldSettingsSnap.data() || {};
+          const [current, next] = (oldSettings.session || '2025/2026').split('/').map(Number);
+          const newSession = `${current + 1}/${next + 1}`;
+
+          batch.update(settingsRef, {
+              session: newSession,
+              secondToLastSessionEndTimestamp: oldSettings.lastSessionEndTimestamp || new Date('2026-01-10T12:00:00+01:00').toISOString(),
+              lastSessionEndTimestamp: new Date().toISOString(),
+          });
+
+          // 3. Hide executives
+          batch.update(settingsRef, { showExecutives: false });
+          
+          await batch.commit();
+          
+          setSiteSettings(prev => ({...prev, session: newSession, showExecutives: false}));
+          showNotification(`Session advanced to ${newSession}. Students promoted.`, "success");
+      } catch (e) {
+          console.error(e);
+          showNotification("Failed to advance session.", "error");
+      } finally {
+          setIsAdvanceModalOpen(false);
+          setIsProcessing(false);
+      }
+  };
+
+  const handleWipeData = async () => {
+    if (wipeConfirmText !== 'WIPE DATA') {
+        showNotification("Confirmation text is incorrect.", "error");
         return;
     }
     setIsProcessing(true);
-
-    // Corrected list of collections to wipe
-    const collectionsToWipe = ['test_results', 'community_messages'];
-
     try {
-        // --- Step 1: Wipe specified collections ---
-        for (const coll of collectionsToWipe) {
-            const q = query(collection(db, coll));
-            const snapshot = await getDocs(q);
-            if (snapshot.empty) continue;
-            
-            let batch = writeBatch(db);
-            let count = 0;
-            for (const doc of snapshot.docs) {
-                batch.delete(doc.ref);
-                count++;
-                if (count === 499) { // Commit batch every 499 deletes to stay under limits
-                    await batch.commit();
-                    batch = writeBatch(db);
-                    count = 0;
-                }
-            }
-            if (count > 0) {
-                await batch.commit();
-            }
+        const collectionsToWipe = ['test_results', 'community_messages', 'notes', 'lost_items'];
+        for (const col of collectionsToWipe) {
+            const snap = await getDocs(collection(db, col));
+            const batch = writeBatch(db);
+            snap.docs.forEach(d => batch.delete(d.ref));
+            await batch.commit();
         }
-        
-        // --- Step 2: Reset user contribution points to wipe leaderboard ---
-        const usersQuery = query(collection(db, 'users'));
-        const usersSnapshot = await getDocs(usersQuery);
-        if (!usersSnapshot.empty) {
-            let userBatch = writeBatch(db);
-            let userCount = 0;
-            for (const userDoc of usersSnapshot.docs) {
-                userBatch.update(userDoc.ref, { contributionPoints: 0 });
-                userCount++;
-                if (userCount === 499) {
-                    await userBatch.commit();
-                    userBatch = writeBatch(db);
-                    userCount = 0;
-                }
-            }
-            if (userCount > 0) {
-                await userBatch.commit();
-            }
-        }
-
-        showNotification("Session data has been wiped successfully.", "success");
-    } catch (e) {
-        console.error(e);
-        showNotification("An error occurred during wipe.", "error");
-    } finally {
-        setIsProcessing(false);
+        showNotification("All non-essential user data wiped.", "success");
+    } catch (e) { showNotification("Wipe failed", "error"); }
+    finally {
         setIsWipeModalOpen(false);
+        setIsProcessing(false);
         setWipeConfirmText('');
     }
   };
-  
-  const handleAdvanceLevels = async () => {
-    setIsProcessing(true);
-    try {
-        const q = query(collection(db, 'users'), where('role', '==', 'student'));
-        const snapshot = await getDocs(q);
-        if (snapshot.empty) {
-            showNotification("No student records to advance.", "info");
-            setIsProcessing(false);
-            setIsAdvanceModalOpen(false);
-            return;
-        }
 
-        let batch = writeBatch(db);
-        let count = 0;
-        for (const userDoc of snapshot.docs) {
-            const user = userDoc.data();
-            const currentLevel = user.level;
-            if (currentLevel === 400) {
-                batch.update(userDoc.ref, { role: 'alumni', level: 'General' });
-            } else if ([100, 200, 300].includes(currentLevel)) {
-                batch.update(userDoc.ref, { level: currentLevel + 100 });
-            }
-            count++;
-            if (count === 499) {
-                await batch.commit();
-                batch = writeBatch(db);
-                count = 0;
-            }
-        }
-        if (count > 0) {
-            await batch.commit();
-        }
-
-        showNotification("All student levels have been advanced for the new session.", "success");
-    } catch (e) {
-        console.error(e);
-        showNotification("An error occurred during level advancement.", "error");
-    } finally {
-        setIsProcessing(false);
-        setIsAdvanceModalOpen(false);
-    }
-  };
-
-  const inputStyles = "w-full border border-slate-300 p-2 rounded bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none";
-  const labelStyles = "block text-xs font-bold uppercase mb-1 text-slate-600 dark:text-slate-400";
-  const sectionStyles = "bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 mb-8";
-  const headingStyles = "text-xl font-bold text-slate-800 dark:text-white mb-6";
+  const inputStyles = "w-full border-0 rounded-xl p-3 shadow-sm dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none";
+  if (!isSuperAdmin) return <div>Access Denied.</div>;
 
   return (
-    <>
-    <div className="animate-fade-in max-w-3xl pb-20">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Platform Settings</h1>
+    <div className="animate-fade-in pb-20 max-w-4xl mx-auto space-y-8">
+        <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Platform Settings</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Manage global configurations for the portal.</p>
+        </div>
         
-        <div className={sectionStyles}>
-            <h3 className={headingStyles}>File Upload Service</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Select the primary service for document uploads.</p>
-            <div className="space-y-2">
-                <label className="flex items-center gap-3 p-4 border dark:border-slate-600 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                    <input type="radio" name="uploadService" value="dropbox" checked={siteSettings.uploadService === 'dropbox'} onChange={e => setSiteSettings({...siteSettings, uploadService: e.target.value})} className="h-4 w-4 text-indigo-600" />
-                    <span className="font-bold dark:text-slate-200">Dropbox</span>
-                </label>
-                <label className="flex items-center gap-3 p-4 border dark:border-slate-600 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                    <input type="radio" name="uploadService" value="google_drive" checked={siteSettings.uploadService === 'google_drive'} onChange={e => setSiteSettings({...siteSettings, uploadService: e.target.value})} className="h-4 w-4 text-indigo-600" />
-                    <span className="font-bold dark:text-slate-200">Google Drive</span>
-                </label>
-            </div>
-            
-            {siteSettings.uploadService === 'google_drive' && (
-                <div className="mt-6 p-4 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg space-y-4">
-                    <h4 className="font-bold text-indigo-800 dark:text-indigo-300">Google Drive Configuration</h4>
-                    <div>
-                        <label className={labelStyles}>Google Drive Folder ID</label>
-                        <input className={inputStyles} placeholder="Paste Folder ID from URL" value={driveSettings.folder_id} onChange={e => setDriveSettings({...driveSettings, folder_id: e.target.value})} />
-                    </div>
-                    {driveSettings.connected_email ? (
-                        <div className="flex items-center justify-between bg-green-100 dark:bg-green-900/40 p-3 rounded-lg">
-                            <p className="text-sm text-green-800 dark:text-green-300">Connected as: <strong>{driveSettings.connected_email}</strong></p>
-                            <button onClick={handleGoogleDisconnect} className="text-xs font-bold text-red-600 hover:underline">Disconnect</button>
-                        </div>
-                    ) : (
-                        <button onClick={handleGoogleConnect} className="w-full py-3 bg-blue-600 text-white font-bold rounded-lg flex items-center justify-center gap-2">
-                           <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
-                           Connect Google Drive
-                        </button>
-                    )}
-                </div>
-            )}
-        </div>
-
-        <div className={sectionStyles}>
-             <h3 className={headingStyles}>General Configuration</h3>
-             <div><label className={labelStyles}>Current Academic Session</label><input className={inputStyles} value={siteSettings.session} onChange={e => setSiteSettings({...siteSettings, session: e.target.value})} /></div>
-        </div>
-
-        <div className={sectionStyles}>
-             <h3 className={headingStyles}>Module Visibility</h3>
-             <div className="flex items-center justify-between">
-                 <div><h4 className="font-bold dark:text-white">Show Executives Page</h4><p className="text-xs text-slate-500 dark:text-slate-400">Toggle to hide the executive list from the public.</p></div>
-                 <button onClick={() => setSiteSettings({...siteSettings, showExecutives: !siteSettings.showExecutives})} className={`w-14 h-8 rounded-full p-1 ${siteSettings.showExecutives ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform ${siteSettings.showExecutives ? 'translate-x-6' : 'translate-x-0'}`}></div></button>
+        {/* Site Settings */}
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
+             <h3 className="font-bold text-slate-800 dark:text-white mb-4">General</h3>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Academic Session</label><input className={inputStyles} value={siteSettings.session} onChange={e => setSiteSettings({...siteSettings, session: e.target.value})} /></div>
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">File Upload Service</label><select className={`${inputStyles} bg-white`} value={siteSettings.uploadService} onChange={e => setSiteSettings({...siteSettings, uploadService: e.target.value})}><option value="dropbox">Dropbox</option><option value="google_drive">Google Drive</option></select></div>
+                <div className="md:col-span-2 flex items-center gap-3 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-xl"><input type="checkbox" id="showExecs" checked={siteSettings.showExecutives} onChange={e => setSiteSettings({...siteSettings, showExecutives: e.target.checked})} className="h-4 w-4 rounded" /><label htmlFor="showExecs" className="text-sm font-medium dark:text-slate-300">Show Executives Page</label></div>
              </div>
+             <button onClick={handleSaveSite} className="mt-4 w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Save General Settings</button>
         </div>
 
-        <div className={sectionStyles}>
-             <h3 className={headingStyles}>Social Media & Community Links</h3>
-             <div className="space-y-4">
-                 <div><label className={labelStyles}>WhatsApp</label><input className={inputStyles} value={socialLinks.whatsapp} onChange={e => setSocialLinks({...socialLinks, whatsapp: e.target.value})} /></div>
-                 <div><label className={labelStyles}>Telegram</label><input className={inputStyles} value={socialLinks.telegram} onChange={e => setSocialLinks({...socialLinks, telegram: e.target.value})} /></div>
-                 <div><label className={labelStyles}>Facebook</label><input className={inputStyles} value={socialLinks.facebook} onChange={e => setSocialLinks({...socialLinks, facebook: e.target.value})} /></div>
-                 <div><label className={labelStyles}>Instagram</label><input className={inputStyles} value={socialLinks.instagram} onChange={e => setSocialLinks({...socialLinks, instagram: e.target.value})} /></div>
-                 <div><label className={labelStyles}>Twitter / X</label><input className={inputStyles} value={socialLinks.twitter} onChange={e => setSocialLinks({...socialLinks, twitter: e.target.value})} /></div>
-                 <div><label className={labelStyles}>TikTok</label><input className={inputStyles} value={socialLinks.tiktok} onChange={e => setSocialLinks({...socialLinks, tiktok: e.target.value})} /></div>
+        {/* Google Drive */}
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
+             <h3 className="font-bold text-slate-800 dark:text-white mb-4">Google Drive Integration</h3>
+             {driveSettings.connected_email ? <p className="text-sm text-emerald-600 mb-4">Connected as: {driveSettings.connected_email}</p> : <p className="text-sm text-amber-600 mb-4">Not Connected. Connect to enable Google Drive as the storage option.</p>}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Folder ID</label><input className={inputStyles} placeholder="Enter Google Drive Folder ID" value={driveSettings.folder_id} onChange={e => setDriveSettings({...driveSettings, folder_id: e.target.value})} /></div>
+                <button onClick={() => tokenClient?.requestCode()} className="bg-white border border-slate-300 text-slate-700 py-2 rounded-lg font-bold self-end flex items-center justify-center gap-2" disabled={!tokenClient}><img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google"/> Connect Drive</button>
              </div>
+             <button onClick={() => setDoc(doc(db, 'config', 'google_drive_settings'), driveSettings, { merge: true }).then(() => showNotification("Folder ID Saved", "success"))} className="mt-4 w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Save Drive Settings</button>
+        </div>
+        
+        {/* Social Links */}
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
+             <h3 className="font-bold text-slate-800 dark:text-white mb-4">Social Media Links</h3>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input className={inputStyles} placeholder="Facebook URL" value={socialLinks.facebook} onChange={e => setSocialLinks({...socialLinks, facebook: e.target.value})} />
+                <input className={inputStyles} placeholder="Twitter/X URL" value={socialLinks.twitter} onChange={e => setSocialLinks({...socialLinks, twitter: e.target.value})} />
+                <input className={inputStyles} placeholder="Instagram URL" value={socialLinks.instagram} onChange={e => setSocialLinks({...socialLinks, instagram: e.target.value})} />
+                <input className={inputStyles} placeholder="WhatsApp Channel" value={socialLinks.whatsapp} onChange={e => setSocialLinks({...socialLinks, whatsapp: e.target.value})} />
+             </div>
+             <button onClick={handleSaveSocial} className="mt-4 w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Save Social Links</button>
         </div>
 
-        <button onClick={handleSaveSettings} className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow hover:bg-indigo-700">Save All Settings</button>
-
-        {isSuperAdmin && (
-            <div className="bg-rose-50 dark:bg-rose-900/20 p-8 rounded-2xl border-2 border-dashed border-rose-200 dark:border-rose-500/30 mt-12">
-                <h3 className="text-xl font-bold text-rose-800 dark:text-rose-200 mb-4">Danger Zone</h3>
-                <div className="space-y-6">
-                    <div><h4 className="font-bold text-rose-700 dark:text-rose-300">Advance Academic Session</h4><p className="text-sm text-rose-600 dark:text-rose-400 mb-3">Promote all students to the next level. 400L students become Alumni. This cannot be undone.</p><button onClick={() => setIsAdvanceModalOpen(true)} className="px-5 py-2 bg-rose-500 text-white font-bold rounded-lg">Advance Levels</button></div>
-                    <div className="pt-6 border-t border-rose-200 dark:border-rose-500/30"><h4 className="font-bold text-rose-700 dark:text-rose-300">Wipe Session Records</h4><p className="text-sm text-rose-600 dark:text-rose-400 mb-3">Permanently delete Leaderboard, test results, and community chat. This is irreversible.</p><button onClick={() => setIsWipeModalOpen(true)} className="px-5 py-2 bg-rose-700 text-white font-bold rounded-lg">Wipe Session Data</button></div>
-                </div>
+        {/* DANGER ZONE */}
+        <div className="bg-rose-50 dark:bg-rose-900/20 p-6 rounded-2xl border-2 border-dashed border-rose-300 dark:border-rose-800">
+            <h3 className="font-bold text-rose-800 dark:text-rose-200 mb-4">Danger Zone</h3>
+            <div className="space-y-4">
+                <button onClick={() => setIsAdvanceModalOpen(true)} className="w-full bg-amber-500 text-white py-3 rounded-lg font-bold">Advance Academic Session</button>
+                <button onClick={() => setIsWipeModalOpen(true)} className="w-full bg-rose-600 text-white py-3 rounded-lg font-bold">Wipe User-Generated Data</button>
             </div>
-        )}
+        </div>
+        
+        {isAdvanceModalOpen && <ConfirmationModal title="Confirm Session Advancement" onConfirm={handleAdvanceSession} onCancel={() => setIsAdvanceModalOpen(false)} isProcessing={isProcessing}>This will promote all students to the next level (400L become Alumni), set the executives page to hidden, and trigger the "Session Wrap" for all users on their next login. This is irreversible.</ConfirmationModal>}
+        {isWipeModalOpen && <ConfirmationModal title="Confirm Data Wipe" onConfirm={handleWipeData} onCancel={() => setIsWipeModalOpen(false)} isProcessing={isProcessing} needsTextInput={true} confirmText={wipeConfirmText} onTextChange={setWipeConfirmText}>This will permanently delete all test results, community messages, private notes, and lost/found items. User accounts and uploaded materials will NOT be affected.</ConfirmationModal>}
     </div>
-
-    {isWipeModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setIsWipeModalOpen(false)}>
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
-                <h3 className="font-bold text-lg text-rose-700 dark:text-rose-300">Confirm Data Wipe</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-300 my-4">This will permanently delete all test results, leaderboard entries, and community messages. To proceed, type <strong className="font-mono text-rose-500">FINSA WIPE</strong> below.</p>
-                <input value={wipeConfirmText} onChange={e => setWipeConfirmText(e.target.value)} className={`${inputStyles} font-mono`} />
-                <div className="flex gap-2 mt-4"><button onClick={() => setIsWipeModalOpen(false)} className="flex-1 py-2 border border-slate-300 text-slate-700 dark:text-slate-300 dark:border-slate-600 rounded">Cancel</button><button onClick={handleWipeRecords} disabled={isProcessing || wipeConfirmText !== 'FINSA WIPE'} className="flex-1 py-2 bg-rose-600 text-white rounded disabled:opacity-50">{isProcessing ? 'Wiping...' : 'Confirm'}</button></div>
-            </div>
-        </div>
-    )}
-
-    {isAdvanceModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setIsAdvanceModalOpen(false)}>
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
-                <h3 className="font-bold text-lg text-rose-700 dark:text-rose-300">Confirm Level Advancement</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-300 my-4">This will move all students to their next level (100 to 200, 400 to Alumni). This action cannot be undone and signifies the start of a new session.</p>
-                <div className="flex gap-2 mt-4"><button onClick={() => setIsAdvanceModalOpen(false)} className="flex-1 py-2 border border-slate-300 text-slate-700 dark:text-slate-300 dark:border-slate-600 rounded">Cancel</button><button onClick={handleAdvanceLevels} disabled={isProcessing} className="flex-1 py-2 bg-rose-600 text-white rounded disabled:opacity-50">{isProcessing ? 'Processing...' : 'Advance Session'}</button></div>
-            </div>
-        </div>
-    )}
-    </>
   );
 };
+
+
+const ConfirmationModal: React.FC<any> = ({ title, onConfirm, onCancel, isProcessing, children, needsTextInput, confirmText, onTextChange }) => (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl w-full max-w-sm">
+            <h3 className="font-bold text-lg dark:text-white">{title}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 mb-4">{children}</p>
+            {needsTextInput && <input value={confirmText} onChange={e => onTextChange(e.target.value)} className="w-full border p-2 rounded mb-4 dark:bg-slate-700 dark:border-slate-600" placeholder="Type WIPE DATA to confirm" />}
+            <div className="flex gap-3"><button onClick={onCancel} className="flex-1 py-2 rounded border dark:border-slate-600 dark:text-slate-300">Cancel</button><button onClick={onConfirm} disabled={isProcessing} className="flex-1 py-2 bg-rose-600 text-white rounded font-bold disabled:opacity-50">{isProcessing ? 'Processing...' : 'Confirm'}</button></div>
+        </div>
+    </div>
+);
