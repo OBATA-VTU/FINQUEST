@@ -34,13 +34,16 @@ import { CountdownPage } from './pages/CountdownPage';
 import ScrollToTop from './components/ScrollToTop';
 import { NotificationHandler } from './components/NotificationHandler';
 
-// NEW: Import new admin pages
+// NEW: Import new pages
 import { AdminMaterialsPage } from './pages/AdminMaterialsPage';
 import { AdminNewsPage } from './pages/AdminNewsPage';
 import { AdminExecutivesPage } from './pages/AdminExecutivesPage';
 import { AdminLecturersPage } from './pages/AdminLecturersPage';
 import { AdminCommunityPage } from './pages/AdminCommunityPage';
 import { AdminGalleryPage } from './pages/AdminGalleryPage';
+import { ArcadePage } from './pages/ArcadePage';
+import { MarketplacePage } from './pages/MarketplacePage';
+import { NotificationsPage } from './pages/NotificationsPage';
 
 // Target launch date: Jan 10, 2026, 12:00 PM West Africa Time (UTC+1)
 const LAUNCH_DATE = new Date('2026-01-10T12:00:00+01:00');
@@ -102,6 +105,10 @@ const AppContent: React.FC = () => {
                 <Route path="/notes" element={<RequireAuth><NotesPage /></RequireAuth>} />
                 <Route path="/leaderboard" element={<RequireAuth><LeaderboardPage /></RequireAuth>} />
                 <Route path="/upload" element={<RequireAuth><UploadPage /></RequireAuth>} />
+                <Route path="/arcade" element={<RequireAuth><ArcadePage /></RequireAuth>} />
+                <Route path="/marketplace" element={<RequireAuth><MarketplacePage /></RequireAuth>} />
+                <Route path="/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
+
                 
                 {/* Gated Public-ish Pages */}
                 <Route path="/executives" element={<RequireAuth><ExecutivesPage /></RequireAuth>} />

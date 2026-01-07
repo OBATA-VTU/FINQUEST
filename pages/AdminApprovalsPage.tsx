@@ -15,7 +15,11 @@ export const AdminApprovalsPage: React.FC = () => {
   const [pendingItems, setPendingItems] = useState<PastQuestion[]>([]);
   const [loading, setLoading] = useState(false);
   const { showNotification } = useNotification();
+  
+  // Modal states
   const [previewContent, setPreviewContent] = useState<PastQuestion | null>(null);
+  const [rejectingItem, setRejectingItem] = useState<PastQuestion | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     fetchPending();
@@ -40,43 +44,72 @@ export const AdminApprovalsPage: React.FC = () => {
       }
   };
 
-  const handleMaterialApproval = async (item: PastQuestion, approve: boolean) => {
-      if (!window.confirm(approve ? "Approve this upload?" : "Permanently reject and delete this file?")) return;
+  const handleApprove = async (item: PastQuestion) => {
+    if (!window.confirm("Approve this upload?")) return;
+    try {
+        const ref = doc(db, 'questions', item.id);
+        await updateDoc(ref, { status: 'approved' });
+        
+        if (item.uploadedBy) {
+            const userRef = doc(db, 'users', item.uploadedBy);
+            await updateDoc(userRef, { contributionPoints: increment(10) }).catch(e => console.warn("Could not award points", e));
+            
+            const userDoc = await getDoc(userRef);
+            if (userDoc.exists()) {
+                const user = { id: userDoc.id, ...userDoc.data() } as User;
+                const newBadges = await checkAndAwardBadges(user);
+                if (newBadges.length > 0) {
+                    const allBadges = [...new Set([...(user.badges || []), ...newBadges])];
+                    await updateDoc(userRef, { badges: allBadges });
+                    showNotification(`Awarded ${newBadges.length} new badge(s) to the user!`, "success");
+                }
+            }
+
+            // Send success notification
+            await addDoc(collection(db, 'notifications'), {
+                userId: item.uploadedBy,
+                title: "Contribution Approved!",
+                message: `Your submission for ${item.courseCode} - ${item.courseTitle} has been approved. You've earned 10 contribution points!`,
+                type: 'success',
+                read: false,
+                createdAt: new Date().toISOString()
+            });
+        }
+        showNotification("Question approved & 10 Points awarded!", "success");
+        fetchPending();
+    } catch (e) { showNotification("Approval failed", "error"); }
+  };
+
+  const handleReject = async () => {
+      if (!rejectingItem) return;
       
       try {
-          const ref = doc(db, 'questions', item.id);
-          if (approve) {
-              await updateDoc(ref, { status: 'approved' });
-              
-              if (item.uploadedBy) {
-                  const userRef = doc(db, 'users', item.uploadedBy);
-                  // Award 10 points for upload approval
-                  await updateDoc(userRef, { contributionPoints: increment(10) }).catch(e => console.warn("Could not award points", e));
-                  
-                  // Check for badges
-                  const userDoc = await getDoc(userRef);
-                  if (userDoc.exists()) {
-                      const user = { id: userDoc.id, ...userDoc.data() } as User;
-                      const newBadges = await checkAndAwardBadges(user);
-                      if (newBadges.length > 0) {
-                          const allBadges = [...new Set([...(user.badges || []), ...newBadges])];
-                          await updateDoc(userRef, { badges: allBadges });
-                          showNotification(`Awarded ${newBadges.length} new badge(s) to the user!`, "success");
-                      }
-                  }
-              }
-
-              showNotification("Question approved & 10 Points awarded!", "success");
-          } else {
-              if (item.storagePath) {
-                  await deleteDocument(item.storagePath);
-              }
-              await deleteDoc(ref);
-              showNotification("Record and file rejected.", "info");
+          if (rejectingItem.storagePath) {
+              await deleteDocument(rejectingItem.storagePath);
           }
+          await deleteDoc(doc(db, 'questions', rejectingItem.id));
+
+          // Send notification if reason is provided
+          if (rejectionReason.trim() && rejectingItem.uploadedBy) {
+              await addDoc(collection(db, 'notifications'), {
+                  userId: rejectingItem.uploadedBy,
+                  title: "Contribution Rejected",
+                  message: `Your submission for ${rejectingItem.courseCode} was rejected. Reason: ${rejectionReason}`,
+                  type: 'warning',
+                  read: false,
+                  createdAt: new Date().toISOString()
+              });
+          }
+
+          showNotification("Record and file rejected.", "info");
           fetchPending();
-      } catch (e) { showNotification("Action failed", "error"); }
+      } catch (e) { showNotification("Rejection failed", "error"); }
+      finally {
+          setRejectingItem(null);
+          setRejectionReason('');
+      }
   };
+
 
   return (
     <>
@@ -106,14 +139,35 @@ export const AdminApprovalsPage: React.FC = () => {
                         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Uploaded by: {item.uploadedByEmail || 'Unknown'}</p>
                         <div className="mt-auto pt-4 border-t border-slate-50 dark:border-slate-700 flex gap-2">
                             <button onClick={() => handlePreview(item)} className="flex-1 py-2 text-center text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-600 transition">Preview</button>
-                            <button onClick={() => handleMaterialApproval(item, true)} className="flex-1 py-2 text-center text-xs font-bold text-white bg-emerald-500 rounded hover:bg-emerald-600 transition">Approve (+10 Pts)</button>
-                            <button onClick={() => handleMaterialApproval(item, false)} className="px-3 py-2 text-center text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-900/20 rounded hover:bg-rose-100 dark:hover:bg-rose-900/40 transition">Reject</button>
+                            <button onClick={() => handleApprove(item)} className="flex-1 py-2 text-center text-xs font-bold text-white bg-emerald-500 rounded hover:bg-emerald-600 transition">Approve</button>
+                            <button onClick={() => setRejectingItem(item)} className="px-3 py-2 text-center text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-900/20 rounded hover:bg-rose-100 dark:hover:bg-rose-900/40 transition">Reject</button>
                         </div>
                     </div>
                 ))}
             </div>
         )}
     </div>
+
+    {/* Rejection Modal */}
+    {rejectingItem && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setRejectingItem(null)}>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white">Reject Submission?</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 mb-4">Optionally provide a reason for the user.</p>
+                <textarea 
+                    value={rejectionReason} 
+                    onChange={e => setRejectionReason(e.target.value)}
+                    className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none mb-4 dark:bg-slate-700 dark:border-slate-600" 
+                    rows={3} 
+                    placeholder="e.g., Low image quality, duplicate file..."
+                />
+                <div className="flex gap-3">
+                    <button onClick={() => setRejectingItem(null)} className="flex-1 py-2 rounded-lg border border-slate-300 dark:border-slate-600 font-bold text-slate-600 dark:text-slate-300">Cancel</button>
+                    <button onClick={handleReject} className="flex-1 py-2 rounded-lg bg-rose-600 text-white font-bold">Confirm Reject</button>
+                </div>
+            </div>
+        </div>
+    )}
 
     {/* Text Content Preview Modal */}
     {previewContent && (

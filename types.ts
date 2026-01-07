@@ -102,3 +102,28 @@ export interface TestResult {
   level: Level;
   date: string;
 }
+
+export interface MarketplaceItem {
+    id: string;
+    title: string;
+    description: string;
+    price: number;
+    category: 'Goods' | 'Services' | 'Accommodation';
+    imageUrl: string;
+    sellerId: string;
+    sellerName: string;
+    sellerVerified: boolean;
+    contact: string;
+    createdAt: string;
+}
+
+export interface Notification {
+    id: string;
+    userId: string;
+    message: string;
+    type: 'info' | 'success' | 'warning' | 'error';
+    createdAt: string;
+    read: boolean;
+    title?: string;
+    link?: string;
+}
