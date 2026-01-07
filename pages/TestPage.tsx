@@ -23,6 +23,8 @@ interface Question {
 type TestMode = 'mock' | 'ai' | 'trivia' | 'timeline';
 type ViewState = 'select_mode' | 'configure' | 'loading' | 'in_game' | 'results';
 
+const getSessionKey = (userId: string) => `cbt_session_${userId}`;
+
 export const TestPage: React.FC = () => {
     const auth = useContext(AuthContext);
     const { showNotification } = useNotification();
@@ -42,27 +44,83 @@ export const TestPage: React.FC = () => {
     const [score, setScore] = useState(0);
     const [timeLeft, setTimeLeft] = useState(0);
     const [showCalculator, setShowCalculator] = useState(false);
+    
+    const sessionRef = useRef<any>(null); // Holds session data to avoid stale closures
 
+    // Load session on mount or user change
+    useEffect(() => {
+        if (!auth?.user) return;
+        
+        const sessionKey = getSessionKey(auth.user.id);
+        const savedSessionJSON = localStorage.getItem(sessionKey);
+
+        if (savedSessionJSON) {
+            try {
+                const savedSession = JSON.parse(savedSessionJSON);
+                const now = Date.now();
+                const timeLeftSeconds = Math.round((savedSession.sessionEndTime - now) / 1000);
+
+                if (timeLeftSeconds > 1) {
+                    showNotification("Resuming your previous test session.", "info");
+                    setQuestions(savedSession.questions);
+                    setUserAnswers(savedSession.userAnswers || {});
+                    setCurrentQuestionIndex(savedSession.currentQuestionIndex || 0);
+                    setSelectedMode(savedSession.mode);
+                    setTimeLeft(timeLeftSeconds);
+                    setScore(savedSession.score || 0);
+                    sessionRef.current = savedSession;
+                    setView('in_game');
+                } else {
+                    showNotification("Previous session timed out and was auto-submitted.", "warning");
+                    endTest(savedSession.questions, savedSession.userAnswers || {});
+                }
+            } catch (e) {
+                console.error("Failed to restore session", e);
+                localStorage.removeItem(sessionKey);
+            }
+        }
+    }, [auth?.user]);
+    
+    // Save session state whenever it changes during a game
+    useEffect(() => {
+        if (view === 'in_game' && auth?.user && questions.length > 0) {
+            const sessionKey = getSessionKey(auth.user.id);
+            const sessionEndTime = sessionRef.current?.sessionEndTime || (Date.now() + timeLeft * 1000);
+            
+            const sessionData = {
+                mode: selectedMode,
+                questions,
+                userAnswers,
+                currentQuestionIndex,
+                sessionEndTime,
+                score 
+            };
+            
+            sessionRef.current = sessionData;
+            localStorage.setItem(sessionKey, JSON.stringify(sessionData));
+        }
+    }, [userAnswers, currentQuestionIndex, questions, view, score, auth?.user, selectedMode]);
+
+    // Timer logic
     useEffect(() => {
         let timer: any;
-        const tick = () => {
-            if (view === 'in_game') {
+        if (view === 'in_game') {
+            timer = setInterval(() => {
                 setTimeLeft(prev => {
                     if (prev <= 1) {
-                        if (selectedMode === 'mock' || selectedMode === 'ai') endTest();
-                        else if (selectedMode === 'trivia') handleTriviaAnswer(-1);
-                        else if (selectedMode === 'timeline') handleTimelineAnswer(-1);
+                        endTest();
                         return 0;
                     }
                     return prev - 1;
                 });
-            }
-        };
-        timer = setInterval(tick, 1000);
+            }, 1000);
+        }
         return () => clearInterval(timer);
-    }, [view, selectedMode]);
+    }, [view]);
 
     const resetState = () => {
+      if (auth?.user) localStorage.removeItem(getSessionKey(auth.user.id));
+      sessionRef.current = null;
       setView('select_mode');
       setSelectedMode(null);
       setQuestions([]);
@@ -73,47 +131,68 @@ export const TestPage: React.FC = () => {
 
     const handleSelectMode = (mode: TestMode) => {
         setSelectedMode(mode);
-        if (mode === 'trivia' || mode === 'timeline') {
-            if (mode === 'trivia') startTrivia();
-            else startTimeline();
-        } else {
-            setView('configure');
-        }
+        setView('configure');
+    };
+
+    const startSession = (generatedQuestions: Question[], duration: number) => {
+        if (!auth?.user) return;
+        const sessionKey = getSessionKey(auth.user.id);
+        const sessionEndTime = Date.now() + duration * 1000;
+        
+        const sessionData = {
+            mode: selectedMode,
+            questions: generatedQuestions,
+            userAnswers: {},
+            currentQuestionIndex: 0,
+            sessionEndTime,
+            score: 0
+        };
+        
+        sessionRef.current = sessionData;
+        localStorage.setItem(sessionKey, JSON.stringify(sessionData));
+        
+        setQuestions(generatedQuestions);
+        setUserAnswers({});
+        setCurrentQuestionIndex(0);
+        setScore(0);
+        setTimeLeft(duration);
+        setView('in_game');
     };
     
     const startStandardMock = () => {
         setView('loading');
-        setTimeLeft(600); // 10 minutes
         const filtered = fallbackQuestions.filter(q => q.level === level).sort(() => 0.5 - Math.random()).slice(0, 10);
-        setQuestions(filtered.length > 0 ? filtered : fallbackQuestions.slice(0, 10));
-        setView('in_game');
+        startSession(filtered.length > 0 ? filtered : fallbackQuestions.slice(0, 10), 600); // 10 minutes
     };
 
     const startAiMastery = async () => {
         if (!topic.trim()) { showNotification("Please enter a study topic.", "warning"); return; }
         setView('loading');
-        setTimeLeft(900); // 15 minutes
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const prompt = `Generate 10 university-level multiple-choice finance questions for level ${level} on topic: "${topic}". Return JSON: Array<{id:number, text:string, options:string[4], correctAnswer:number(0-3)}>.`;
             const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt, config: { responseMimeType: 'application/json' } });
             trackAiUsage();
-            setQuestions(JSON.parse(result.text.trim()));
-            setView('in_game');
+            startSession(JSON.parse(result.text.trim()), 900); // 15 minutes
         } catch (error) {
             showNotification("AI engine busy. Starting a standard mock instead.", "info");
             startStandardMock();
         }
     };
-
-    const endTest = async () => {
-        const correct = questions.reduce((acc, q, i) => acc + (userAnswers[i] === q.correctAnswer ? 1 : 0), 0);
-        const finalScore = Math.round((correct / questions.length) * 100);
+    
+    // This function can now be called with specific data for auto-submission
+    const endTest = async (qs: Question[] = questions, ans: Record<number, number> = userAnswers) => {
+        if (view === 'results') return; // Prevent double submission
+        
+        const correct = qs.reduce((acc, q, i) => acc + (ans[i] === q.correctAnswer ? 1 : 0), 0);
+        const finalScore = qs.length > 0 ? Math.round((correct / qs.length) * 100) : 0;
         setScore(finalScore);
         setView('results');
         
         if (auth?.user) {
-            await addDoc(collection(db, 'test_results'), { userId: auth.user.id, score: finalScore, level, topic: selectedMode === 'ai' ? topic : 'Standard Mock', date: new Date().toISOString(), totalQuestions: questions.length });
+            localStorage.removeItem(getSessionKey(auth.user.id));
+            sessionRef.current = null;
+            await addDoc(collection(db, 'test_results'), { userId: auth.user.id, score: finalScore, level, topic: selectedMode === 'ai' ? topic : 'Standard Mock', date: new Date().toISOString(), totalQuestions: qs.length });
             if (finalScore >= 50) {
                 const userRef = doc(db, 'users', auth.user.id);
                 await updateDoc(userRef, { contributionPoints: increment(finalScore >= 80 ? 10 : 5) });
@@ -123,73 +202,6 @@ export const TestPage: React.FC = () => {
                     if (newBadges.length > 0) await updateDoc(userRef, { badges: [...(snap.data().badges || []), ...newBadges] });
                 }
             }
-        }
-    };
-
-    const startTrivia = async () => {
-        setView('loading');
-        setCurrentQuestionIndex(0);
-        setScore(0);
-        setTimeLeft(15);
-        try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const prompt = `Generate 10 unique, multiple-choice questions about Nigerian and global financial facts and history. Return ONLY a valid JSON array: Array<{id:number, text:string, options:string[4], correctAnswer:number(0-3)}>.`;
-            const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt, config: { responseMimeType: 'application/json' } });
-            trackAiUsage();
-            setQuestions(JSON.parse(result.text.trim()));
-            setView('in_game');
-        } catch (error) {
-            showNotification("AI engine busy. Starting a standard trivia round.", "info");
-            setQuestions([...triviaQuestions].sort(() => 0.5 - Math.random()));
-            setView('in_game');
-        }
-    };
-    
-    const handleTriviaAnswer = (idx: number) => {
-        const correct = questions[currentQuestionIndex].correctAnswer === idx;
-        const newScore = score + (correct ? 10 : 0);
-        if (currentQuestionIndex < questions.length - 1) {
-            if (correct) setScore(newScore);
-            setCurrentQuestionIndex(p => p + 1);
-            setTimeLeft(15);
-        } else {
-            setScore(newScore);
-            if (auth?.user) updateDoc(doc(db, 'users', auth.user.id), { contributionPoints: increment(Math.floor(newScore / 2)) });
-            setView('results');
-        }
-    };
-
-    const startTimeline = async () => {
-        setView('loading');
-        setCurrentQuestionIndex(0);
-        setScore(0);
-        setTimeLeft(20);
-        try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const prompt = `Generate 10 unique, multiple-choice questions about key dates and events in financial history. Return ONLY a valid JSON array: Array<{id:number, text:string, options:string[4], correctAnswer:number(0-3)}>.`;
-            const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt, config: { responseMimeType: 'application/json' } });
-            trackAiUsage();
-            setQuestions(JSON.parse(result.text.trim()));
-            setView('in_game');
-        } catch (error) {
-            showNotification("AI engine busy. Starting a standard timeline round.", "info");
-            setQuestions([...timelineQuestions].sort(() => 0.5 - Math.random()).slice(0, 10));
-            setView('in_game');
-        }
-    };
-    
-    const handleTimelineAnswer = (idx: number) => {
-        const correct = questions[currentQuestionIndex].correctAnswer === idx;
-        const newScore = score + (correct ? 1 : 0);
-        if (currentQuestionIndex < questions.length - 1) {
-            if (correct) setScore(newScore);
-            setCurrentQuestionIndex(p => p + 1);
-            setTimeLeft(20);
-        } else {
-            const finalScore = newScore;
-            if (auth?.user) updateDoc(doc(db, 'users', auth.user.id), { contributionPoints: increment(finalScore * 2) });
-            setScore(finalScore * 10); // Display as a percentage
-            setView('results');
         }
     };
 
@@ -204,14 +216,19 @@ export const TestPage: React.FC = () => {
                 <p className="text-slate-500 dark:text-slate-400 mb-8">You've completed the practice session.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <button onClick={resetState} className="py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100">New Session</button>
-                    {(selectedMode === 'mock' || selectedMode === 'ai') && <button onClick={() => generateTestReviewPDF(questions, userAnswers, score, auth?.user)} className="py-3 bg-indigo-600 text-white rounded-xl font-bold">Review PDF</button>}
+                    <button onClick={() => generateTestReviewPDF(questions, userAnswers, score, auth?.user)} className="py-3 bg-indigo-600 text-white rounded-xl font-bold">Review PDF</button>
                 </div>
             </div>
         </div>
     );
 
-    if (view === 'in_game' && (selectedMode === 'mock' || selectedMode === 'ai')) {
+    if (view === 'in_game') {
         const q = questions[currentQuestionIndex];
+        if(!q) {
+            // This can happen if state is corrupt, reset to be safe
+            resetState();
+            return null;
+        }
         return (
             <div className="min-h-screen bg-slate-100 dark:bg-slate-950 p-4 md:p-8">
                 {showCalculator && <Calculator onClose={() => setShowCalculator(false)} />}
@@ -240,7 +257,7 @@ export const TestPage: React.FC = () => {
                             <div className="grid grid-cols-5 gap-2 mb-6">{questions.map((_, i) => <button key={i} onClick={() => setCurrentQuestionIndex(i)} className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${currentQuestionIndex === i ? 'bg-indigo-600 text-white scale-110' : userAnswers[i] !== undefined ? 'bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200' : 'bg-slate-100 dark:bg-slate-800'}`}>{i+1}</button>)}</div>
                             <div className="flex justify-between border-t border-slate-100 dark:border-slate-800 pt-4">
                                 <button disabled={currentQuestionIndex === 0} onClick={() => setCurrentQuestionIndex(p => p - 1)} className="px-5 py-2 rounded-lg font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50">Previous</button>
-                                {currentQuestionIndex === (questions.length - 1) ? <button onClick={endTest} className="px-6 py-2 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700">Submit</button> : <button onClick={() => setCurrentQuestionIndex(p => p + 1)} className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">Next</button>}
+                                {currentQuestionIndex === (questions.length - 1) ? <button onClick={() => endTest()} className="px-6 py-2 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700">Submit</button> : <button onClick={() => setCurrentQuestionIndex(p => p + 1)} className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">Next</button>}
                             </div>
                         </div>
                     </div>
@@ -249,29 +266,6 @@ export const TestPage: React.FC = () => {
         );
     }
     
-    if (view === 'in_game' && (selectedMode === 'trivia' || selectedMode === 'timeline')) {
-        const isTrivia = selectedMode === 'trivia';
-        const maxTime = isTrivia ? 15 : 20;
-        const currentQ = questions[currentQuestionIndex];
-        return (
-            <div className="min-h-screen bg-slate-950 text-white p-4 sm:p-6 flex flex-col items-center justify-center">
-                <div className="w-full max-w-2xl bg-slate-900 rounded-[2.5rem] p-6 sm:p-10 border border-white/10 shadow-2xl animate-pop-in">
-                    <div className="flex justify-between items-center mb-8">
-                        <div className="px-4 py-1.5 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest">{isTrivia ? 'Trivia' : 'Timeline'} • {currentQuestionIndex + 1}/{questions.length}</div>
-                        <div className="relative w-16 h-16 flex items-center justify-center">
-                            <svg className="w-full h-full transform -rotate-90"><circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-white/10" /><circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="transparent" strokeDasharray={176} strokeDashoffset={176 - (176 * timeLeft) / maxTime} className={`${timeLeft <= 5 ? 'text-rose-500' : 'text-indigo-500'} transition-all duration-1000`} /></svg>
-                            <span className="absolute font-black text-xl">{timeLeft}</span>
-                        </div>
-                    </div>
-                    <h2 className="text-2xl sm:text-3xl font-serif font-bold mb-10 text-center min-h-[100px]">{currentQ.text}</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {currentQ.options.map((opt: string, i: number) => <button key={i} onClick={() => isTrivia ? handleTriviaAnswer(i) : handleTimelineAnswer(i)} className="p-6 bg-white/5 border border-white/10 rounded-3xl font-bold hover:bg-indigo-600 transition-colors text-center">{opt}</button>)}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
     if (view === 'configure') {
         return (
             <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-8 animate-fade-in flex flex-col items-center justify-center">
@@ -303,8 +297,6 @@ export const TestPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <ModeCard title="Standard Mock" description="A 10-question test mirroring the official exam format for your level." onClick={() => handleSelectMode('mock')} color="emerald" icon={<svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>} />
                     <ModeCard title="AI Topic Mastery" description="Our AI will generate custom questions on any topic you choose." onClick={() => handleSelectMode('ai')} color="indigo" icon={<svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>} />
-                    <ModeCard title="Financial Trivia" description="A fast-paced challenge on Nigerian and global financial facts." onClick={() => handleSelectMode('trivia')} color="rose" icon={<svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>} />
-                    <ModeCard title="Timeline Tussle" description="Answer questions about key dates in financial history." onClick={() => handleSelectMode('timeline')} color="amber" icon={<svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
                 </div>
             </div>
         </div>

@@ -51,21 +51,29 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
   const handleClearAll = async () => {
       if (unreadCount === 0) return;
       const batch = writeBatch(db);
-      dbNotifications.forEach(note => {
+      const unreadNotes = dbNotifications.filter(note => !note.read);
+      
+      unreadNotes.forEach(note => {
           if (!note.read) {
               const noteRef = doc(db, 'notifications', note.id);
               batch.update(noteRef, { read: true });
           }
       });
-      await batch.commit();
-      setDbNotifications(prev => prev.map(n => ({ ...n, read: true })));
-      setUnreadCount(0);
+      
+      try {
+        await batch.commit();
+        // Rely on onSnapshot to update the UI, removing the optimistic update
+        // to prevent race conditions.
+      } catch (error) {
+        console.error("Failed to mark notifications as read:", error);
+      }
   };
   
-  const handleNotificationClick = async (notification: FirestoreNotification) => {
+  const handleNotificationClick = (notification: FirestoreNotification) => {
       setShowNotifications(false);
       if (!notification.read) {
-          await updateDoc(doc(db, 'notifications', notification.id), { read: true });
+          // Fire-and-forget update. onSnapshot will handle the UI change.
+          updateDoc(doc(db, 'notifications', notification.id), { read: true });
       }
       navigate('/notifications', { state: { highlightId: notification.id } });
   };
