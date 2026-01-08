@@ -4,7 +4,7 @@ import { Logo } from './Logo';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { collection, query, where, limit, onSnapshot, doc, writeBatch, orderBy, updateDoc } from 'firebase/firestore';
+import { collection, query, where, limit, onSnapshot, doc, writeBatch, updateDoc, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Notification as FirestoreNotification } from '../types';
 
@@ -62,8 +62,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
       
       try {
         await batch.commit();
-        // Rely on onSnapshot to update the UI, removing the optimistic update
-        // to prevent race conditions.
       } catch (error) {
         console.error("Failed to mark notifications as read:", error);
       }
@@ -72,7 +70,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
   const handleNotificationClick = (notification: FirestoreNotification) => {
       setShowNotifications(false);
       if (!notification.read) {
-          // Fire-and-forget update. onSnapshot will handle the UI change.
           updateDoc(doc(db, 'notifications', notification.id), { read: true });
       }
       navigate('/notifications', { state: { highlightId: notification.id } });

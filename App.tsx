@@ -29,10 +29,12 @@ import { UploadPage } from './pages/UploadPage';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { SettingsProvider } from './contexts/SettingsContext';
 import { Layout } from './components/Layout';
 import { CountdownPage } from './pages/CountdownPage';
 import ScrollToTop from './components/ScrollToTop';
 import { NotificationHandler } from './components/NotificationHandler';
+import { SEOMetadataUpdater } from './components/SEOMetadataUpdater';
 
 import { AdminMaterialsPage } from './pages/AdminMaterialsPage';
 import { AdminNewsPage } from './pages/AdminNewsPage';
@@ -143,6 +145,7 @@ const AppContent: React.FC = () => {
     <>
         <ScrollToTop />
         <NotificationHandler />
+        <SEOMetadataUpdater />
         <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route element={<Layout />}>
@@ -218,7 +221,9 @@ const App: React.FC = () => {
     <ThemeProvider>
         <NotificationProvider>
           <AuthProvider>
-            <AppContent />
+            <SettingsProvider>
+              <AppContent />
+            </SettingsProvider>
           </AuthProvider>
         </NotificationProvider>
     </ThemeProvider>

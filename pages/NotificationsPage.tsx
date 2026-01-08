@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch } from 'firebase/firestore';
@@ -25,7 +26,10 @@ export const NotificationsPage: React.FC = () => {
             setLoading(false);
             if (highlightId) {
                 const noteToRead = notes.find(n => n.id === highlightId);
-                if (noteToRead && !noteToRead.read) markAsRead(highlightId);
+                if (noteToRead && !noteToRead.read) {
+                  // Fire-and-forget update, onSnapshot will handle the UI change eventually.
+                  markAsRead(highlightId);
+                }
             }
         });
         return () => unsubscribe();
@@ -38,13 +42,21 @@ export const NotificationsPage: React.FC = () => {
     const markAllAsRead = async () => {
         const unread = notifications.filter(n => !n.read);
         if (unread.length === 0) return;
-        const batch = writeBatch(db);
-        unread.forEach(note => {
-            const noteRef = doc(db, 'notifications', note.id);
-            batch.update(noteRef, { read: true });
-        });
-        await batch.commit();
-        setNotifications(prev => prev.map(n => ({ ...n, read: true }))); // Immediate UI update
+        
+        // Optimistic UI update for better UX
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        
+        try {
+            const batch = writeBatch(db);
+            unread.forEach(note => {
+                const noteRef = doc(db, 'notifications', note.id);
+                batch.update(noteRef, { read: true });
+            });
+            await batch.commit();
+        } catch (e) {
+            console.error("Failed to mark all as read", e);
+            // Revert UI on failure if needed, though onSnapshot should correct it.
+        }
     };
 
     const getIcon = (type: Notification['type']) => {

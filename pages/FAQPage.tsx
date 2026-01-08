@@ -11,7 +11,7 @@ const faqs: FAQItem[] = [
   { category: 'General', question: "What is FINSA?", answer: "FINSA (Finance Students' Association) is the official digital portal for the Finance Department of Adekunle Ajasin University. It serves as a centralized hub for academic resources, news, and student interaction." },
   { category: 'General', question: "Who can use this portal?", answer: "The portal is strictly for students and staff of the Finance Department at AAUA. Guest users can view limited information." },
   { category: 'General', question: "Is the website mobile-friendly?", answer: "Yes, FINSA is fully responsive and optimized for all devices including Android and iOS phones." },
-  { category: 'General', question: "Who developed this portal?", answer: "The portal was developed by the OBA - PRO '25/26 team to digitize departmental resources." },
+  { category: 'General', question: "Who developed this portal?", answer: "The portal was developed by OBA, the Public Relations Officer (PRO) of the Finance Department for the 2025/2026 academic session." },
   
   { category: 'Support', question: "How do I contact support?", answer: "For all inquiries, technical issues, or support, please contact the PRO solely via WhatsApp at 08142452729. Emails are no longer monitored for immediate support." },
   { category: 'Support', question: "Can I report a bug?", answer: "Yes, if you notice any glitches, please send a screenshot and description to the PRO via WhatsApp." },
