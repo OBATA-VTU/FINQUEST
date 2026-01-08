@@ -21,19 +21,20 @@ export const DownloadAppPage: React.FC = () => {
             setIsInstallable(true);
         };
 
-        if (isIos()) {
-            setIsIosDevice(true);
-            // On iOS, 'Add to Home Screen' is always a manual option if the manifest is set up correctly.
-            // We can assume it's "installable" in that sense.
-            setIsInstallable(true);
-        } else {
-            window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-        }
-
-        // Check if the app is already in standalone mode
+        // Check if the app is already running in standalone mode. If so, don't offer to install.
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
         if (isStandalone) {
             setIsInstallable(false);
+            return;
+        }
+
+        if (isIos()) {
+            setIsIosDevice(true);
+            // On iOS, installation is a manual browser action. We can always show the instructions.
+            setIsInstallable(true);
+        } else {
+            // For other browsers, rely on the beforeinstallprompt event.
+            window.addEventListener('beforeinstallprompt', handleBeforeInstall);
         }
 
         return () => {
@@ -52,7 +53,7 @@ export const DownloadAppPage: React.FC = () => {
         } else if (isIosDevice) {
             setShowIosInstructions(true);
         } else {
-            alert("App may already be installed. If not, look for an 'Install' icon in your browser's address bar or menu.");
+            alert("To install, look for an 'Install' icon in your browser's address bar or menu. If you don't see one, your browser may not support PWA installation.");
         }
     };
 

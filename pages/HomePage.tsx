@@ -1,13 +1,15 @@
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Announcement, GalleryItem } from '../types';
 import { db } from '../firebase';
 import { collection, query, orderBy, limit, getDocs, doc, getDoc, getCountFromServer, where } from 'firebase/firestore';
 import { AdBanner } from '../components/AdBanner';
+import { AuthContext } from '../contexts/AuthContext';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const auth = useContext(AuthContext);
   const observerRef = useRef<IntersectionObserver | null>(null);
   
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -129,24 +131,26 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      <section className="bg-slate-50 dark:bg-slate-900 py-20 reveal">
-          <div className="container mx-auto px-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-                  <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 animate-slide-in-up hover:-translate-y-2 transition-transform duration-300">
-                      <h3 className="text-5xl font-black text-indigo-600 dark:text-indigo-400 mb-2">{loadingStats ? '...' : stats.users}+</h3>
-                      <p className="font-bold text-slate-500 dark:text-slate-400">Registered Students</p>
-                  </div>
-                  <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 animate-slide-in-up hover:-translate-y-2 transition-transform duration-300" style={{animationDelay: '150ms'}}>
-                      <h3 className="text-5xl font-black text-emerald-600 dark:text-emerald-400 mb-2">{loadingStats ? '...' : stats.materials}+</h3>
-                      <p className="font-bold text-slate-500 dark:text-slate-400">Study Materials</p>
-                  </div>
-                  <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 animate-slide-in-up hover:-translate-y-2 transition-transform duration-300" style={{animationDelay: '300ms'}}>
-                      <h3 className="text-5xl font-black text-rose-600 dark:text-rose-400 mb-2">{loadingStats ? '...' : stats.tests}+</h3>
-                      <p className="font-bold text-slate-500 dark:text-slate-400">Tests Completed</p>
-                  </div>
-              </div>
-          </div>
-      </section>
+      {auth?.user && (
+        <section className="bg-slate-50 dark:bg-slate-900 py-20 reveal">
+            <div className="container mx-auto px-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                    <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 animate-slide-in-up hover:-translate-y-2 transition-transform duration-300">
+                        <h3 className="text-5xl font-black text-indigo-600 dark:text-indigo-400 mb-2">{loadingStats ? '...' : stats.users}+</h3>
+                        <p className="font-bold text-slate-500 dark:text-slate-400">Registered Students</p>
+                    </div>
+                    <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 animate-slide-in-up hover:-translate-y-2 transition-transform duration-300" style={{animationDelay: '150ms'}}>
+                        <h3 className="text-5xl font-black text-emerald-600 dark:text-emerald-400 mb-2">{loadingStats ? '...' : stats.materials}+</h3>
+                        <p className="font-bold text-slate-500 dark:text-slate-400">Study Materials</p>
+                    </div>
+                    <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 animate-slide-in-up hover:-translate-y-2 transition-transform duration-300" style={{animationDelay: '300ms'}}>
+                        <h3 className="text-5xl font-black text-rose-600 dark:text-rose-400 mb-2">{loadingStats ? '...' : stats.tests}+</h3>
+                        <p className="font-bold text-slate-500 dark:text-slate-400">Tests Completed</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+      )}
 
       <section className="py-24 bg-white dark:bg-slate-950 transition-colors reveal">
           <div className="container mx-auto px-4">
@@ -255,41 +259,43 @@ export const HomePage: React.FC = () => {
               </div>
           </div>
       </section>
+      
+      {auth?.user && (
+        <section className="py-24 bg-white dark:bg-slate-950 transition-colors reveal">
+            <div className="container mx-auto px-4">
+                <div className="flex flex-col lg:flex-row gap-16 items-center">
+                    <div className="lg:w-2/5 animate-slide-in-up">
+                        <h2 className="text-4xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white mb-8">Departmental News</h2>
+                        <p className="text-slate-600 dark:text-slate-400 text-lg mb-10 leading-relaxed">Stay updated with official announcements, exam schedules, seminar notifications, and scholarship opportunities.</p>
+                        <button onClick={() => navigate('/announcements')} className="group inline-flex items-center justify-center gap-3 px-8 py-4 bg-indigo-900 text-white font-bold rounded-full shadow-xl hover:bg-indigo-800 transition uppercase tracking-widest text-xs"><span>View All Updates</span><span className="transition-transform group-hover:translate-x-1.5">→</span></button>
+                    </div>
+                    <div className="lg:w-3/5">
+                        <div className="space-y-6">
+                            {announcements.length > 0 ? (
+                                announcements.map((news, i) => (
+                                    <div key={news.id} className="group flex items-center gap-6 p-6 border border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-900/50 hover:shadow-lg transition-all bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm cursor-pointer rounded-2xl animate-slide-in-up" onClick={() => navigate('/announcements')} style={{animationDelay: `${150 * (i+1)}ms`}}>
+                                        <div className="w-20 shrink-0 flex flex-col items-center text-center">
+                                            <span className="block text-4xl font-serif font-black text-indigo-300 dark:text-indigo-500/50 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{new Date(news.date).getDate()}</span>
+                                            <span className="text-xs font-bold uppercase text-slate-400 dark:text-slate-500">{new Date(news.date).toLocaleDateString(undefined, {month: 'short'})}, {new Date(news.date).getFullYear()}</span>
+                                        </div>
+                                        <div className="border-l border-slate-200 dark:border-slate-700 pl-6">
+                                            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors font-serif">{news.title}</h3>
+                                            <p className="text-slate-600 dark:text-slate-400 line-clamp-2 text-sm leading-relaxed">{news.content}</p>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-slate-400 italic p-12 border border-dashed border-slate-200 dark:border-slate-800 text-center rounded-2xl">No recent announcements found.</div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+                <AdBanner />
+            </div>
+        </section>
+      )}
 
-      <section className="py-24 bg-white dark:bg-slate-950 transition-colors reveal">
-          <div className="container mx-auto px-4">
-              <div className="flex flex-col lg:flex-row gap-16 items-center">
-                  <div className="lg:w-2/5 animate-slide-in-up">
-                      <h2 className="text-4xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white mb-8">Departmental News</h2>
-                      <p className="text-slate-600 dark:text-slate-400 text-lg mb-10 leading-relaxed">Stay updated with official announcements, exam schedules, seminar notifications, and scholarship opportunities.</p>
-                      <button onClick={() => navigate('/announcements')} className="group inline-flex items-center justify-center gap-3 px-8 py-4 bg-indigo-900 text-white font-bold rounded-full shadow-xl hover:bg-indigo-800 transition uppercase tracking-widest text-xs"><span>View All Updates</span><span className="transition-transform group-hover:translate-x-1.5">→</span></button>
-                  </div>
-                  <div className="lg:w-3/5">
-                      <div className="space-y-6">
-                          {announcements.length > 0 ? (
-                              announcements.map((news, i) => (
-                                  <div key={news.id} className="group flex items-center gap-6 p-6 border border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-900/50 hover:shadow-lg transition-all bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm cursor-pointer rounded-2xl animate-slide-in-up" onClick={() => navigate('/announcements')} style={{animationDelay: `${150 * (i+1)}ms`}}>
-                                      <div className="w-20 shrink-0 flex flex-col items-center text-center">
-                                          <span className="block text-4xl font-serif font-black text-indigo-300 dark:text-indigo-500/50 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{new Date(news.date).getDate()}</span>
-                                          <span className="text-xs font-bold uppercase text-slate-400 dark:text-slate-500">{new Date(news.date).toLocaleDateString(undefined, {month: 'short'})}, {new Date(news.date).getFullYear()}</span>
-                                      </div>
-                                      <div className="border-l border-slate-200 dark:border-slate-700 pl-6">
-                                          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors font-serif">{news.title}</h3>
-                                          <p className="text-slate-600 dark:text-slate-400 line-clamp-2 text-sm leading-relaxed">{news.content}</p>
-                                      </div>
-                                  </div>
-                              ))
-                          ) : (
-                              <div className="text-slate-400 italic p-12 border border-dashed border-slate-200 dark:border-slate-800 text-center rounded-2xl">No recent announcements found.</div>
-                          )}
-                      </div>
-                  </div>
-              </div>
-              <AdBanner />
-          </div>
-      </section>
-
-      {galleryImages.length > 0 && (
+      {auth?.user && galleryImages.length > 0 && (
           <section className="py-24 bg-slate-50 dark:bg-slate-900 reveal">
               <div className="container mx-auto px-4">
                   <div className="text-center max-w-3xl mx-auto mb-16">
