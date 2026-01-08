@@ -1,4 +1,5 @@
 
+
 import React, { useContext, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
@@ -142,6 +143,7 @@ const AppContent: React.FC = () => {
         <ScrollToTop />
         <NotificationHandler />
         <Routes>
+            <Route path="/login" element={<LoginPage />} />
             <Route element={<Layout />}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/announcements" element={<AnnouncementsPage />} />

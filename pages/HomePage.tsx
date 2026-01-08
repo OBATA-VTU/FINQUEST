@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Announcement, GalleryItem } from '../types';
@@ -101,7 +102,22 @@ export const HomePage: React.FC = () => {
         </div>
       </div>
 
-      {/* NEW: STATS SECTION */}
+      {/* NEW: MARQUEE SECTION */}
+      <section className="bg-slate-900 py-4 border-y border-indigo-900/50 overflow-hidden">
+        <div className="flex animate-marquee whitespace-nowrap">
+            {[...Array(2)].map((_, i) => (
+                <React.Fragment key={i}>
+                    <span className="text-lg font-bold text-indigo-300 mx-8">Verified Past Questions</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
+                    <span className="text-lg font-bold text-indigo-300 mx-8">AI-Powered CBT Practice</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
+                    <span className="text-lg font-bold text-indigo-300 mx-8">Community Chat Lounge</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
+                    <span className="text-lg font-bold text-indigo-300 mx-8">Gamified Leaderboard</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
+                    <span className="text-lg font-bold text-indigo-300 mx-8">24/7 Access to Resources</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
+                </React.Fragment>
+            ))}
+        </div>
+      </section>
+
+      {/* STATS SECTION */}
       <section className="bg-slate-50 dark:bg-slate-900 py-20 reveal">
           <div className="container mx-auto px-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
@@ -121,7 +137,7 @@ export const HomePage: React.FC = () => {
           </div>
       </section>
 
-      {/* 2. HOD WELCOME */}
+      {/* HOD WELCOME */}
       <section className="py-24 bg-white dark:bg-slate-950 transition-colors reveal">
           <div className="container mx-auto px-4">
               <div className="bg-slate-50 dark:bg-slate-900 rounded-3xl p-8 md:p-12 shadow-xl border border-slate-100 dark:border-slate-800">
@@ -155,7 +171,7 @@ export const HomePage: React.FC = () => {
           </div>
       </section>
 
-      {/* NEW: HOW IT WORKS */}
+      {/* HOW IT WORKS */}
       <section className="py-24 bg-slate-50 dark:bg-slate-900 reveal">
           <div className="container mx-auto px-4">
               <div className="text-center max-w-3xl mx-auto mb-16">
@@ -183,7 +199,7 @@ export const HomePage: React.FC = () => {
           </div>
       </section>
 
-      {/* 3. FEATURE CARDS */}
+      {/* FEATURE CARDS */}
       <section className="py-24 bg-white dark:bg-slate-950 relative overflow-hidden reveal">
           <div className="container mx-auto px-4 relative z-10">
               <div className="text-center max-w-3xl mx-auto mb-16">
@@ -217,7 +233,34 @@ export const HomePage: React.FC = () => {
           </div>
       </section>
       
-      {/* 4. NEWS & EVENTS */}
+      {/* NEW: TESTIMONIALS SECTION */}
+      <section className="py-24 bg-slate-50 dark:bg-slate-900 reveal">
+          <div className="container mx-auto px-4">
+              <div className="text-center max-w-3xl mx-auto mb-16">
+                  <h2 className="text-3xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white mb-6">From Our Students</h2>
+                  <p className="text-slate-600 dark:text-slate-400 text-lg">See how the FINSA portal is making a difference in their academic journey.</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 animate-slide-in-up">
+                      <svg className="w-12 h-12 text-indigo-100 dark:text-slate-700 mb-4" fill="currentColor" viewBox="0 0 32 32"><path d="M9.984 20.016q0 2.375-1.391 3.828t-3.578 1.453q-2.188 0-3.578-1.453t-1.391-3.828q0-2.375 1.391-3.828t3.578-1.453h1.5q2.5 0 2.5 2.5zM22.016 20.016q0 2.375-1.391 3.828t-3.578 1.453q-2.188 0-3.578-1.453t-1.391-3.828q0-2.375 1.391-3.828t3.578-1.453h1.5q2.5 0 2.5 2.5z"></path></svg>
+                      <p className="text-slate-600 dark:text-slate-300 italic mb-6">"The past questions archive is a lifesaver. Being able to search by course code saved me so much time before exams."</p>
+                      <div><p className="font-bold text-slate-900 dark:text-white">Adekunle Tolu</p><p className="text-sm text-slate-500 dark:text-slate-400">400 Level</p></div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 animate-slide-in-up" style={{animationDelay: '150ms'}}>
+                     <svg className="w-12 h-12 text-indigo-100 dark:text-slate-700 mb-4" fill="currentColor" viewBox="0 0 32 32"><path d="M9.984 20.016q0 2.375-1.391 3.828t-3.578 1.453q-2.188 0-3.578-1.453t-1.391-3.828q0-2.375 1.391-3.828t3.578-1.453h1.5q2.5 0 2.5 2.5zM22.016 20.016q0 2.375-1.391 3.828t-3.578 1.453q-2.188 0-3.578-1.453t-1.391-3.828q0-2.375 1.391-3.828t3.578-1.453h1.5q2.5 0 2.5 2.5z"></path></svg>
+                      <p className="text-slate-600 dark:text-slate-300 italic mb-6">"The AI-powered CBT is amazing for practice. I can generate questions on specific topics I'm struggling with. It's like having a personal tutor."</p>
+                      <div><p className="font-bold text-slate-900 dark:text-white">Chioma Okoro</p><p className="text-sm text-slate-500 dark:text-slate-400">300 Level</p></div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 animate-slide-in-up" style={{animationDelay: '300ms'}}>
+                     <svg className="w-12 h-12 text-indigo-100 dark:text-slate-700 mb-4" fill="currentColor" viewBox="0 0 32 32"><path d="M9.984 20.016q0 2.375-1.391 3.828t-3.578 1.453q-2.188 0-3.578-1.453t-1.391-3.828q0-2.375 1.391-3.828t3.578-1.453h1.5q2.5 0 2.5 2.5zM22.016 20.016q0 2.375-1.391 3.828t-3.578 1.453q-2.188 0-3.578-1.453t-1.391-3.828q0-2.375 1.391-3.828t3.578-1.453h1.5q2.5 0 2.5 2.5z"></path></svg>
+                      <p className="text-slate-600 dark:text-slate-300 italic mb-6">"Finally, a single place for everything. News, community groups, lecture notes... it's all here. No more scrambling for info."</p>
+                      <div><p className="font-bold text-slate-900 dark:text-white">David Musa</p><p className="text-sm text-slate-500 dark:text-slate-400">200 Level</p></div>
+                  </div>
+              </div>
+          </div>
+      </section>
+
+      {/* NEWS & EVENTS */}
       <section className="py-24 bg-slate-50 dark:bg-slate-900 transition-colors reveal">
           <div className="container mx-auto px-4">
               <div className="flex flex-col lg:flex-row gap-16">
@@ -251,7 +294,7 @@ export const HomePage: React.FC = () => {
           </div>
       </section>
 
-      {/* 5. GALLERY PREVIEW */}
+      {/* GALLERY PREVIEW */}
       {galleryImages.length > 0 && (
           <section className="py-24 bg-white dark:bg-slate-950 reveal">
               <div className="container mx-auto px-4">
@@ -272,7 +315,7 @@ export const HomePage: React.FC = () => {
           </section>
       )}
 
-      {/* 6. FOOTER CTA */}
+      {/* FOOTER CTA */}
       <section className="py-28 bg-indigo-950 text-white text-center reveal transition-colors">
           <div className="container mx-auto px-4 max-w-4xl">
               <h2 className="text-4xl md:text-6xl font-serif font-bold mb-8">Ready to Excel?</h2>
