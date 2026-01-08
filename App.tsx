@@ -153,6 +153,7 @@ const AppContent: React.FC = () => {
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="/faq" element={<FAQPage />} />
                 <Route path="/lost-and-found" element={<LostFoundPage />} />
+                <Route path="/download-app" element={<DownloadAppPage />} />
                 
                 <Route path="/dashboard" element={<RequireAuth><UserDashboardPage /></RequireAuth>} />
                 <Route path="/questions" element={<RequireAuth><PastQuestionsPage /></RequireAuth>} />
@@ -164,7 +165,6 @@ const AppContent: React.FC = () => {
                 <Route path="/upload" element={<RequireAuth><UploadPage /></RequireAuth>} />
                 <Route path="/marketplace" element={<RequireAuth><MarketplacePage /></RequireAuth>} />
                 <Route path="/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
-                <Route path="/download-app" element={<RequireAuth><DownloadAppPage /></RequireAuth>} />
                 
                 <Route path="/executives" element={<RequireAuth><ExecutivesPage /></RequireAuth>} />
                 <Route path="/lecturers" element={<RequireAuth><LecturersPage /></RequireAuth>} />

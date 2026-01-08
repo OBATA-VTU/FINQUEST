@@ -233,6 +233,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     </>
                 )}
                 <NavItem 
+                    to="/lost-and-found" 
+                    label="Lost & Found" 
+                    icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>}
+                    onClose={onClose}
+                />
+                <NavItem 
                     to="/faq" 
                     label="FAQ / Support" 
                     icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.79 4 4 0 1.105-.448 2.105-1.172 2.828l-1.089 1.09a2 2 0 00-.586 1.415V18m0-3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
