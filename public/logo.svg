@@ -3,25 +3,20 @@
     <path id="txtTop" d="M 70,256 A 186,186 0 1,1 442,256" />
     <path id="txtBot" d="M 90,256 A 166,166 0 0,0 422,256" />
     <path id="bannerPath" d="M 120,440 Q 256,480 392,440" />
+    <clipPath id="innerClip"><circle cx="256" cy="256" r="167" /></clipPath>
   </defs>
 
-  <!-- Background Circle (White) -->
-  <circle cx="256" cy="256" r="240" fill="white" stroke="#311b92" stroke-width="12" />
-  
-  <!-- Inner Circle Border -->
-  <circle cx="256" cy="256" r="170" fill="none" stroke="#311b92" stroke-width="6" />
+  <!-- Ring Structure -->
+  <circle cx="256" cy="256" r="230" fill="#311b92" />
+  <circle cx="256" cy="256" r="210" fill="white" />
+  <circle cx="256" cy="256" r="205" fill="#311b92" />
+  <circle cx="256" cy="256" r="170" fill="white" />
 
   <!-- Quadrants -->
   <g clip-path="url(#innerClip)">
-    <defs><clipPath id="innerClip"><circle cx="256" cy="256" r="167" /></clipPath></defs>
-    
-    <!-- Top Left (Blue) -->
     <rect x="0" y="0" width="256" height="256" fill="#311b92" />
-    <!-- Top Right (White) -->
-    <rect x="256" y="0" width="256" height="256" fill="white" />
-    <!-- Bottom Left (White) -->
-    <rect x="0" y="256" width="256" height="256" fill="white" />
-    <!-- Bottom Right (Blue) -->
+    <rect x="256" y="0" width="256" height="256" fill="#000000" />
+    <rect x="0" y="256" width="256" height="256" fill="#000000" />
     <rect x="256" y="256" width="256" height="256" fill="#311b92" />
   </g>
   
@@ -30,21 +25,30 @@
   <line x1="89" y1="256" x2="423" y2="256" stroke="white" stroke-width="6" />
 
   <!-- Symbols -->
-  <!-- TL # (Red) -->
   <text x="170" y="190" font-family="serif" font-weight="bold" font-size="90" fill="#f43f5e" text-anchor="middle">#</text>
-  <!-- TR £ (Red) -->
-  <text x="342" y="190" font-family="serif" font-weight="bold" font-size="90" fill="#f43f5e" text-anchor="middle">£</text>
-  <!-- BL $ (Red) -->
-  <text x="170" y="360" font-family="serif" font-weight="bold" font-size="90" fill="#f43f5e" text-anchor="middle">$</text>
-  <!-- BR ¥ (Red) -->
+  <text x="342" y="190" font-family="serif" font-weight="bold" font-size="90" fill="#FFFFFF" text-anchor="middle">£</text>
+  <text x="170" y="360" font-family="serif" font-weight="bold" font-size="90" fill="#FFFFFF" text-anchor="middle">$</text>
   <text x="342" y="360" font-family="serif" font-weight="bold" font-size="90" fill="#f43f5e" text-anchor="middle">¥</text>
 
+  <!-- Banner/Motto -->
+  <path d="M 100,430 Q 256,470 412,430 L 392,470 Q 256,510 120,470 Z" fill="white" stroke="#311b92" stroke-width="3" />
+  
+  <!-- Wings -->
+  <g stroke="#311b92" stroke-width="4" fill="none">
+    <path d="M 45,256 C 10,210, 80,390, 115,435" />
+    <path d="M 467,256 C 502,210, 432,390, 397,435" />
+  </g>
+
+  <text font-family="sans-serif" font-weight="bold" font-size="16" fill="#311b92" letter-spacing="1">
+     <textPath href="#bannerPath" startOffset="50%" text-anchor="middle">MOTTO: BREEDING FINANCIAL EXPERTS</textPath>
+  </text>
+  
   <!-- Ring Text -->
-  <text font-family="sans-serif" font-weight="900" font-size="30" fill="#311b92" letter-spacing="1">
+  <text font-family="sans-serif" font-weight="900" font-size="30" fill="#FFFFFF" letter-spacing="1">
     <textPath href="#txtTop" startOffset="50%" text-anchor="middle">FINANCE STUDENTS' ASSOCIATION</textPath>
   </text>
   
-  <text font-family="sans-serif" font-weight="bold" font-size="34" fill="#311b92" letter-spacing="3">
+  <text font-family="sans-serif" font-weight="bold" font-size="34" fill="#FFFFFF" letter-spacing="3">
     <textPath href="#txtBot" startOffset="50%" text-anchor="middle">AAUA CHAPTER</textPath>
   </text>
 
@@ -52,9 +56,6 @@
   <circle cx="45" cy="256" r="12" fill="#f43f5e" />
   <circle cx="467" cy="256" r="12" fill="#f43f5e" />
 
-  <!-- Banner/Motto -->
-  <path d="M 100,430 Q 256,470 412,430 L 392,470 Q 256,510 120,470 Z" fill="white" stroke="#311b92" stroke-width="3" />
-  <text font-family="sans-serif" font-weight="bold" font-size="16" fill="#311b92" letter-spacing="1">
-     <textPath href="#bannerPath" startOffset="50%" text-anchor="middle">MOTTO: BREEDING FINANCIAL EXPERTS</textPath>
-  </text>
+  <!-- Outer Stroke -->
+  <circle cx="256" cy="256" r="230" fill="none" stroke="#311b92" stroke-width="12" />
 </svg>
