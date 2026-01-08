@@ -78,7 +78,9 @@
               'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
               'marquee': 'marquee 25s linear infinite',
               'shine': 'shine 5s linear infinite',
-              '3d-tilt': '3d-tilt 10s ease-in-out infinite'
+              '3d-tilt': '3d-tilt 10s ease-in-out infinite',
+              'bounce-slow': 'bounce-slow 12s ease-in-out infinite alternate',
+              'gradient-text': 'gradient-text 8s ease infinite',
             },
             keyframes: {
               kenburns: {
@@ -102,6 +104,14 @@
                 '25%': { transform: 'rotateX(3deg) rotateY(2deg)' },
                 '50%': { transform: 'rotateX(0deg) rotateY(0deg)' },
                 '75%': { transform: 'rotateX(-3deg) rotateY(-2deg)' },
+              },
+              'bounce-slow': {
+                '0%': { transform: 'translateY(-10%) translateX(5%) scale(1)' },
+                '100%': { transform: 'translateY(10%) translateX(-5%) scale(1.1)' },
+              },
+              'gradient-text': {
+                '0%, 100%': { 'background-position': '0% 50%' },
+                '50%': { 'background-position': '100% 50%' },
               },
             }
           },

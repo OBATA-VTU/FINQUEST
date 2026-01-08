@@ -44,6 +44,7 @@ import { ArcadePage } from './pages/ArcadePage';
 import { MarketplacePage } from './pages/MarketplacePage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { SessionWrapPage } from './pages/SessionWrapPage';
+import { DownloadAppPage } from './pages/DownloadAppPage';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -163,6 +164,7 @@ const AppContent: React.FC = () => {
                 <Route path="/upload" element={<RequireAuth><UploadPage /></RequireAuth>} />
                 <Route path="/marketplace" element={<RequireAuth><MarketplacePage /></RequireAuth>} />
                 <Route path="/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
+                <Route path="/download-app" element={<RequireAuth><DownloadAppPage /></RequireAuth>} />
                 
                 <Route path="/executives" element={<RequireAuth><ExecutivesPage /></RequireAuth>} />
                 <Route path="/lecturers" element={<RequireAuth><LecturersPage /></RequireAuth>} />

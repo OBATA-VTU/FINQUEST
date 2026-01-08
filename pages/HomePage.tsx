@@ -73,6 +73,11 @@ export const HomePage: React.FC = () => {
                 className="w-full h-full object-cover opacity-20 animate-kenburns origin-center"
              />
              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent"></div>
+             
+             {/* Animated Orbs */}
+             <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-indigo-600 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-bounce-slow"></div>
+             <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-purple-600 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-bounce-slow" style={{animationDelay: '4s'}}></div>
+             <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-pink-600 rounded-full mix-blend-screen filter blur-3xl opacity-10 animate-bounce-slow" style={{animationDelay: '8s'}}></div>
         </div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(49,27,146,0.3),_transparent_70%)]"></div>
 
@@ -83,7 +88,9 @@ export const HomePage: React.FC = () => {
                 </span>
                 <h1 className="text-5xl sm:text-6xl md:text-8xl font-serif font-black leading-tight mb-8 drop-shadow-2xl tracking-tight">
                     Department of <br/>
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-white to-indigo-200">Finance</span>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-white to-indigo-200 animate-gradient-text" style={{backgroundSize: '200% auto'}}>
+                        Finance
+                    </span>
                 </h1>
                 <p className="text-lg md:text-2xl text-slate-300 max-w-3xl mx-auto font-light leading-relaxed mb-12 drop-shadow-md px-6">
                     Breeding financial experts through academic excellence, ethical grounding, and innovative research.
