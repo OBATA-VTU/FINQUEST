@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { db } from '../firebase';
@@ -21,6 +22,27 @@ interface Message {
     senderBadges?: string[];
 }
 
+const DateSeparator: React.FC<{ date: string }> = ({ date }) => {
+    const formatDate = (d: Date) => {
+        const today = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        
+        if (d.toDateString() === today.toDateString()) return 'Today';
+        if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+        return d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+    };
+
+    return (
+        <div className="text-center my-4">
+            <span className="bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-bold px-3 py-1 rounded-full">
+                {formatDate(new Date(date))}
+            </span>
+        </div>
+    );
+};
+
+
 export const CommunityPage: React.FC = () => {
   const auth = useContext(AuthContext);
   const { showNotification } = useNotification();
@@ -31,7 +53,6 @@ export const CommunityPage: React.FC = () => {
   const [sending, setSending] = useState(false);
   const dummyRef = useRef<HTMLDivElement>(null);
   
-  // Image Upload & Preview State
   const [previewImage, setPreviewImage] = useState<File | null>(null);
   const [imageCaption, setImageCaption] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -66,7 +87,7 @@ export const CommunityPage: React.FC = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files[0]) {
           setPreviewImage(e.target.files[0]);
-          setImageCaption(''); // Reset caption
+          setImageCaption(''); 
       }
   };
 
@@ -101,7 +122,7 @@ export const CommunityPage: React.FC = () => {
           const displayName = auth.user.username ? `@${auth.user.username}` : (auth.user.name || 'User');
 
           await addDoc(collection(db, 'community_messages'), {
-              text: textToSend, // Caption or regular message
+              text: textToSend,
               imageUrl,
               senderId: auth.user.id,
               senderName: displayName,
@@ -112,7 +133,6 @@ export const CommunityPage: React.FC = () => {
               createdAt: new Date().toISOString()
           });
           
-          // Check for first message badge
           if (!auth.user.badges?.includes('COMMUNITY_STARTER')) {
               const userRef = doc(db, 'users', auth.user.id);
               const allBadges = [...(auth.user.badges || []), 'COMMUNITY_STARTER'];
@@ -180,48 +200,56 @@ export const CommunityPage: React.FC = () => {
               </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#e5ddd5] dark:bg-slate-950/50 dark:bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
-              {messages.map((msg) => {
+          <div className="flex-1 overflow-y-auto p-4 bg-[#e5ddd5] dark:bg-slate-950/50 dark:bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
+              {messages.map((msg, index) => {
                   const isMe = msg.senderId === auth.user?.id;
+                  const prevMsg = messages[index - 1];
+                  const isFirstInBlock = !prevMsg || prevMsg.senderId !== msg.senderId;
+                  const isSameDay = prevMsg && new Date(msg.createdAt).toDateString() === new Date(prevMsg.createdAt).toDateString();
+                  const showDateSeparator = !prevMsg || !isSameDay;
+                  
                   const badges = msg.senderBadges || [];
-                  let topBadge: Badge | undefined = undefined;
-                  if (badges.length > 0) {
-                      topBadge = badges
-                          .map(id => getBadge(id))
-                          .filter((b): b is Badge => !!b)
-                          .sort((a, b) => b.rank - a.rank)[0];
-                  }
+                  const topBadge = badges.map(getBadge).filter((b): b is Badge => !!b).sort((a, b) => b.rank - a.rank)[0];
 
                   return (
-                      <div key={msg.id} className={`flex gap-2 ${isMe ? 'flex-row-reverse' : ''} animate-fade-in group`}>
-                          {!isMe && <div className="w-8 h-8 rounded-full bg-slate-300 overflow-hidden shrink-0"><img src={msg.avatarUrl || `https://ui-avatars.com/api/?name=${msg.senderName}`} className="w-full h-full object-cover" /></div>}
-                          
-                          <div className={`relative max-w-[80%] md:max-w-[60%] rounded-2xl px-4 py-2 shadow-sm ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-tl-none'}`}>
-                              {!isMe && <div className="flex items-center gap-1 mb-1"><span className={`text-xs font-bold ${['admin', 'executive'].includes(msg.senderRole || '') ? 'text-rose-500' : 'text-indigo-500'}`}>{msg.senderName}</span><VerificationBadge role={msg.senderRole || 'student'} isVerified={msg.isVerified} className="w-3 h-3" /> {topBadge && <span title={topBadge.name}>{topBadge.icon}</span>}</div>}
-                              
-                              {msg.imageUrl && <img src={msg.imageUrl} alt="Attachment" className="rounded-lg mb-2 max-w-full h-auto cursor-pointer hover:opacity-90 border-2 border-transparent hover:border-white/20" onClick={() => window.open(msg.imageUrl, '_blank')} />}
-                              
-                              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
-                              
-                              <div className={`flex items-center justify-end gap-1 mt-1 opacity-70`}>
-                                  <span className="text-[10px]">{new Date(msg.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                                  {isMe && <span className="text-[10px]">✓✓</span>}
-                              </div>
-
-                              {isMe && (
-                                  <button onClick={() => handleDeleteMessage(msg.id)} className="absolute top-0 -left-8 p-1 text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-slate-800 rounded-full shadow-sm">
-                                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                  </button>
-                              )}
-                          </div>
-                      </div>
+                      <React.Fragment key={msg.id}>
+                        {showDateSeparator && <DateSeparator date={msg.createdAt} />}
+                        <div className={`flex gap-2.5 ${isMe ? 'flex-row-reverse' : ''} ${isFirstInBlock ? 'mt-4' : 'mt-1'} group animate-fade-in`}>
+                            <div className="w-8 shrink-0">
+                                {!isMe && isFirstInBlock && (
+                                    <div className="w-8 h-8 rounded-full bg-slate-300 overflow-hidden">
+                                        <img src={msg.avatarUrl || `https://ui-avatars.com/api/?name=${msg.senderName}`} className="w-full h-full object-cover" />
+                                    </div>
+                                )}
+                            </div>
+                            <div className={`max-w-[80%] md:max-w-[60%] rounded-2xl px-3.5 py-2 shadow-sm ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : `bg-white dark:bg-slate-800 text-slate-900 dark:text-white ${isFirstInBlock ? 'rounded-tl-none' : ''}`}`}>
+                                {!isMe && isFirstInBlock && (
+                                    <div className="flex items-center gap-1.5 mb-1">
+                                        <span className={`text-xs font-bold ${['admin', 'executive'].includes(msg.senderRole || '') ? 'text-rose-500' : 'text-indigo-500'}`}>{msg.senderName}</span>
+                                        <VerificationBadge role={msg.senderRole || 'student'} isVerified={msg.isVerified} className="w-3 h-3" />
+                                        {topBadge && <span title={topBadge.name}>{topBadge.icon}</span>}
+                                    </div>
+                                )}
+                                {msg.imageUrl && <img src={msg.imageUrl} alt="Attachment" className="rounded-lg mb-2 max-w-full h-auto cursor-pointer hover:opacity-90" onClick={() => window.open(msg.imageUrl, '_blank')} />}
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
+                                <div className={`flex items-center justify-end gap-1 mt-1 opacity-70`}>
+                                    <span className="text-[10px]">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    {isMe && <span className="text-[10px]">✓✓</span>}
+                                </div>
+                                {isMe && (
+                                    <button onClick={() => handleDeleteMessage(msg.id)} className="absolute top-0 -left-8 p-1 text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-slate-800 rounded-full shadow-sm">
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                      </React.Fragment>
                   );
               })}
               <div ref={dummyRef}></div>
           </div>
 
           <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 relative z-20">
-              {/* Image Preview Modal Overlay */}
               {previewImage && (
                   <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
                       <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 w-full max-w-md shadow-2xl animate-fade-in-up">
@@ -230,14 +258,7 @@ export const CommunityPage: React.FC = () => {
                               <button onClick={cancelImagePreview} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-rose-500 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
                           </div>
                           <div className="flex gap-2">
-                              <input 
-                                  autoFocus
-                                  className="flex-1 bg-slate-100 dark:bg-slate-700 dark:text-white px-4 py-3 rounded-xl outline-none" 
-                                  placeholder="Add a caption..." 
-                                  value={imageCaption}
-                                  onChange={e => setImageCaption(e.target.value)}
-                                  onKeyDown={e => e.key === 'Enter' && handleSend()}
-                              />
+                              <input autoFocus className="flex-1 bg-slate-100 dark:bg-slate-700 dark:text-white px-4 py-3 rounded-xl outline-none" placeholder="Add a caption..." value={imageCaption} onChange={e => setImageCaption(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} />
                               <button onClick={handleSend} disabled={sending} className="bg-indigo-600 text-white p-3 rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50">
                                   {sending ? <div className="w-6 h-6 border-2 border-white/50 border-t-white rounded-full animate-spin"/> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>}
                               </button>
@@ -252,12 +273,7 @@ export const CommunityPage: React.FC = () => {
                   </button>
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileSelect} />
                   
-                  <input 
-                      value={newMessage} 
-                      onChange={e => setNewMessage(e.target.value)} 
-                      className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-full px-5 py-3 focus:outline-none text-sm dark:text-white border border-transparent focus:border-indigo-300 dark:focus:border-indigo-700 transition-colors" 
-                      placeholder="Type a message..." 
-                  />
+                  <input value={newMessage} onChange={e => setNewMessage(e.target.value)} className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-full px-5 py-3 focus:outline-none text-sm dark:text-white border border-transparent focus:border-indigo-300 dark:focus:border-indigo-700 transition-colors" placeholder="Type a message..." />
                   <button type="submit" disabled={!newMessage.trim() || sending} className="p-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-lg">
                       {sending ? <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" /> : <svg className="w-5 h-5 translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>}
                   </button>
@@ -266,3 +282,4 @@ export const CommunityPage: React.FC = () => {
       </div>
   );
 };
+    

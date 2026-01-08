@@ -20,6 +20,9 @@ const getFriendlyErrorMessage = (error: any): string => {
     return msg.replace('Firebase:', '').trim() || 'An unexpected error occurred.';
 };
 
+const EyeIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>;
+const EyeOffIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>;
+
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
@@ -30,6 +33,7 @@ export const LoginPage: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [level, setLevel] = useState<Level>(100);
   const [username, setUsername] = useState('');
   const [matricNumber, setMatricNumber] = useState('');
@@ -37,7 +41,6 @@ export const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'short' | 'invalid_format'>('idle');
   
-  // Forgot Password
   const [showForgot, setShowForgot] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [isResetting, setIsResetting] = useState(false);
@@ -88,7 +91,7 @@ export const LoginPage: React.FC = () => {
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const sanitizedUsername = e.target.value
         .toLowerCase()
-        .replace(/[^a-z0-9]/g, ''); // Allow only letters and numbers
+        .replace(/[^a-z0-9]/g, ''); 
       setUsername(sanitizedUsername);
   };
 
@@ -131,7 +134,6 @@ export const LoginPage: React.FC = () => {
           const isIncomplete = await auth.loginWithGoogle();
           if (isIncomplete) { setViewState('google_setup'); setIsLoading(false); } 
       } catch (err: any) {
-          // Error notification handled in context
           setIsLoading(false);
       }
   };
@@ -179,7 +181,6 @@ export const LoginPage: React.FC = () => {
 
   const isUsernameInvalid = ['taken', 'short', 'invalid_format'].includes(usernameStatus);
 
-  // Upload/Setup UI
   if (viewState !== 'auth') {
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
@@ -259,7 +260,16 @@ export const LoginPage: React.FC = () => {
                         </>
                     )}
                     <div className="space-y-1"><label className="text-xs font-bold uppercase text-slate-500 ml-1">Email Address</label><input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="student@example.com" /></div>
-                    <div className="space-y-1"><label className="text-xs font-bold uppercase text-slate-500 ml-1">Password</label><input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="••••••••" />{isLogin && <div className="flex justify-end"><button type="button" onClick={() => setShowForgot(true)} className="text-xs text-indigo-600 font-bold hover:underline">Forgot password?</button></div>}</div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold uppercase text-slate-500 ml-1">Password</label>
+                        <div className="relative">
+                            <input type={isPasswordVisible ? 'text' : 'password'} required value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="••••••••" />
+                            <button type="button" onClick={() => setIsPasswordVisible(p => !p)} className="absolute inset-y-0 right-0 px-4 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                                {isPasswordVisible ? <EyeOffIcon/> : <EyeIcon/>}
+                            </button>
+                        </div>
+                        {isLogin && <div className="flex justify-end pt-1"><button type="button" onClick={() => setShowForgot(true)} className="text-xs text-indigo-600 font-bold hover:underline">Forgot password?</button></div>}
+                    </div>
                     <button type="submit" disabled={isLoading} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-transform hover:-translate-y-1 disabled:opacity-70 disabled:transform-none">{isLoading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}</button>
                 </form>
                 <div className="mt-8 text-center"><p className="text-slate-500 dark:text-slate-400 text-sm">{isLogin ? "Don't have an account? " : "Already have an account? "}<button onClick={() => setIsLogin(!isLogin)} className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">{isLogin ? 'Sign Up' : 'Log In'}</button></p></div>
@@ -279,3 +289,4 @@ export const LoginPage: React.FC = () => {
     </div>
   );
 };
+    
