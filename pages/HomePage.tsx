@@ -90,12 +90,20 @@ export const HomePage: React.FC = () => {
                 <p className="text-lg md:text-2xl text-slate-300 max-w-3xl mx-auto font-light leading-relaxed mb-12 drop-shadow-md px-6">
                     Breeding financial experts through academic excellence, ethical grounding, and innovative research.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-5 justify-center">
-                    <button onClick={() => navigate('/login')} className="w-full sm:w-auto px-10 py-4 bg-white text-indigo-950 font-bold rounded-full shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:bg-indigo-50 transition-all uppercase tracking-widest text-xs hover:scale-105 transform duration-300">
-                        Student Portal
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <button
+                        onClick={() => navigate('/login')}
+                        className="group w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 bg-white text-indigo-950 font-bold rounded-full shadow-lg shadow-white/10 hover:shadow-xl hover:shadow-white/20 transition-all duration-300 transform hover:scale-[1.03]"
+                    >
+                        <span className="text-sm uppercase tracking-wider">Student Portal</span>
+                        <span className="transition-transform group-hover:translate-x-1.5">→</span>
                     </button>
-                    <button onClick={() => navigate('/announcements')} className="w-full sm:w-auto px-10 py-4 border border-white/50 text-white font-bold rounded-full hover:bg-white/10 transition-all uppercase tracking-widest text-xs hover:scale-105 transform duration-300 backdrop-blur-sm">
-                        Latest News
+                    <button
+                        onClick={() => navigate('/announcements')}
+                        className="group w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 border-2 border-white/30 text-white font-bold rounded-full backdrop-blur-sm hover:bg-white/10 hover:border-white/70 transition-all duration-300 transform hover:scale-[1.03]"
+                    >
+                        <span className="text-sm uppercase tracking-wider">Latest News</span>
+                        <span className="transition-transform group-hover:translate-x-1.5">→</span>
                     </button>
                 </div>
             </div>
