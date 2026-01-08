@@ -77,6 +77,8 @@
               'float': 'float 6s ease-in-out infinite',
               'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
               'marquee': 'marquee 25s linear infinite',
+              'shine': 'shine 5s linear infinite',
+              '3d-tilt': '3d-tilt 10s ease-in-out infinite'
             },
             keyframes: {
               kenburns: {
@@ -90,7 +92,17 @@
               marquee: {
                 '0%': { transform: 'translateX(0%)' },
                 '100%': { transform: 'translateX(-50%)' },
-              }
+              },
+              shine: {
+                '0%': { transform: 'translateX(-100%)' },
+                '100%': { transform: 'translateX(100%)' },
+              },
+              '3d-tilt': {
+                '0%, 100%': { transform: 'rotateX(0deg) rotateY(0deg)' },
+                '25%': { transform: 'rotateX(3deg) rotateY(2deg)' },
+                '50%': { transform: 'rotateX(0deg) rotateY(0deg)' },
+                '75%': { transform: 'rotateX(-3deg) rotateY(-2deg)' },
+              },
             }
           },
         },

@@ -1,5 +1,4 @@
 
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Announcement, GalleryItem } from '../types';
@@ -36,7 +35,6 @@ export const HomePage: React.FC = () => {
   useEffect(() => {
     const fetchContent = async () => {
         try {
-            // Fetch content in parallel
             const [newsSnap, gallerySnap, hodSnap, userCountSnap, materialCountSnap, testCountSnap] = await Promise.all([
                 getDocs(query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(3))),
                 getDocs(query(collection(db, 'gallery'), orderBy('date', 'desc'), limit(4))),
@@ -66,21 +64,21 @@ export const HomePage: React.FC = () => {
   return (
     <div className="font-sans bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 overflow-x-hidden transition-colors duration-300">
       
-      {/* 1. HERO SECTION */}
-      <div className="relative h-[85vh] min-h-[600px] flex items-center justify-center bg-slate-950 overflow-hidden">
+      <div className="relative h-[90vh] min-h-[700px] flex items-center justify-center bg-slate-950 overflow-hidden">
         <div className="absolute inset-0 z-0">
              <img 
                 src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" 
                 alt="AAUA Campus" 
                 loading="eager"
-                className="w-full h-full object-cover opacity-30 animate-kenburns origin-center grayscale-[30%]"
+                className="w-full h-full object-cover opacity-20 animate-kenburns origin-center"
              />
-             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
+             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent"></div>
         </div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(49,27,146,0.3),_transparent_70%)]"></div>
 
-        <div className="container mx-auto px-4 relative z-10 text-center text-white mt-12">
+        <div className="container mx-auto px-4 relative z-10 text-center text-white">
             <div className="animate-fade-in-down max-w-5xl mx-auto">
-                <span className="inline-block py-1.5 px-4 border border-indigo-400/50 rounded-full bg-indigo-900/30 backdrop-blur-md text-indigo-200 text-xs font-bold tracking-[0.3em] uppercase mb-8 shadow-lg">
+                <span className="inline-block py-1.5 px-4 border border-indigo-400/30 rounded-full bg-indigo-950/40 backdrop-blur-md text-indigo-200 text-xs font-bold tracking-[0.3em] uppercase mb-8 shadow-lg">
                     Adekunle Ajasin University
                 </span>
                 <h1 className="text-5xl sm:text-6xl md:text-8xl font-serif font-black leading-tight mb-8 drop-shadow-2xl tracking-tight">
@@ -109,8 +107,7 @@ export const HomePage: React.FC = () => {
             </div>
         </div>
       </div>
-
-      {/* NEW: MARQUEE SECTION */}
+      
       <section className="bg-slate-900 py-4 border-y border-indigo-900/50 overflow-hidden">
         <div className="flex animate-marquee whitespace-nowrap">
             {[...Array(2)].map((_, i) => (
@@ -125,19 +122,18 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* STATS SECTION */}
       <section className="bg-slate-50 dark:bg-slate-900 py-20 reveal">
           <div className="container mx-auto px-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-                  <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 animate-slide-in-up">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                  <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 animate-slide-in-up hover:-translate-y-2 transition-transform duration-300">
                       <h3 className="text-5xl font-black text-indigo-600 dark:text-indigo-400 mb-2">{loadingStats ? '...' : stats.users}+</h3>
                       <p className="font-bold text-slate-500 dark:text-slate-400">Registered Students</p>
                   </div>
-                  <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 animate-slide-in-up" style={{animationDelay: '150ms'}}>
+                  <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 animate-slide-in-up hover:-translate-y-2 transition-transform duration-300" style={{animationDelay: '150ms'}}>
                       <h3 className="text-5xl font-black text-emerald-600 dark:text-emerald-400 mb-2">{loadingStats ? '...' : stats.materials}+</h3>
                       <p className="font-bold text-slate-500 dark:text-slate-400">Study Materials</p>
                   </div>
-                  <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 animate-slide-in-up" style={{animationDelay: '300ms'}}>
+                  <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 animate-slide-in-up hover:-translate-y-2 transition-transform duration-300" style={{animationDelay: '300ms'}}>
                       <h3 className="text-5xl font-black text-rose-600 dark:text-rose-400 mb-2">{loadingStats ? '...' : stats.tests}+</h3>
                       <p className="font-bold text-slate-500 dark:text-slate-400">Tests Completed</p>
                   </div>
@@ -145,13 +141,12 @@ export const HomePage: React.FC = () => {
           </div>
       </section>
 
-      {/* HOD WELCOME */}
       <section className="py-24 bg-white dark:bg-slate-950 transition-colors reveal">
           <div className="container mx-auto px-4">
-              <div className="bg-slate-50 dark:bg-slate-900 rounded-3xl p-8 md:p-12 shadow-xl border border-slate-100 dark:border-slate-800">
-                  <div className="flex flex-col lg:flex-row items-start gap-12">
-                      <div className="w-full lg:w-1/3 shrink-0">
-                          <div className="relative group animate-slide-in-up">
+              <div className="bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-3xl p-8 md:p-12 shadow-xl border border-slate-100 dark:border-slate-800">
+                  <div className="flex flex-col lg:flex-row items-center gap-12">
+                      <div className="w-full lg:w-1/3 shrink-0 animate-slide-in-up">
+                          <div className="relative group animate-3d-tilt" style={{transformStyle: 'preserve-3d'}}>
                               <div className="absolute inset-0 bg-indigo-600 rounded-2xl transform translate-x-3 translate-y-3 transition-transform group-hover:translate-x-2 group-hover:translate-y-2"></div>
                               <img 
                                 src={hodData?.imageUrl || "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"} 
@@ -160,54 +155,51 @@ export const HomePage: React.FC = () => {
                               />
                           </div>
                       </div>
-                      <div className="w-full lg:w-2/3 flex flex-col justify-center pt-4 animate-slide-in-up" style={{animationDelay: '200ms'}}>
-                          <div className="mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
+                      <div className="w-full lg:w-2/3 flex flex-col justify-center animate-slide-in-up" style={{animationDelay: '200ms'}}>
+                          <div className="mb-6">
                               <span className="text-indigo-600 dark:text-indigo-400 font-bold tracking-[0.2em] uppercase text-xs block mb-2">From the Desk of the H.O.D</span>
                               <h2 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 dark:text-white mb-2">{hodData?.name || "Dr. A. A. Adebayo"}</h2>
                               <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">{hodData?.title || "Head of Department, Finance"}</p>
                           </div>
-                          <div className="prose prose-lg text-slate-600 dark:text-slate-300 leading-loose">
-                            <p>{hodData?.message || "Welcome to the Department of Finance at AAUA. Our curriculum is designed not just to teach market theories, but to instill the critical thinking and ethical grounding necessary for the modern financial landscape."}</p>
-                          </div>
-                          <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-700 flex items-center gap-4">
-                              <div className="h-10 w-1 bg-indigo-500 rounded-full"></div>
-                              <p className="text-sm font-bold text-indigo-900 dark:text-indigo-300 italic">"Breeding Financial Experts"</p>
+                          <div className="prose prose-lg text-slate-600 dark:text-slate-300 leading-relaxed border-l-4 border-indigo-200 dark:border-indigo-800 pl-6">
+                            <p className="italic">{hodData?.message || "Welcome to the Department of Finance at AAUA. Our curriculum is designed not just to teach market theories, but to instill the critical thinking and ethical grounding necessary for the modern financial landscape."}</p>
                           </div>
                       </div>
                   </div>
               </div>
           </div>
       </section>
-
-      {/* HOW IT WORKS */}
-      <section className="py-24 bg-slate-50 dark:bg-slate-900 reveal">
+      
+      <section className="py-24 bg-slate-50 dark:bg-slate-900 reveal relative overflow-hidden">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-slate-200 dark:bg-slate-800 hidden md:block"></div>
           <div className="container mx-auto px-4">
               <div className="text-center max-w-3xl mx-auto mb-16">
                   <h2 className="text-3xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white mb-6">A Smarter Way to Study</h2>
-                  <p className="text-slate-600 dark:text-slate-400 text-lg">Your entire academic journey, streamlined into three simple steps.</p>
+                  <p className="text-slate-600 dark:text-slate-400 text-lg">Your entire academic journey, streamlined.</p>
               </div>
-              <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-                  <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-200 dark:bg-slate-700 hidden md:block"></div>
-                  <div className="relative text-center p-6 animate-slide-in-up">
-                      <div className="w-16 h-16 mx-auto bg-white dark:bg-slate-800 rounded-full flex items-center justify-center text-2xl font-bold text-indigo-600 dark:text-indigo-400 border-4 border-slate-50 dark:border-slate-900 shadow-md mb-4">1</div>
-                      <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Create Your Account</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Quickly register with your student details to get personalized access.</p>
+              <div className="space-y-16 md:space-y-0">
+                  <div className="flex flex-col md:flex-row items-center gap-8 animate-slide-in-up">
+                      <div className="md:w-1/2 flex justify-end">
+                        <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center text-3xl font-bold text-indigo-600 dark:text-indigo-400 border-4 border-slate-50 dark:border-slate-900 shadow-lg shrink-0">1</div>
+                      </div>
+                      <div className="md:w-1/2 md:pl-8 text-center md:text-left"><h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Create Your Account</h3><p className="text-slate-500 dark:text-slate-400">Quickly register with your student details to get personalized access.</p></div>
                   </div>
-                  <div className="relative text-center p-6 animate-slide-in-up" style={{animationDelay: '150ms'}}>
-                      <div className="w-16 h-16 mx-auto bg-white dark:bg-slate-800 rounded-full flex items-center justify-center text-2xl font-bold text-indigo-600 dark:text-indigo-400 border-4 border-slate-50 dark:border-slate-900 shadow-md mb-4">2</div>
-                      <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Access the Archives</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Instantly find and download past questions, notes, and other materials.</p>
+                  <div className="flex flex-col md:flex-row-reverse items-center gap-8 animate-slide-in-up">
+                      <div className="md:w-1/2 flex justify-start">
+                        <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center text-3xl font-bold text-indigo-600 dark:text-indigo-400 border-4 border-slate-50 dark:border-slate-900 shadow-lg shrink-0">2</div>
+                      </div>
+                      <div className="md:w-1/2 md:pr-8 text-center md:text-right"><h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Access the Archives</h3><p className="text-slate-500 dark:text-slate-400">Instantly find and download past questions, notes, and other materials.</p></div>
                   </div>
-                  <div className="relative text-center p-6 animate-slide-in-up" style={{animationDelay: '300ms'}}>
-                      <div className="w-16 h-16 mx-auto bg-white dark:bg-slate-800 rounded-full flex items-center justify-center text-2xl font-bold text-indigo-600 dark:text-indigo-400 border-4 border-slate-50 dark:border-slate-900 shadow-md mb-4">3</div>
-                      <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Practice & Excel</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Use the AI-powered CBT to test your knowledge and climb the leaderboard.</p>
+                  <div className="flex flex-col md:flex-row items-center gap-8 animate-slide-in-up">
+                      <div className="md:w-1/2 flex justify-end">
+                        <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center text-3xl font-bold text-indigo-600 dark:text-indigo-400 border-4 border-slate-50 dark:border-slate-900 shadow-lg shrink-0">3</div>
+                      </div>
+                      <div className="md:w-1/2 md:pl-8 text-center md:text-left"><h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Practice & Excel</h3><p className="text-slate-500 dark:text-slate-400">Use the AI-powered CBT to test your knowledge and climb the leaderboard.</p></div>
                   </div>
               </div>
           </div>
       </section>
 
-      {/* FEATURE CARDS */}
       <section className="py-24 bg-white dark:bg-slate-950 relative overflow-hidden reveal">
           <div className="container mx-auto px-4 relative z-10">
               <div className="text-center max-w-3xl mx-auto mb-16">
@@ -216,51 +208,40 @@ export const HomePage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  <div onClick={() => navigate('/questions')} className="group bg-slate-50 dark:bg-slate-900 p-10 rounded-3xl shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-pointer border border-slate-100 dark:border-slate-800 animate-slide-in-up">
-                      <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-8 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                      </div>
+                  <div onClick={() => navigate('/questions')} className="group bg-white/50 dark:bg-slate-900/50 p-10 rounded-3xl backdrop-blur-sm shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-pointer border border-slate-100 dark:border-slate-800 animate-slide-in-up">
+                      <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-8 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-colors"><svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg></div>
                       <h3 className="text-2xl font-bold mb-4 font-serif text-slate-900 dark:text-white">Past Questions</h3>
                       <p className="text-slate-500 dark:text-slate-400 leading-relaxed">Access a comprehensive archive of verified past examination papers, sorted by course code.</p>
                   </div>
-                  <div onClick={() => navigate('/community')} className="group bg-slate-50 dark:bg-slate-900 p-10 rounded-3xl shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-pointer border border-slate-100 dark:border-slate-800 animate-slide-in-up" style={{animationDelay: '150ms'}}>
-                      <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 rounded-2xl flex items-center justify-center mb-8 text-rose-600 dark:text-rose-400 group-hover:bg-rose-600 group-hover:text-white transition-colors">
-                          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                      </div>
+                  <div onClick={() => navigate('/community')} className="group bg-white/50 dark:bg-slate-900/50 p-10 rounded-3xl backdrop-blur-sm shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-pointer border border-slate-100 dark:border-slate-800 animate-slide-in-up" style={{animationDelay: '150ms'}}>
+                      <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 rounded-2xl flex items-center justify-center mb-8 text-rose-600 dark:text-rose-400 group-hover:bg-rose-600 group-hover:text-white transition-colors"><svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg></div>
                       <h3 className="text-2xl font-bold mb-4 font-serif text-slate-900 dark:text-white">Community</h3>
                       <p className="text-slate-500 dark:text-slate-400 leading-relaxed">Join official WhatsApp and Telegram study groups, discuss coursework, and network.</p>
                   </div>
-                  <div onClick={() => navigate('/lecturers')} className="group bg-slate-50 dark:bg-slate-900 p-10 rounded-3xl shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-pointer border border-slate-100 dark:border-slate-800 animate-slide-in-up" style={{animationDelay: '300ms'}}>
-                      <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mb-8 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                      </div>
+                  <div onClick={() => navigate('/lecturers')} className="group bg-white/50 dark:bg-slate-900/50 p-10 rounded-3xl backdrop-blur-sm shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-pointer border border-slate-100 dark:border-slate-800 animate-slide-in-up" style={{animationDelay: '300ms'}}>
+                      <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mb-8 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors"><svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg></div>
                       <h3 className="text-2xl font-bold mb-4 font-serif text-slate-900 dark:text-white">Faculty Directory</h3>
                       <p className="text-slate-500 dark:text-slate-400 leading-relaxed">Connect with your lecturers, view their research interests, and access contact info.</p>
                   </div>
               </div>
           </div>
       </section>
-      
-      {/* NEW: TESTIMONIALS SECTION */}
+
       <section className="py-24 bg-slate-50 dark:bg-slate-900 reveal">
           <div className="container mx-auto px-4">
               <div className="text-center max-w-3xl mx-auto mb-16">
                   <h2 className="text-3xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white mb-6">From Our Students</h2>
-                  <p className="text-slate-600 dark:text-slate-400 text-lg">See how the FINSA portal is making a difference in their academic journey.</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 animate-slide-in-up">
-                      <svg className="w-12 h-12 text-indigo-100 dark:text-slate-700 mb-4" fill="currentColor" viewBox="0 0 32 32"><path d="M9.984 20.016q0 2.375-1.391 3.828t-3.578 1.453q-2.188 0-3.578-1.453t-1.391-3.828q0-2.375 1.391-3.828t3.578-1.453h1.5q2.5 0 2.5 2.5zM22.016 20.016q0 2.375-1.391 3.828t-3.578 1.453q-2.188 0-3.578-1.453t-1.391-3.828q0-2.375 1.391-3.828t3.578-1.453h1.5q2.5 0 2.5 2.5z"></path></svg>
+                  <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 animate-slide-in-up">
                       <p className="text-slate-600 dark:text-slate-300 italic mb-6">"The past questions archive is a lifesaver. Being able to search by course code saved me so much time before exams."</p>
                       <div><p className="font-bold text-slate-900 dark:text-white">Adekunle Tolu</p><p className="text-sm text-slate-500 dark:text-slate-400">400 Level</p></div>
                   </div>
-                  <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 animate-slide-in-up" style={{animationDelay: '150ms'}}>
-                     <svg className="w-12 h-12 text-indigo-100 dark:text-slate-700 mb-4" fill="currentColor" viewBox="0 0 32 32"><path d="M9.984 20.016q0 2.375-1.391 3.828t-3.578 1.453q-2.188 0-3.578-1.453t-1.391-3.828q0-2.375 1.391-3.828t3.578-1.453h1.5q2.5 0 2.5 2.5zM22.016 20.016q0 2.375-1.391 3.828t-3.578 1.453q-2.188 0-3.578-1.453t-1.391-3.828q0-2.375 1.391-3.828t3.578-1.453h1.5q2.5 0 2.5 2.5z"></path></svg>
-                      <p className="text-slate-600 dark:text-slate-300 italic mb-6">"The AI-powered CBT is amazing for practice. I can generate questions on specific topics I'm struggling with. It's like having a personal tutor."</p>
+                  <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 animate-slide-in-up" style={{animationDelay: '150ms'}}>
+                      <p className="text-slate-600 dark:text-slate-300 italic mb-6">"The AI-powered CBT is amazing for practice. I can generate questions on specific topics I'm struggling with."</p>
                       <div><p className="font-bold text-slate-900 dark:text-white">Chioma Okoro</p><p className="text-sm text-slate-500 dark:text-slate-400">300 Level</p></div>
                   </div>
-                  <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 animate-slide-in-up" style={{animationDelay: '300ms'}}>
-                     <svg className="w-12 h-12 text-indigo-100 dark:text-slate-700 mb-4" fill="currentColor" viewBox="0 0 32 32"><path d="M9.984 20.016q0 2.375-1.391 3.828t-3.578 1.453q-2.188 0-3.578-1.453t-1.391-3.828q0-2.375 1.391-3.828t3.578-1.453h1.5q2.5 0 2.5 2.5zM22.016 20.016q0 2.375-1.391 3.828t-3.578 1.453q-2.188 0-3.578-1.453t-1.391-3.828q0-2.375 1.391-3.828t3.578-1.453h1.5q2.5 0 2.5 2.5z"></path></svg>
+                  <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 animate-slide-in-up" style={{animationDelay: '300ms'}}>
                       <p className="text-slate-600 dark:text-slate-300 italic mb-6">"Finally, a single place for everything. News, community groups, lecture notes... it's all here. No more scrambling for info."</p>
                       <div><p className="font-bold text-slate-900 dark:text-white">David Musa</p><p className="text-sm text-slate-500 dark:text-slate-400">200 Level</p></div>
                   </div>
@@ -268,27 +249,26 @@ export const HomePage: React.FC = () => {
           </div>
       </section>
 
-      {/* NEWS & EVENTS */}
-      <section className="py-24 bg-slate-50 dark:bg-slate-900 transition-colors reveal">
+      <section className="py-24 bg-white dark:bg-slate-950 transition-colors reveal">
           <div className="container mx-auto px-4">
-              <div className="flex flex-col lg:flex-row gap-16">
-                  <div className="lg:w-1/3 animate-slide-in-up">
+              <div className="flex flex-col lg:flex-row gap-16 items-center">
+                  <div className="lg:w-2/5 animate-slide-in-up">
                       <h2 className="text-4xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white mb-8">Departmental News</h2>
                       <p className="text-slate-600 dark:text-slate-400 text-lg mb-10 leading-relaxed">Stay updated with official announcements, exam schedules, seminar notifications, and scholarship opportunities.</p>
-                      <button onClick={() => navigate('/announcements')} className="px-10 py-4 bg-indigo-900 text-white font-bold hover:bg-indigo-800 transition shadow-xl uppercase tracking-widest text-xs">View All Updates</button>
+                      <button onClick={() => navigate('/announcements')} className="group inline-flex items-center justify-center gap-3 px-8 py-4 bg-indigo-900 text-white font-bold rounded-full shadow-xl hover:bg-indigo-800 transition uppercase tracking-widest text-xs"><span>View All Updates</span><span className="transition-transform group-hover:translate-x-1.5">→</span></button>
                   </div>
-                  <div className="lg:w-2/3">
-                      <div className="grid gap-8">
+                  <div className="lg:w-3/5">
+                      <div className="space-y-6">
                           {announcements.length > 0 ? (
                               announcements.map((news, i) => (
-                                  <div key={news.id} className="group flex flex-col sm:flex-row gap-8 p-8 border border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-900/50 hover:shadow-lg transition-all bg-white dark:bg-slate-950 cursor-pointer rounded-2xl animate-slide-in-up" onClick={() => navigate('/announcements')} style={{animationDelay: `${150 * (i+1)}ms`}}>
-                                      <div className="w-auto sm:w-24 shrink-0 flex flex-row sm:flex-col items-center sm:items-center text-center border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-800 pb-4 sm:pb-0 sm:pr-8 justify-center gap-4 sm:gap-0">
-                                          <span className="block text-4xl md:text-5xl font-serif font-black text-indigo-300 dark:text-indigo-500/50 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{new Date(news.date).getDate()}</span>
-                                          <span className="text-xs font-bold uppercase text-slate-400 dark:text-slate-500">{new Date(news.date).toLocaleDateString(undefined, {month: 'short'})}</span>
+                                  <div key={news.id} className="group flex items-center gap-6 p-6 border border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-900/50 hover:shadow-lg transition-all bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm cursor-pointer rounded-2xl animate-slide-in-up" onClick={() => navigate('/announcements')} style={{animationDelay: `${150 * (i+1)}ms`}}>
+                                      <div className="w-20 shrink-0 flex flex-col items-center text-center">
+                                          <span className="block text-4xl font-serif font-black text-indigo-300 dark:text-indigo-500/50 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{new Date(news.date).getDate()}</span>
+                                          <span className="text-xs font-bold uppercase text-slate-400 dark:text-slate-500">{new Date(news.date).toLocaleDateString(undefined, {month: 'short'})}, {new Date(news.date).getFullYear()}</span>
                                       </div>
-                                      <div>
-                                          <h3 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors font-serif">{news.title}</h3>
-                                          <p className="text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">{news.content}</p>
+                                      <div className="border-l border-slate-200 dark:border-slate-700 pl-6">
+                                          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors font-serif">{news.title}</h3>
+                                          <p className="text-slate-600 dark:text-slate-400 line-clamp-2 text-sm leading-relaxed">{news.content}</p>
                                       </div>
                                   </div>
                               ))
@@ -302,17 +282,15 @@ export const HomePage: React.FC = () => {
           </div>
       </section>
 
-      {/* GALLERY PREVIEW */}
       {galleryImages.length > 0 && (
-          <section className="py-24 bg-white dark:bg-slate-950 reveal">
+          <section className="py-24 bg-slate-50 dark:bg-slate-900 reveal">
               <div className="container mx-auto px-4">
                   <div className="text-center max-w-3xl mx-auto mb-16">
                       <h2 className="text-3xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white mb-6">Campus Moments</h2>
-                      <p className="text-slate-600 dark:text-slate-400 text-lg">A glimpse into student life and departmental events.</p>
                   </div>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-slide-in-up">
                       {galleryImages.map((img, i) => (
-                          <div key={img.id} className="group relative rounded-xl overflow-hidden shadow-lg aspect-[3/4] cursor-pointer" onClick={() => navigate('/gallery')} style={{ animationDelay: `${i * 100}ms` }}>
+                          <div key={img.id} className="group relative rounded-xl overflow-hidden shadow-lg aspect-w-3 aspect-h-4 cursor-pointer" onClick={() => navigate('/gallery')} style={{ animationDelay: `${i * 100}ms` }}>
                               <img src={img.imageUrl} alt={img.caption} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
                               <p className="absolute bottom-4 left-4 text-white font-bold text-sm drop-shadow-md">{img.caption}</p>
@@ -323,13 +301,15 @@ export const HomePage: React.FC = () => {
           </section>
       )}
 
-      {/* FOOTER CTA */}
-      <section className="py-28 bg-indigo-950 text-white text-center reveal transition-colors">
-          <div className="container mx-auto px-4 max-w-4xl">
+      <section className="py-28 bg-gradient-to-br from-indigo-900 to-slate-900 text-white text-center reveal transition-colors relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/az-subtle.png')] opacity-20"></div>
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-indigo-900/30 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="container mx-auto px-4 max-w-4xl relative">
               <h2 className="text-4xl md:text-6xl font-serif font-bold mb-8">Ready to Excel?</h2>
               <p className="text-indigo-200 text-xl mb-12 font-light">Join thousands of students using the FINSA portal to access resources, connect with mentors, and master their degree.</p>
-              <button onClick={() => navigate('/login')} className="px-12 py-5 bg-white text-indigo-950 font-bold rounded-full shadow-2xl hover:bg-indigo-50 transition uppercase tracking-widest text-sm transform hover:scale-105 duration-300">
-                  Access Student Portal
+              <button onClick={() => navigate('/login')} className="group relative inline-flex items-center justify-center gap-3 px-12 py-5 bg-white text-indigo-950 font-bold rounded-full shadow-2xl hover:bg-indigo-50 transition uppercase tracking-widest text-sm transform hover:scale-105 duration-300 overflow-hidden">
+                <span className="absolute left-0 top-0 h-full w-full bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shine"></span>
+                Access Student Portal
               </button>
           </div>
       </section>
