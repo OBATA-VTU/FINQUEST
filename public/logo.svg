@@ -1,48 +1,37 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <path id="txtTop" d="M 82,256 A 174,174 0 1,1 430,256" />
-    <path id="txtMotto" d="M 430, 256 A 174,174 0 0,1 82,256" />
+    <path id="txtBottom" d="M 430, 256 A 174,174 0 0,1 82,256" />
     <clipPath id="innerClip"><circle cx="256" cy="256" r="160" /></clipPath>
   </defs>
 
   <!-- Outer Rings -->
-  <circle cx="256" cy="256" r="240" fill="#311b92" stroke="#311b92" stroke-width="8" />
+  <circle cx="256" cy="256" r="240" fill="#0D47A1" stroke="#FFD700" stroke-width="8" />
   <circle cx="256" cy="256" r="220" fill="white" />
-  <circle cx="256" cy="256" r="215" fill="#311b92" />
+  <circle cx="256" cy="256" r="215" fill="#0D47A1" />
   <circle cx="256" cy="256" r="162" fill="white" />
 
-  <!-- Quadrants -->
-  <g clip-path="url(#innerClip)">
-    <rect x="96" y="96" width="160" height="160" fill="#311b92" />
-    <rect x="256" y="96" width="160" height="160" fill="white" />
-    <rect x="96" y="256" width="160" height="160" fill="white" />
-    <rect x="256" y="256" width="160" height="160" fill="#311b92" />
+  <!-- Center Shield and Book -->
+   <g transform="translate(0, -10)">
+    <path d="M 256, 180 L 160, 220 L 160, 300 C 160, 360 256, 400 256, 400 C 256, 400 352, 360 352, 300 L 352, 220 Z" fill="#E3F2FD" stroke="#0D47A1" stroke-width="4"/>
+    <path d="M 216, 250 C 216,240 296,240 296,250 L 296, 330 C 296,340 216,340 216,330 Z" fill="#FFFFFF" stroke="#0D47A1" stroke-width="2" />
+    <path d="M 256, 255 L 256, 325" stroke="#0D47A1" stroke-width="2" />
+    <path d="M 226, 260 L 246, 265" stroke="#0D47A1" stroke-width="2" />
+    <path d="M 226, 275 L 246, 280" stroke="#0D47A1" stroke-width="2" />
+    <path d="M 226, 290 L 246, 295" stroke="#0D47A1" stroke-width="2" />
+    <path d="M 266, 260 L 286, 265" stroke="#0D47A1" stroke-width="2" />
+    <path d="M 266, 275 L 286, 280" stroke="#0D47A1" stroke-width="2" />
+    <path d="M 266, 290 L 286, 295" stroke="#0D47A1" stroke-width="2" />
   </g>
   
-  <!-- Symbols -->
-  <text x="176" y="196" font-family="Arial, sans-serif" font-weight="900" font-size="80" fill="#f43f5e" text-anchor="middle">#</text>
-  <text x="336" y="196" font-family="Arial, sans-serif" font-weight="900" font-size="80" fill="#f43f5e" text-anchor="middle">£</text>
-  <text x="176" y="356" font-family="Arial, sans-serif" font-weight="900" font-size="80" fill="#f43f5e" text-anchor="middle">$</text>
-  <text x="336" y="356" font-family="Arial, sans-serif" font-weight="900" font-size="80" fill="#f43f5e" text-anchor="middle">¥</text>
-  <circle cx="370" cy="280" r="3" fill="black" />
-
-  <!-- Center Text & Dots -->
-  <text x="256" y="268" font-family="Arial, sans-serif" font-weight="900" font-size="34" fill="#311b92" letter-spacing="3" text-anchor="middle">AAUA CHAPTER</text>
-  <circle cx="140" cy="256" r="10" fill="#f43f5e" />
-  <circle cx="372" cy="256" r="10" fill="#f43f5e" />
+  <text x="256" y="278" font-family="'Times New Roman', serif" font-weight="900" font-size="64" fill="#0D47A1" text-anchor="middle">F</text>
   
-  <!-- Wings -->
-  <g stroke="#311b92" stroke-width="4" fill="none">
-    <path d="M 45,256 C 10,210, 80,390, 115,435" />
-    <path d="M 467,256 C 502,210, 432,390, 397,435" />
-  </g>
-
   <!-- Ring Text -->
-  <text font-family="Arial, sans-serif" font-weight="900" font-size="32" fill="#FFFFFF" letter-spacing="1">
-    <textPath href="#txtTop" startOffset="50%" text-anchor="middle">FINANCE STUDENTS' ASSOCIATION</textPath>
+  <text font-family="'Times New Roman', serif" font-weight="900" font-size="32" fill="#FFFFFF" letter-spacing="2">
+    <textPath href="#txtTop" startOffset="50%" text-anchor="middle">DEPARTMENT OF FINANCE</textPath>
   </text>
   
-  <text font-family="Arial, sans-serif" font-weight="900" font-size="28" fill="#FFFFFF" letter-spacing="1">
-     <textPath href="#txtMotto" startOffset="50%" text-anchor="middle">MOTTO: BREEDING FINANCIAL EXPERTS</textPath>
+  <text font-family="'Times New Roman', serif" font-weight="900" font-size="28" fill="#FFFFFF" letter-spacing="1">
+     <textPath href="#txtBottom" startOffset="50%" text-anchor="middle">ADEKUNLE AJASIN UNIVERSITY</textPath>
   </text>
 </svg>
