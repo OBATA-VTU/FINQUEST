@@ -11,6 +11,8 @@ import { doc, updateDoc, increment } from 'firebase/firestore';
 type Game = 'trivia' | 'timeline';
 type ViewState = 'select' | 'in_game' | 'results';
 
+const storageKey = 'arcade-game-session';
+
 // Main Arcade Component
 export const ArcadePage: React.FC = () => {
     const auth = useContext(AuthContext);
@@ -21,6 +23,8 @@ export const ArcadePage: React.FC = () => {
     const [total, setTotal] = useState(0);
 
     const startGame = (game: Game) => {
+        // Clear any previous game state before starting a new one
+        localStorage.removeItem(storageKey);
         setActiveGame(game);
         setView('in_game');
     };
@@ -28,6 +32,7 @@ export const ArcadePage: React.FC = () => {
     const finishGame = async (finalScore: number, totalQuestions: number) => {
         setScore(finalScore);
         setTotal(totalQuestions);
+        localStorage.removeItem(storageKey);
         setView('results');
 
         if (auth?.user && finalScore > 0) {
@@ -42,6 +47,7 @@ export const ArcadePage: React.FC = () => {
     };
 
     const reset = () => {
+        localStorage.removeItem(storageKey);
         setView('select');
         setActiveGame(null);
     };
@@ -61,7 +67,7 @@ export const ArcadePage: React.FC = () => {
     return null;
 };
 
-// 1. Game Selection Screen
+// ... GameSelection component is unchanged ...
 const GameSelection: React.FC<{ onSelect: (game: Game) => void }> = ({ onSelect }) => {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-8 animate-fade-in">
@@ -96,34 +102,58 @@ const GamePlayer: React.FC<{ game: Game; onFinish: (score: number, total: number
     const [answers, setAnswers] = useState<Record<number, number>>({});
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const setupGame = async () => {
-            if (game === 'timeline') {
-                setQuestions(timelineQuestions.sort(() => 0.5 - Math.random()).slice(0, 10));
-                return;
+            setIsLoading(true);
+
+            // Check for saved state
+            const savedStateJSON = localStorage.getItem(storageKey);
+            if (savedStateJSON) {
+                const savedState = JSON.parse(savedStateJSON);
+                if (savedState.game === game && window.confirm("Continue your last game?")) {
+                    setQuestions(savedState.questions);
+                    setAnswers(savedState.answers);
+                    setCurrentIndex(savedState.currentIndex);
+                    setIsLoading(false);
+                    return;
+                } else {
+                    localStorage.removeItem(storageKey);
+                }
             }
 
-            // AI-first for Trivia
-            try {
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-                const prompt = `Generate exactly 10 trivia questions about Nigerian finance, general finance calculations, and some basic world finance history. The first 5 should be relatively easy, and the last 5 should be progressively harder. Return a valid JSON array of objects with keys: "id" (number from 1-10), "text" (string), "options" (array of 4 strings), and "correctAnswer" (number from 0-3).`;
-                const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt, config: { responseMimeType: 'application/json' } });
-                trackAiUsage();
-                const aiQuestions = JSON.parse(result.text.trim());
-                if (!Array.isArray(aiQuestions) || aiQuestions.length < 10) throw new Error("AI did not return 10 questions.");
-                setQuestions(aiQuestions);
-            } catch (e) {
-                console.warn("AI generation for trivia failed, falling back to bank.", e);
-                setQuestions(triviaQuestions.sort(() => 0.5 - Math.random()).slice(0, 10));
+            // If no saved state, start new game
+            if (game === 'timeline') {
+                setQuestions(timelineQuestions.sort(() => 0.5 - Math.random()).slice(0, 10));
+            } else {
+                try {
+                    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                    const prompt = `Generate exactly 10 trivia questions about Nigerian finance, general finance calculations, and some basic world finance history. The first 5 should be relatively easy, and the last 5 should be progressively harder. Return a valid JSON array of objects with keys: "id" (number from 1-10), "text" (string), "options" (array of 4 strings), and "correctAnswer" (number from 0-3).`;
+                    const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt, config: { responseMimeType: 'application/json' } });
+                    trackAiUsage();
+                    const aiQuestions = JSON.parse(result.text.trim());
+                    if (!Array.isArray(aiQuestions) || aiQuestions.length < 10) throw new Error("AI did not return 10 questions.");
+                    setQuestions(aiQuestions);
+                } catch (e) {
+                    console.warn("AI generation for trivia failed, falling back to bank.", e);
+                    setQuestions(triviaQuestions.sort(() => 0.5 - Math.random()).slice(0, 10));
+                }
             }
+            setIsLoading(false);
         };
         setupGame();
     }, [game]);
 
+    // Save progress whenever it changes
+    useEffect(() => {
+        if (questions.length > 0 && !isLoading) {
+            localStorage.setItem(storageKey, JSON.stringify({ game, questions, answers, currentIndex }));
+        }
+    }, [answers, currentIndex, questions, game, isLoading]);
 
     const handleAnswer = (optionIndex: number) => {
-        if (selectedOption !== null) return; // Prevent changing answer
+        if (selectedOption !== null) return;
         setSelectedOption(optionIndex);
         setAnswers(prev => ({ ...prev, [currentIndex]: optionIndex }));
         setIsCorrect(optionIndex === questions[currentIndex].correctAnswer);
@@ -135,7 +165,6 @@ const GamePlayer: React.FC<{ game: Game; onFinish: (score: number, total: number
             setSelectedOption(null);
             setIsCorrect(null);
         } else {
-            // Game over
             const score = Object.keys(answers).reduce((acc, key) => {
                 const idx = parseInt(key);
                 return acc + (answers[idx] === questions[idx].correctAnswer ? 1 : 0);
@@ -144,7 +173,7 @@ const GamePlayer: React.FC<{ game: Game; onFinish: (score: number, total: number
         }
     };
 
-    if (questions.length === 0) return <div className="min-h-screen flex items-center justify-center">Loading Game...</div>;
+    if (isLoading || questions.length === 0) return <div className="min-h-screen flex items-center justify-center">Loading Game...</div>;
 
     const question = questions[currentIndex];
     const progress = ((currentIndex + 1) / questions.length) * 100;
@@ -187,7 +216,7 @@ const GamePlayer: React.FC<{ game: Game; onFinish: (score: number, total: number
     );
 };
 
-// 3. Results Screen
+// ... ResultsScreen and Icons are unchanged ...
 const ResultsScreen: React.FC<{ score: number; total: number; onRestart: () => void }> = ({ score, total, onRestart }) => {
     const percentage = Math.round((score / total) * 100);
     return (
@@ -204,6 +233,5 @@ const ResultsScreen: React.FC<{ score: number; total: number; onRestart: () => v
     );
 };
 
-// Icons
 const IconTrivia = () => <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.79 4 4 0 1.105-.448 2.105-1.172 2.828l-1.089 1.09a2 2 0 00-.586 1.415V18m0-3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const IconTimeline = () => <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
