@@ -1,3 +1,4 @@
+
 // This file contains a larger, more robust set of fallback questions for the CBT practice test.
 // These questions are used when the AI generation fails for any reason.
 
@@ -107,16 +108,22 @@ export const fallbackQuestions: FallbackQuestion[] = [
 ];
 
 export const triviaQuestions: FallbackQuestion[] = [
+  // Easy History
   { id: 101, text: "In what year was the Nigerian Naira introduced to replace the Nigerian Pound?", options: ["1963", "1973", "1983", "1993"], correctAnswer: 1, level: 'General', topic: 'Nigerian Finance History' },
-  { id: 102, text: "The Structural Adjustment Programme (SAP) was introduced under which Nigerian Head of State?", options: ["Shehu Shagari", "Muhammadu Buhari", "Ibrahim Babangida", "Sani Abacha"], correctAnswer: 2, level: 'General', topic: 'Nigerian Finance History' },
-  { id: 103, text: "The banking sector consolidation exercise, requiring a ₦25 billion minimum capital base, was led by which CBN Governor?", options: ["Sanusi Lamido Sanusi", "Godwin Emefiele", "Charles Soludo", "Joseph Oladele Sanusi"], correctAnswer: 2, level: 'General', topic: 'Nigerian Finance History' },
-  { id: 104, text: "When was the Nigerian Stock Exchange (originally Lagos Stock Exchange) founded?", options: ["1950", "1960", "1970", "1980"], correctAnswer: 1, level: 'General', topic: 'Nigerian Finance History' },
-  { id: 105, text: "The 'Naira Redesign' policy that led to a currency shortage was initiated by the CBN in late:", options: ["2020", "2021", "2022", "2023"], correctAnswer: 2, level: 'General', topic: 'Nigerian Finance History' },
-  { id: 106, text: "The Indigenization Decree, which transferred ownership of many foreign businesses to Nigerians, was prominent in which decade?", options: ["1960s", "1970s", "1980s", "1990s"], correctAnswer: 1, level: 'General', topic: 'Nigerian Finance History' },
-  { id: 107, text: "The Treasury Single Account (TSA) policy was fully implemented by which presidential administration?", options: ["Olusegun Obasanjo", "Umaru Musa Yar'Adua", "Goodluck Jonathan", "Muhammadu Buhari"], correctAnswer: 3, level: 'General', topic: 'Nigerian Finance History' },
-  { id: 108, text: "Nigeria gained its independence from Great Britain in which year?", options: ["1958", "1960", "1963", "1966"], correctAnswer: 1, level: 'General', topic: 'Nigerian Finance History' },
-  { id: 109, text: "The 'Oil Boom' era, which significantly shaped Nigeria's economy, occurred primarily in the:", options: ["1960s", "1970s", "1980s", "1990s"], correctAnswer: 1, level: 'General', topic: 'Nigerian Finance History' },
-  { id: 110, text: "When was the Asset Management Corporation of Nigeria (AMCON) established to resolve the non-performing loan assets of banks?", options: ["2005", "2008", "2010", "2015"], correctAnswer: 2, level: 'General', topic: 'Nigerian Finance History' }
+  { id: 102, text: "When was the Nigerian Stock Exchange (originally Lagos Stock Exchange) founded?", options: ["1950", "1960", "1970", "1980"], correctAnswer: 1, level: 'General', topic: 'Nigerian Finance History' },
+  // Easy Calculation
+  { id: 103, text: "If you invest ₦10,000 at a 10% simple interest rate per year, how much interest will you earn in 2 years?", options: ["₦1,000", "₦2,000", "₦1,200", "₦2,100"], correctAnswer: 1, level: 'General', topic: 'Calculation' },
+  { id: 104, text: "A product costs ₦500. If VAT is 7.5%, what is the total price?", options: ["₦537.50", "₦575.00", "₦507.50", "₦530.00"], correctAnswer: 0, level: 'General', topic: 'Calculation' },
+  // Medium History
+  { id: 105, text: "The banking sector consolidation exercise, requiring a ₦25 billion minimum capital base, was led by which CBN Governor?", options: ["Sanusi Lamido Sanusi", "Godwin Emefiele", "Charles Soludo", "Joseph Oladele Sanusi"], correctAnswer: 2, level: 'General', topic: 'Nigerian Finance History' },
+  { id: 106, text: "The Treasury Single Account (TSA) policy was fully implemented by which presidential administration?", options: ["Olusegun Obasanjo", "Umaru Musa Yar'Adua", "Goodluck Jonathan", "Muhammadu Buhari"], correctAnswer: 3, level: 'General', topic: 'Nigerian Finance History' },
+  // Medium Calculation
+  { id: 107, text: "A stock is bought at ₦150 and sold at ₦180. What is the percentage profit?", options: ["15%", "20%", "25%", "30%"], correctAnswer: 1, level: 'General', topic: 'Calculation' },
+  { id: 108, text: "What is the future value of ₦5,000 in one year if the compound interest rate is 8% per annum?", options: ["₦5,080", "₦5,400", "₦5,800", "₦5,008"], correctAnswer: 1, level: 'General', topic: 'Calculation' },
+  // Hard History
+  { id: 109, text: "The Structural Adjustment Programme (SAP) was introduced under which Nigerian Head of State?", options: ["Shehu Shagari", "Muhammadu Buhari", "Ibrahim Babangida", "Sani Abacha"], correctAnswer: 2, level: 'General', topic: 'Nigerian Finance History' },
+  // Hard Calculation
+  { id: 110, text: "A project requires an initial investment of ₦100,000 and generates ₦30,000 per year for 5 years. What is the simple payback period?", options: ["3 years", "3.33 years", "4 years", "5 years"], correctAnswer: 1, level: 'General', topic: 'Calculation' }
 ];
 
 export const timelineQuestions: FallbackQuestion[] = [

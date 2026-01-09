@@ -105,6 +105,7 @@ export const SessionWrapPage: React.FC<SessionWrapPageProps> = ({ info, onFinish
       await updateDoc(doc(db, 'users', user.id), {
         badges: arrayUnion(...newBadges)
       });
+      auth?.updateUser({ badges: [...(user.badges || []), ...newBadges] });
     }
     onFinish();
   };

@@ -35,6 +35,7 @@ import { CountdownPage } from './pages/CountdownPage';
 import ScrollToTop from './components/ScrollToTop';
 import { NotificationHandler } from './components/NotificationHandler';
 import { SEOMetadataUpdater } from './components/SEOMetadataUpdater';
+import { OnboardingTour } from './components/OnboardingTour';
 
 import { AdminMaterialsPage } from './pages/AdminMaterialsPage';
 import { AdminNewsPage } from './pages/AdminNewsPage';
@@ -84,14 +85,19 @@ const AppContent: React.FC = () => {
   const auth = useContext(AuthContext);
   const [sessionWrapInfo, setSessionWrapInfo] = useState<{ start: string; end: string; session: string } | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    const checkSession = async () => {
+    const checkSessionAndOnboarding = async () => {
       if (!auth?.user) {
         setCheckingSession(false);
         return;
       }
       try {
+        if (auth.user.hasCompletedOnboarding !== true) {
+            setShowOnboarding(true);
+        }
+
         const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
         if (settingsDoc.exists()) {
           const settings = settingsDoc.data();
@@ -121,7 +127,7 @@ const AppContent: React.FC = () => {
         setCheckingSession(false);
       }
     };
-    checkSession();
+    checkSessionAndOnboarding();
   }, [auth?.user]);
 
   const handleFinishWrap = async () => {
@@ -132,6 +138,16 @@ const AppContent: React.FC = () => {
     }
     setSessionWrapInfo(null);
   };
+
+  const handleFinishOnboarding = async () => {
+    if (auth?.user) {
+        await updateDoc(doc(db, 'users', auth.user.id), {
+            hasCompletedOnboarding: true,
+        });
+        auth.updateUser({ hasCompletedOnboarding: true });
+    }
+    setShowOnboarding(false);
+  };
   
   if (checkingSession) {
     return <div className="h-screen w-screen bg-slate-950"></div>;
@@ -139,6 +155,10 @@ const AppContent: React.FC = () => {
 
   if (sessionWrapInfo) {
     return <SessionWrapPage info={sessionWrapInfo} onFinish={handleFinishWrap} />;
+  }
+
+  if (showOnboarding) {
+      return <OnboardingTour onFinish={handleFinishOnboarding} />;
   }
   
   return (
@@ -163,6 +183,7 @@ const AppContent: React.FC = () => {
                 <Route path="/community" element={<RequireAuth><CommunityPage /></RequireAuth>} />
                 <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
                 <Route path="/test" element={<RequireAuth><TestPage /></RequireAuth>} />
+                <Route path="/arcade" element={<RequireAuth><ArcadePage /></RequireAuth>} />
                 <Route path="/notes" element={<RequireAuth><NotesPage /></RequireAuth>} />
                 <Route path="/leaderboard" element={<RequireAuth><LeaderboardPage /></RequireAuth>} />
                 <Route path="/upload" element={<RequireAuth><UploadPage /></RequireAuth>} />
