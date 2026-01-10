@@ -28,8 +28,9 @@ const storageKey = 'cbt-test-session';
 
 // Helper function to calculate score
 const calculateScore = (questions: Question[], userAnswers: Record<number, number>) => {
+    if (!questions || questions.length === 0) return 0;
     const correct = questions.reduce((acc, q, i) => acc + (userAnswers[i] === q.correctAnswer ? 1 : 0), 0);
-    return questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0;
+    return Math.round((correct / questions.length) * 100);
 };
 
 // Main Component
@@ -41,8 +42,6 @@ export const TestPage: React.FC = () => {
     const [timeLeft, setTimeLeft] = useState(0);
     const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-
-    // Config & Notes State
     const [level, setLevel] = useState<Level | 'General'>('General');
     const [topic, setTopic] = useState('');
     const [aiNotes, setAiNotes] = useState('');
@@ -50,28 +49,31 @@ export const TestPage: React.FC = () => {
     useEffect(() => {
         const savedStateJSON = localStorage.getItem(storageKey);
         if (savedStateJSON) {
-            const savedState = JSON.parse(savedStateJSON);
-            const { endTime } = savedState;
-            const now = Date.now();
-            const timeLeftFromEnd = Math.round((endTime - now) / 1000);
+            try {
+                const savedState = JSON.parse(savedStateJSON);
+                const { endTime } = savedState;
+                const now = Date.now();
+                const timeLeftFromEnd = Math.round((endTime - now) / 1000);
 
-            if (timeLeftFromEnd <= 0) {
-                // Timer expired while away, submit the results
-                localStorage.setItem('lastTestResults', JSON.stringify({ questions: savedState.questions, userAnswers: savedState.userAnswers, score: calculateScore(savedState.questions, savedState.userAnswers) }));
+                if (timeLeftFromEnd <= 0) {
+                    localStorage.setItem('lastTestResults', JSON.stringify({ questions: savedState.questions, userAnswers: savedState.userAnswers, score: calculateScore(savedState.questions, savedState.userAnswers) }));
+                    localStorage.removeItem(storageKey);
+                    setView('results');
+                } else if (window.confirm("An unfinished test was found. Do you want to continue?")) {
+                    setMode(savedState.mode);
+                    setLevel(savedState.level);
+                    setTopic(savedState.topic);
+                    setQuestions(savedState.questions);
+                    setUserAnswers(savedState.userAnswers);
+                    setCurrentQuestionIndex(savedState.currentQuestionIndex);
+                    setTimeLeft(timeLeftFromEnd);
+                    setView('in_game');
+                } else {
+                    localStorage.removeItem(storageKey);
+                }
+            } catch (e) {
+                console.error("Failed to parse saved test state", e);
                 localStorage.removeItem(storageKey);
-                setView('results');
-            } else if (window.confirm("An unfinished test was found. Do you want to continue?")) {
-                // Restore the session
-                setMode(savedState.mode);
-                setLevel(savedState.level);
-                setTopic(savedState.topic);
-                setQuestions(savedState.questions);
-                setUserAnswers(savedState.userAnswers);
-                setCurrentQuestionIndex(savedState.currentQuestionIndex);
-                setTimeLeft(timeLeftFromEnd);
-                setView('in_game');
-            } else {
-                localStorage.removeItem(storageKey); // User chose not to continue
             }
         }
     }, []);
@@ -87,14 +89,15 @@ export const TestPage: React.FC = () => {
         setCurrentQuestionIndex(0);
     };
     
-    // RENDER LOGIC
     switch (view) {
         case 'select_mode':
             return <ModeSelection setView={setView} setMode={setMode} navigate={navigate} />;
         case 'configure':
             return <ConfigurationScreen mode={mode} setView={setView} setQuestions={setQuestions} setTimeLeft={setTimeLeft} setAiNotes={setAiNotes} level={level} setLevel={setLevel} topic={topic} setTopic={setTopic} />;
+        case 'loading':
+            return <LoadingScreen />;
         case 'in_game':
-            return <GameScreen questions={questions} timeLeft={timeLeft} setTimeLeft={setTimeLeft} reset={resetToSelection} userAnswers={userAnswers} setUserAnswers={setUserAnswers} currentQuestionIndex={currentQuestionIndex} setCurrentQuestionIndex={setCurrentQuestionIndex} />;
+            return <GameScreen questions={questions} timeLeft={timeLeft} setTimeLeft={setTimeLeft} reset={resetToSelection} userAnswers={userAnswers} setUserAnswers={setUserAnswers} currentQuestionIndex={currentQuestionIndex} setCurrentQuestionIndex={setCurrentQuestionIndex} setView={setView} />;
         case 'results':
             return <ResultsScreen onRestart={resetToSelection} />;
         case 'notes':
@@ -104,19 +107,12 @@ export const TestPage: React.FC = () => {
     }
 };
 
-// ... ModeSelection component remains unchanged ...
 const ModeSelection: React.FC<{ setView: Function, setMode: Function, navigate: Function }> = ({ setView, setMode, navigate }) => {
-    const handleSelect = (mode: TestMode) => {
-        setMode(mode);
-        setView('configure');
-    };
+    const handleSelect = (mode: TestMode) => { setMode(mode); setView('configure'); };
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-8 animate-fade-in">
             <div className="max-w-6xl mx-auto">
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white">Practice Center</h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-2">Choose your preferred session to begin.</p>
-                </div>
+                <div className="text-center mb-12"><h1 className="text-4xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white">Practice Center</h1><p className="text-slate-500 dark:text-slate-400 mt-2">Choose your preferred session to begin.</p></div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <ModeCard title="General Mock Exam" description="A 30-question, 40-minute test simulating official exam conditions." onClick={() => handleSelect('mock')} icon={<IconClipboardList />} color="emerald" />
                     <ModeCard title="AI Topic Mastery" description="Generate custom quizzes or comprehensive notes on any topic you choose." onClick={() => handleSelect('ai')} icon={<IconSparkles />} color="indigo" />
@@ -143,7 +139,6 @@ const ModeCard: React.FC<{ title: string, description: string, onClick: () => vo
     );
 };
 
-// 2. Configuration Screen
 const ConfigurationScreen: React.FC<{ mode: TestMode | null, setView: Function, setQuestions: Function, setTimeLeft: Function, setAiNotes: Function, level: Level | 'General', setLevel: Function, topic: string, setTopic: Function }> = (props) => {
     const { mode, setView, setQuestions, setTimeLeft, setAiNotes, level, setLevel, topic, setTopic } = props;
     const { showNotification } = useNotification();
@@ -187,9 +182,25 @@ const ConfigurationScreen: React.FC<{ mode: TestMode | null, setView: Function, 
         } catch (e) { showNotification("AI engine busy. Starting a standard mock instead.", "info"); startMock(); }
     };
     
-    // ... Other functions like handleAiProceed, generateAiNotes remain similar ...
     const handleAiProceed = () => { if (!topic.trim()) { showNotification("Please enter a study topic.", "warning"); return; } setShowAiChoice(true); };
-    const generateAiNotes = async () => { /* ... unchanged ... */ };
+    
+    const generateAiNotes = async () => {
+        setView('loading');
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const prompt = `Generate comprehensive, university-level study notes on the topic: "${topic}". Format in clean Markdown. Include a summary, key concepts with detailed explanations, examples if applicable, and a conclusion.`;
+            const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
+            trackAiUsage();
+            const notes = result.text;
+            if (!notes) throw new Error("AI failed to generate notes.");
+            setAiNotes(notes);
+            setView('notes');
+        } catch (e) {
+            console.error("AI notes generation failed", e);
+            showNotification("AI engine is busy. Please try again later.", "error");
+            setView('configure');
+        }
+    };
     
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-8 animate-fade-in flex flex-col items-center justify-center">
@@ -216,17 +227,29 @@ const ConfigurationScreen: React.FC<{ mode: TestMode | null, setView: Function, 
                     )}
                 </div>
             </div>
-             {showAiChoice && ( /* ... unchanged ... */ )}
+             {showAiChoice && (
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowAiChoice(false)}>
+                    <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl w-full max-w-sm shadow-xl animate-fade-in-up" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Topic: "{topic}"</h3>
+                        <p className="text-slate-500 dark:text-slate-400 mb-6">What would you like to do?</p>
+                        <div className="space-y-3">
+                            <button onClick={generateAiQuiz} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">Generate 10-Question Quiz</button>
+                            <button onClick={generateAiNotes} className="w-full py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700">Generate Study Notes</button>
+                        </div>
+                        <button onClick={() => setShowAiChoice(false)} className="w-full mt-6 text-sm text-slate-500 font-bold hover:text-indigo-600">Cancel</button>
+                    </div>
+                </div>
+             )}
         </div>
     );
 };
 
-// 3. Game Screen
-const GameScreen: React.FC<{ questions: Question[], timeLeft: number, setTimeLeft: Function, reset: Function, userAnswers: Record<number, number>, setUserAnswers: Function, currentQuestionIndex: number, setCurrentQuestionIndex: Function }> = (props) => {
-    const { questions, timeLeft, setTimeLeft, reset, userAnswers, setUserAnswers, currentQuestionIndex, setCurrentQuestionIndex } = props;
+const GameScreen: React.FC<{ questions: Question[], timeLeft: number, setTimeLeft: Function, reset: Function, userAnswers: Record<number, number>, setUserAnswers: Function, currentQuestionIndex: number, setCurrentQuestionIndex: Function, setView: Function }> = (props) => {
+    const { questions, timeLeft, setTimeLeft, reset, userAnswers, setUserAnswers, currentQuestionIndex, setCurrentQuestionIndex, setView } = props;
     const auth = useContext(AuthContext);
     const { showNotification } = useNotification();
     const [showCalculator, setShowCalculator] = useState(false);
+    const timerRef = useRef<any>();
 
     useEffect(() => {
         const savedStateJSON = localStorage.getItem(storageKey);
@@ -241,12 +264,43 @@ const GameScreen: React.FC<{ questions: Question[], timeLeft: number, setTimeLef
         if (auth?.user) {
             localStorage.setItem('lastTestResults', JSON.stringify({ questions, userAnswers, score: finalScore }));
             await addDoc(collection(db, 'test_results'), { userId: auth.user.id, score: finalScore, date: new Date().toISOString(), totalQuestions: questions.length, level: auth.user.level });
-            // ... (points and badge logic remains the same)
+            
+            const userRef = doc(db, 'users', auth.user.id);
+            const points = Math.round(finalScore / 10);
+            if(points > 0) {
+                await updateDoc(userRef, { contributionPoints: increment(points) });
+                auth.updateUser({ contributionPoints: (auth.user.contributionPoints || 0) + points });
+                showNotification(`Test complete! You earned ${points} contribution points.`, 'success');
+            }
+
+            const userDoc = await getDoc(userRef);
+            if (userDoc.exists()) {
+                const updatedUser = { id: userDoc.id, ...userDoc.data() } as User;
+                const newBadges = await checkAndAwardBadges(updatedUser);
+                if (newBadges.length > 0) {
+                    const allBadges = [...new Set([...(updatedUser.badges || []), ...newBadges])];
+                    await updateDoc(userRef, { badges: allBadges });
+                    auth.updateUser({ badges: allBadges });
+                    showNotification(`Unlocked: ${newBadges.join(', ')}!`, "success");
+                }
+            }
+        } else {
+            localStorage.setItem('lastTestResults', JSON.stringify({ questions, userAnswers, score: finalScore }));
         }
-        reset();
+        setView('results');
     };
     
-    useEffect(() => { /* ... timer logic remains the same ... */ }, [timeLeft]);
+    useEffect(() => {
+        timerRef.current = setTimeout(() => {
+            if (timeLeft > 0) {
+                setTimeLeft(timeLeft - 1);
+            } else {
+                showNotification("Time's up! Submitting your test.", "info");
+                endTest();
+            }
+        }, 1000);
+        return () => clearTimeout(timerRef.current);
+    }, [timeLeft]);
     
     if (!questions || questions.length === 0) return <LoadingScreen />;
     const q = questions[currentQuestionIndex];
@@ -262,7 +316,7 @@ const GameScreen: React.FC<{ questions: Question[], timeLeft: number, setTimeLef
                     <div className="space-y-4">
                         {q.options.map((opt, idx) => (
                             <button key={idx} onClick={() => setUserAnswers({...userAnswers, [currentQuestionIndex]: idx})} className={`w-full text-left p-5 rounded-2xl border-2 flex items-center gap-4 group ${userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700'}`}>
-                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 dark:text-white'}`}><span className="text-xs font-bold">{String.fromCharCode(65+idx)}</span></div>
+                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 dark:border-slate-400'}`}><span className="text-xs font-bold">{String.fromCharCode(65+idx)}</span></div>
                                 <span className="font-medium text-slate-700 dark:text-slate-300">{opt}</span>
                             </button>
                         ))}
@@ -270,14 +324,14 @@ const GameScreen: React.FC<{ questions: Question[], timeLeft: number, setTimeLef
                 </div>
                 <div className="w-full lg:w-80">
                     <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-lg mb-6 text-center">
-                        <p className="text-sm font-bold uppercase text-slate-400 mb-2">Time Remaining</p>
+                        <p className="text-sm font-bold uppercase text-slate-400 dark:text-slate-400 mb-2">Time Remaining</p>
                         <div className="font-mono text-5xl font-black text-rose-500 dark:text-rose-400">{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div>
                     </div>
                     <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-lg">
                         <div className="flex justify-between items-center mb-4"><h3 className="font-bold dark:text-white">Progress</h3><button onClick={() => setShowCalculator(true)} className="text-xs font-bold text-slate-500 hover:text-indigo-600">Calculator</button></div>
-                        <div className="grid grid-cols-5 gap-2 mb-6">{questions.map((_, i) => <button key={i} onClick={() => setCurrentQuestionIndex(i)} className={`h-10 rounded-lg font-bold text-sm ${currentQuestionIndex === i ? 'bg-indigo-600 text-white scale-110' : userAnswers[i] !== undefined ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-100 dark:bg-slate-800 dark:text-white'}`}>{i+1}</button>)}</div>
+                        <div className="grid grid-cols-5 gap-2 mb-6">{questions.map((_, i) => <button key={i} onClick={() => setCurrentQuestionIndex(i)} className={`h-10 rounded-lg font-bold text-sm ${currentQuestionIndex === i ? 'bg-indigo-600 text-white scale-110' : userAnswers[i] !== undefined ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-white'}`}>{i+1}</button>)}</div>
                         <div className="flex justify-between border-t pt-4 border-slate-100 dark:border-slate-800">
-                            <button disabled={currentQuestionIndex === 0} onClick={() => setCurrentQuestionIndex((p: number) => p - 1)} className="px-5 py-2 rounded-lg font-bold disabled:opacity-50 dark:text-white">Previous</button>
+                            <button disabled={currentQuestionIndex === 0} onClick={() => setCurrentQuestionIndex((p: number) => p - 1)} className="px-5 py-2 rounded-lg font-bold disabled:opacity-50 text-slate-700 dark:text-white">Previous</button>
                             {currentQuestionIndex === (questions.length - 1) ? <button onClick={endTest} className="px-6 py-2 bg-emerald-600 text-white font-bold rounded-lg">Submit</button> : <button onClick={() => setCurrentQuestionIndex((p: number) => p + 1)} className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg">Next</button>}
                         </div>
                     </div>
@@ -287,11 +341,87 @@ const GameScreen: React.FC<{ questions: Question[], timeLeft: number, setTimeLef
     );
 };
 
+const ResultsScreen: React.FC<{ onRestart: () => void }> = ({ onRestart }) => {
+    const [results, setResults] = useState<{ questions: Question[], userAnswers: Record<number, number>, score: number } | null>(null);
+    const auth = useContext(AuthContext);
 
-// ... ResultsScreen, NotesScreen, LoadingScreen, Icons are unchanged ...
-const ResultsScreen: React.FC<{ onRestart: () => void }> = ({ onRestart }) => { /* ... unchanged ... */ };
-const NotesScreen: React.FC<{ notes: string, topic: string, onBack: () => void }> = ({ notes, topic, onBack }) => { /* ... unchanged ... */ };
-const LoadingScreen: React.FC = () => { /* ... unchanged ... */ };
+    useEffect(() => {
+        const data = localStorage.getItem('lastTestResults');
+        if (data) {
+            try { setResults(JSON.parse(data)); } catch (e) { console.error("Could not parse results", e); }
+        }
+        localStorage.removeItem('lastTestResults');
+        localStorage.removeItem(storageKey);
+    }, []);
+
+    if (!results) {
+        return <div className="min-h-screen flex items-center justify-center p-4"><div className="text-center"><h2 className="text-xl font-bold dark:text-white">No results to display.</h2><button onClick={onRestart} className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg">Start New Test</button></div></div>
+    }
+    
+    const { questions, userAnswers, score } = results;
+    const handleDownloadReview = () => { if (auth?.user) generateTestReviewPDF(questions, userAnswers, score, auth.user); };
+
+    return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-4 md:p-8 animate-fade-in">
+            <div className="max-w-4xl mx-auto">
+                <div className="text-center bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-8 md:p-12 mb-8">
+                    <h2 className="text-2xl font-serif font-bold text-slate-800 dark:text-white mb-2">Test Complete!</h2>
+                    <p className="text-slate-500 dark:text-slate-400">Here's how you performed.</p>
+                    <div className={`my-8 text-7xl font-black ${score >= 50 ? 'text-emerald-500' : 'text-rose-500'}`}>{score}%</div>
+                    <div className="flex justify-center gap-4"><button onClick={onRestart} className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700">Play Again</button><button onClick={handleDownloadReview} className="px-8 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-white font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700">Download Review</button></div>
+                </div>
+                <div className="space-y-4">
+                    <h3 className="font-bold text-lg text-slate-900 dark:text-white">Review Your Answers</h3>
+                    {questions.map((q, i) => {
+                        const userAnswer = userAnswers[i];
+                        return (
+                            <div key={q.id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                <p className="font-bold text-slate-800 dark:text-white mb-3">Q{i+1}: {q.text}</p>
+                                <div className="space-y-2">
+                                    {q.options.map((opt, idx) => {
+                                        const isCorrectAnswer = idx === q.correctAnswer;
+                                        const isSelectedAnswer = idx === userAnswer;
+                                        let classes = "border-slate-200 dark:border-slate-700";
+                                        if (isCorrectAnswer) classes = "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700";
+                                        if (isSelectedAnswer && !isCorrectAnswer) classes = "bg-rose-50 dark:bg-rose-900/20 border-rose-300 dark:border-rose-700";
+                                        return <div key={idx} className={`p-3 rounded-lg border-2 text-sm flex justify-between items-center ${classes}`}><span className="font-medium text-slate-700 dark:text-slate-300">{opt}</span>{isSelectedAnswer && !isCorrectAnswer && <span className="text-xs font-bold text-rose-600">Your Answer</span>}{isCorrectAnswer && <span className="text-xs font-bold text-emerald-600">Correct</span>}</div>
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const NotesScreen: React.FC<{ notes: string, topic: string, onBack: () => void }> = ({ notes, topic, onBack }) => {
+    return (
+        <div className="min-h-screen bg-slate-100 dark:bg-slate-900 p-4 md:p-8 animate-fade-in">
+            <div className="max-w-4xl mx-auto">
+                <button onClick={onBack} className="text-sm font-bold text-slate-500 hover:text-indigo-600 mb-6 flex items-center gap-2">← Back to Configuration</button>
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-8">
+                    <h2 className="text-3xl font-serif font-bold text-slate-900 dark:text-white mb-6">Study Notes: {topic}</h2>
+                    <div className="prose prose-slate dark:prose-invert max-w-none leading-relaxed">
+                        {notes.split('\n').map((line, index) => {
+                            if (line.startsWith('## ')) return <h2 key={index} className="text-xl font-bold mt-4 mb-2">{line.substring(3)}</h2>;
+                            if (line.startsWith('* ')) return <li key={index} className="ml-5 list-disc">{line.substring(2)}</li>;
+                            return <p key={index}>{line}</p>;
+                        })}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+const LoadingScreen: React.FC = () => (
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col items-center justify-center text-center p-4">
+        <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+        <h2 className="mt-6 text-xl font-bold text-slate-800 dark:text-white">Generating Your Session...</h2>
+        <p className="text-slate-500 dark:text-slate-400">Please wait a moment while the AI prepares your content.</p>
+    </div>
+);
 const IconClipboardList = () => <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>;
 const IconSparkles = () => <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6.343 17.657l-2.828 2.828M20.485 3.515l2.828 2.828M17.657 6.343l2.828-2.828M3.515 20.485l2.828-2.828M12 21v-4M21 12h-4M12 3v4M3 12h4m6 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const IconGame = () => <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
