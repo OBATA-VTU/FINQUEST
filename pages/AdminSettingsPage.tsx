@@ -190,27 +190,56 @@ export const AdminSettingsPage: React.FC = () => {
   };
 
   const handleWipeData = async () => {
-    if (wipeConfirmText !== 'WIPE DATA') {
-        showNotification("Confirmation text is incorrect.", "error");
-        return;
-    }
-    setIsProcessing(true);
-    try {
-        const collectionsToWipe = ['test_results', 'community_messages', 'notes', 'lost_items'];
-        for (const col of collectionsToWipe) {
-            const snap = await getDocs(collection(db, col));
-            const batch = writeBatch(db);
-            snap.docs.forEach(d => batch.delete(d.ref));
-            await batch.commit();
-        }
-        showNotification("All non-essential user data wiped.", "success");
-    } catch (e) { showNotification("Wipe failed", "error"); }
-    finally {
-        setIsWipeModalOpen(false);
-        setIsProcessing(false);
-        setWipeConfirmText('');
-    }
+      if (wipeConfirmText !== 'WIPE DATA') {
+          showNotification("Confirmation text is incorrect.", "error");
+          return;
+      }
+      setIsProcessing(true);
+      showNotification("Wipe process started...", "info");
+      try {
+          const collectionsToWipe = ['test_results', 'community_messages', 'notes', 'lost_items'];
+          for (const colName of collectionsToWipe) {
+              const collectionRef = collection(db, colName);
+              const snapshot = await getDocs(collectionRef);
+              
+              if (snapshot.empty) continue;
+
+              const batchSize = 500;
+              const batches = [];
+              let currentBatch = writeBatch(db);
+              
+              snapshot.docs.forEach((doc, index) => {
+                  currentBatch.delete(doc.ref);
+                  if ((index + 1) % batchSize === 0) {
+                      batches.push(currentBatch);
+                      currentBatch = writeBatch(db);
+                  }
+              });
+
+              if (snapshot.size % batchSize !== 0 || snapshot.size < batchSize) {
+                  const lastBatchOps = snapshot.docs.slice(batches.length * batchSize);
+                  if (lastBatchOps.length > 0) {
+                      const finalBatch = writeBatch(db);
+                      lastBatchOps.forEach(doc => finalBatch.delete(doc.ref));
+                      batches.push(finalBatch);
+                  }
+              }
+              
+              await Promise.all(batches.map(batch => batch.commit()));
+              showNotification(`Wiped ${snapshot.size} items from ${colName}.`, "success");
+          }
+          showNotification("All user-generated data has been wiped.", "success");
+      } catch (e: any) { 
+          console.error("Wipe failed:", e);
+          showNotification(`Wipe failed: ${e.message}`, "error"); 
+      }
+      finally {
+          setIsWipeModalOpen(false);
+          setIsProcessing(false);
+          setWipeConfirmText('');
+      }
   };
+
 
   const inputStyles = "w-full border-0 rounded-xl p-3 shadow-sm dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none";
   if (!isSuperAdmin) return <div>Access Denied.</div>;
