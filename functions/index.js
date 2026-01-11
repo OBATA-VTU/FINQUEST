@@ -25,7 +25,7 @@ exports.uploadFileToDrive = functions.https.onCall(async (data, context) => {
         console.error("FATAL: Google OAuth environment variables are not set in Firebase Functions config.");
         throw new functions.https.HttpsError(
             "failed-precondition",
-            "The server is missing Google OAuth configuration. The administrator needs to run the 'firebase functions:config:set' commands and redeploy."
+            "Server is missing Google OAuth configuration. Administrator must run 'firebase functions:config:set google.client_id=...' and '...google.client_secret=...' and redeploy."
         );
     }
     
@@ -91,11 +91,34 @@ exports.uploadFileToDrive = functions.https.onCall(async (data, context) => {
         return { success: true, url: publicUrl, path: fileId };
 
     } catch (error) {
-        console.error("Cloud function 'uploadFileToDrive' error:", error);
-        if (error.code >= 400 && error.code < 500) {
-             throw new functions.https.HttpsError("permission-denied", "The server's permission to Google Drive has expired or is invalid. An admin needs to re-authenticate.");
+        // Log the full error for debugging in Firebase console.
+        functions.logger.error("Cloud function 'uploadFileToDrive' failed:", error);
+
+        let errorMessage = "An unexpected server error occurred during upload.";
+        let errorCode = "internal";
+
+        // Handle Google API specific errors (gaxios error structure)
+        if (error.code && (typeof error.code === 'number') && error.errors) {
+            const googleError = error.errors[0] || {};
+            const reason = googleError.reason || 'unknownReason';
+            const message = googleError.message || 'No details provided by Google.';
+
+            if (error.code === 404) {
+                errorMessage = "The Google Drive Folder ID is invalid. Please check it in the Admin Settings.";
+                errorCode = "not-found";
+            } else if (error.code === 401 || error.code === 403) {
+                errorMessage = "Google Drive permission denied. The connection may have expired. An admin needs to re-authenticate.";
+                errorCode = "permission-denied";
+            } else {
+                errorMessage = `Google Drive Error: ${message} (Reason: ${reason})`;
+                errorCode = "unknown";
+            }
+        } else if (error.message) {
+            // Handle other types of errors that might have a message
+            errorMessage = error.message;
         }
-        throw new functions.https.HttpsError("internal", "An error occurred on the server while uploading the file.");
+
+        throw new functions.https.HttpsError(errorCode, errorMessage);
     }
 });
 
