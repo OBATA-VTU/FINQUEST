@@ -19,7 +19,9 @@ const GOOGLE_CLIENT_SECRET = functions.config().google?.client_secret;
  * This function acts as a backend proxy, using securely stored admin credentials
  * to perform uploads on behalf of any authenticated user.
  */
-exports.uploadFileToDrive = functions.https.onCall(async (data, context) => {
+exports.uploadFileToDrive = functions
+    .runWith({ timeoutSeconds: 300 }) // Increase timeout to 5 minutes to prevent crashes on large uploads.
+    .https.onCall(async (data, context) => {
     // 0. Environment Configuration Check
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
         console.error("FATAL: Google OAuth environment variables are not set in Firebase Functions config.");
