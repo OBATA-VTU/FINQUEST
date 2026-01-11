@@ -106,7 +106,7 @@ export const UploadPage: React.FC = () => {
                 if (!canUseAi) throw new Error("Insufficient points for AI generation.");
                 setUploadStatus('Generating with AI...');
                 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-                const prompt = `Generate comprehensive, university-level study notes/lecture material on the topic: "${courseTitle}". Course Code: ${payload.courseCode}. Format in clean Markdown.`;
+                const prompt = `Generate comprehensive, university-level study notes/lecture material on the topic: "${courseTitle}". Course Code: ${courseCode}. Format in clean Markdown.`;
                 const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
                 trackAiUsage();
                 const aiText = result.text;
