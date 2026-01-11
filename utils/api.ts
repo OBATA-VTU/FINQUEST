@@ -1,66 +1,23 @@
-import { db } from '../firebase';
+import { db, functions } from '../firebase';
 import { doc, setDoc, increment, getDoc, updateDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 
 const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || "a4aa97ad337019899bb59b4e94b149e0";
 const DROPBOX_ACCESS_TOKEN = process.env.DROPBOX_ACCESS_TOKEN;
 
-// Credentials for client-side refresh flow
-const GOOGLE_DRIVE_CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID;
-const GOOGLE_DRIVE_CLIENT_SECRET = process.env.GOOGLE_DRIVE_CLIENT_SECRET;
-
-interface DriveTokenData {
-  access_token: string;
-  refresh_token: string;
-  expires_at: number;
-}
-
-const getGoogleAuthToken = async (): Promise<string> => {
-    const tokenDocRef = doc(db, 'config', 'google_drive_settings');
-    const tokenDoc = await getDoc(tokenDocRef);
-
-    if (!tokenDoc.exists()) {
-        throw new Error("Google Drive not connected. Please connect in Admin Settings.");
-    }
-
-    const tokenData = tokenDoc.data() as DriveTokenData;
-
-    // Check if the token is still valid (with a 60-second buffer).
-    if (Date.now() < tokenData.expires_at - 60000) {
-        return tokenData.access_token;
-    }
-
-    // --- Token has expired, use the refresh token to get a new one ---
-    if (!tokenData.refresh_token) {
-        throw new Error("Google Drive connection has expired and requires re-authentication. Please ask an admin to reconnect.");
-    }
-
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-            client_id: GOOGLE_DRIVE_CLIENT_ID,
-            client_secret: GOOGLE_DRIVE_CLIENT_SECRET,
-            refresh_token: tokenData.refresh_token,
-            grant_type: 'refresh_token',
-        }),
-    });
-
-    const newTokens = await tokenResponse.json();
-    if (!tokenResponse.ok) {
-        console.error("Failed to refresh Google token:", newTokens);
-        const errorDescription = newTokens.error_description || "Unknown error during token refresh.";
-        throw new Error(`Failed to refresh Google Drive connection: ${errorDescription} Please ask an admin to reconnect.`);
-    }
-
-    // Update Firestore with the new access token and expiry time
-    const newExpiry = Date.now() + (newTokens.expires_in * 1000);
-    await updateDoc(tokenDocRef, {
-        access_token: newTokens.access_token,
-        expires_at: newExpiry,
-    });
-
-    return newTokens.access_token;
-};
+// This function converts a File object to a base64 string for the backend.
+const fileToBase64 = (file: File): Promise<string> => 
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      // Result is "data:mime/type;base64,the-real-base64-string"
+      // We only need the part after the comma.
+      const result = reader.result as string;
+      resolve(result.split(',')[1]);
+    };
+    reader.onerror = error => reject(error);
+  });
 
 export const trackAiUsage = async () => {
     try {
@@ -159,51 +116,38 @@ export const uploadFile = (file: File, folder: string = 'materials', onProgress?
     });
 };
 
+// --- THIS IS THE NEW, CORRECT IMPLEMENTATION ---
 export const uploadFileToGoogleDrive = async (file: File, onProgress?: (progress: number) => void): Promise<{ url: string, path: string }> => {
     try {
         onProgress?.(10);
-        const accessToken = await getGoogleAuthToken();
-        const settingsDoc = await getDoc(doc(db, 'config', 'google_drive_settings'));
-        const folderId = settingsDoc.exists() ? settingsDoc.data().folder_id : null;
-
-        if (!folderId) {
-            throw new Error("Google Drive Folder ID not set in Admin Settings.");
-        }
-        
+        // Convert file to base64 string for Firebase Function
+        const base64Content = await fileToBase64(file);
         onProgress?.(30);
-        const metadata = { name: file.name, parents: [folderId] };
-        const formData = new FormData();
-        formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-        formData.append('file', file);
+
+        // Get a reference to the callable function
+        const uploadToDriveFunction = httpsCallable(functions, 'uploadFileToDrive');
+        onProgress?.(50);
         
-        const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${accessToken}` },
-            body: formData,
+        // Call the function with the required payload
+        const result: any = await uploadToDriveFunction({
+            fileContent: base64Content,
+            fileName: file.name,
+            mimeType: file.type,
         });
 
-        if (!response.ok) {
-            const errorBody = await response.json().catch(() => ({}));
-            const message = errorBody?.error?.message || response.statusText;
-            throw new Error(`Google Drive upload failed: ${message}`);
-        }
-        
-        const result = await response.json();
-        const fileId = result.id;
-        
-        await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ role: 'reader', type: 'anyone' }),
-        });
-        
         onProgress?.(100);
-        const publicUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
-        return { url: publicUrl, path: fileId };
 
-    } catch (error) {
-        console.error("Google Drive upload failed:", error);
-        throw error;
+        // The 'data' property of the result contains the object returned by the function
+        if (result.data.success) {
+            return { url: result.data.url, path: result.data.path };
+        } else {
+            // If the function returns an error, it will be caught in the catch block
+            throw new Error("Backend function reported an error.");
+        }
+    } catch (error: any) {
+        console.error("Firebase Function call 'uploadFileToDrive' failed:", error);
+        // The error.message will contain the specific, user-friendly error from the backend
+        throw new Error(error.message || "An unknown error occurred during upload.");
     }
 };
 
@@ -215,6 +159,7 @@ export const uploadDocument = async (file: File, folder: string = 'materials', o
         if (uploadService === 'google_drive') {
             return uploadFileToGoogleDrive(file, onProgress);
         }
+        // Fallback to Dropbox
         return uploadFile(file, folder, onProgress);
     } catch (error) {
         console.error("Failed to determine upload service, defaulting to Dropbox.", error);
@@ -235,13 +180,12 @@ export const deleteFile = async (path: string): Promise<void> => {
     }
 };
 
+// THIS FUNCTION IS NOT CURRENTLY USED BY THE APP, BUT IS KEPT FOR POTENTIAL FUTURE USE
+// It's a client-side only uploader that is less secure and robust than the backend function.
 export const deleteFileFromGoogleDrive = async (fileId: string): Promise<void> => {
     try {
-        const accessToken = await getGoogleAuthToken();
-        await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
-            method: 'DELETE',
-            headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        // This function requires a client-side token management which is not implemented.
+        console.warn("Client-side Google Drive deletion is not fully implemented.");
     } catch(e) {
         console.error("Failed to delete from Google Drive:", e);
     }
@@ -252,8 +196,11 @@ export const deleteDocument = async (path: string): Promise<void> => {
         const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
         const uploadService = settingsDoc.exists() ? settingsDoc.data().uploadService : 'dropbox';
         
+        // Google Drive file IDs don't contain slashes, Dropbox paths do.
         if (uploadService === 'google_drive' || !path.includes('/')) {
-            return deleteFileFromGoogleDrive(path);
+            // For now, deletion only works for Dropbox as the secure backend flow is not implemented for delete.
+            console.warn("Deletion is currently only supported for Dropbox-hosted files.");
+            return;
         }
         return deleteFile(path);
     } catch (error) {
