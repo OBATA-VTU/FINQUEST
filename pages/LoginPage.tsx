@@ -47,6 +47,18 @@ export const LoginPage: React.FC = () => {
   const [isResetting, setIsResetting] = useState(false);
   const [isAddPasswordModalOpen, setIsAddPasswordModalOpen] = useState(false);
 
+  // FIX: Hoisted state and effects for the setup view to the top level to
+  // prevent violating the Rules of Hooks, which was causing the app to crash.
+  const [previewUrl, setPreviewUrl] = useState('');
+  useEffect(() => {
+    if (profileImage) {
+        setPreviewUrl(URL.createObjectURL(profileImage));
+    } else {
+        setPreviewUrl(auth?.user?.avatarUrl || '');
+    }
+  }, [profileImage, auth?.user?.avatarUrl]);
+
+
   useEffect(() => {
     if (auth?.user) {
         if (!auth.user.matricNumber || !auth.user.username) {
@@ -173,16 +185,10 @@ export const LoginPage: React.FC = () => {
   const isSetupFormValid = usernameStatus === 'available' && (level === 100 ? (matricNumber.length >= 8 && matricNumber.length <= 18) || matricNumber.length === 9 : matricNumber.length === 9);
 
   if (viewState === 'complete_setup' && auth?.user) {
-      const [previewUrl, setPreviewUrl] = useState(auth.user.avatarUrl || '');
       const { isPasswordAccount, isGoogleAccount, linkGoogleAccount } = auth;
       const needsPassword = isGoogleAccount && !isPasswordAccount;
       const needsGoogleLink = isPasswordAccount && !isGoogleAccount;
       const needsAvatar = !auth.user.avatarUrl;
-
-      useEffect(() => {
-          if (profileImage) setPreviewUrl(URL.createObjectURL(profileImage));
-          else setPreviewUrl(auth.user?.avatarUrl || '');
-      }, [profileImage, auth.user?.avatarUrl]);
       
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
