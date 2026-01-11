@@ -1,7 +1,7 @@
 import React, { useState, FormEvent, useRef, useEffect, useContext } from 'react';
 import { Level } from '../types';
 import { LEVELS } from '../constants';
-import { uploadFile, uploadToImgBB, trackAiUsage } from '../utils/api';
+import { uploadDocument, uploadToImgBB, trackAiUsage } from '../utils/api';
 import { db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { AuthContext } from '../contexts/AuthContext';
@@ -84,7 +84,7 @@ export const UploadPage: React.FC = () => {
             if (uploadType === 'document') {
                 if (!file) throw new Error("Document file not selected.");
                 setUploadStatus('Uploading Document...');
-                const { url, path } = await uploadFile(file, 'past_questions', setUploadProgress);
+                const { url, path } = await uploadDocument(file, 'past_questions', setUploadProgress);
                 questionData.fileUrl = url;
                 questionData.storagePath = path;
             } else if (uploadType === 'images') {

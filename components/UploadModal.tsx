@@ -1,8 +1,7 @@
-
 import React, { useState, FormEvent, useRef, useEffect, useContext } from 'react';
 import { Level } from '../types';
 import { LEVELS } from '../constants';
-import { uploadFile, uploadToImgBB } from '../utils/api';
+import { uploadDocument, uploadToImgBB } from '../utils/api';
 import { db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { AuthContext } from '../contexts/AuthContext';
@@ -71,8 +70,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
         setUploadProgress(5);
 
         try {
-            // Dropbox Upload
-            const { url, path } = await uploadFile(file, 'past_questions', (progress) => {
+            // Use the new uploadDocument wrapper
+            const { url, path } = await uploadDocument(file, 'past_questions', (progress) => {
                 setUploadProgress(progress);
                 setUploadStatus('Uploading Document...');
             });
@@ -96,7 +95,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
 
             const docRef = await addDoc(collection(db, 'questions'), questionData);
             onUpload({ ...questionData, id: docRef.id });
-            showNotification('Document uploaded successfully!', 'success');
+            showNotification('Document submitted for approval!', 'success');
             onClose();
 
         } catch (error: any) {
@@ -149,7 +148,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
 
             const docRef = await addDoc(collection(db, 'questions'), questionData);
             onUpload({ ...questionData, id: docRef.id });
-            showNotification('Images uploaded successfully!', 'success');
+            showNotification('Images submitted for approval!', 'success');
             onClose();
 
         } catch (error: any) {
