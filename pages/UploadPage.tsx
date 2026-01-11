@@ -106,7 +106,7 @@ export const UploadPage: React.FC = () => {
                 if (!canUseAi) throw new Error("Insufficient points for AI generation.");
                 setUploadStatus('Generating with AI...');
                 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-                const prompt = `Generate comprehensive, university-level study notes/lecture material on the topic: "${courseTitle}". Course Code: ${courseCode}. Format in clean Markdown.`;
+                const prompt = `Generate comprehensive, university-level study notes/lecture material on the topic: "${courseTitle}". Format in clean Markdown. Include a summary, key concepts, detailed explanation, and conclusion.`;
                 const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
                 trackAiUsage();
                 const aiText = result.text;
@@ -162,7 +162,7 @@ export const UploadPage: React.FC = () => {
             suffix + 
             textContent.substring(end);
 
-        // FIX: Corrected undefined function call from 'setContent' to 'setTextContent'.
+        // FIX: 'setContent' is not defined. It should be 'setTextContent'.
         setTextContent(newText);
         
         setTimeout(() => {
