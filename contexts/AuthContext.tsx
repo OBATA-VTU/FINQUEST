@@ -9,7 +9,10 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
-  updateProfile
+  updateProfile,
+  linkWithPopup,
+  EmailAuthProvider,
+  linkWithCredential
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { useNotification } from './NotificationContext';
@@ -23,12 +26,26 @@ interface AuthContextType {
   logout: () => Promise<void>;
   checkUsernameAvailability: (username: string) => Promise<boolean>;
   toggleBookmark: (questionId: string) => Promise<void>;
+  linkGoogleAccount: () => Promise<void>;
+  addPassword: (password: string) => Promise<void>;
+  updateUser: (updates: Partial<User>) => void; // For real-time UI updates
+  isPasswordAccount: boolean;
+  isGoogleAccount: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 const sanitizeData = (data: any) => {
   return JSON.parse(JSON.stringify(data));
+};
+
+const getFriendlyErrorMessage = (error: any): string => {
+    const code = error.code || '';
+    const msg = error.message || '';
+    if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') return 'Incorrect email or password.';
+    if (code === 'auth/email-already-in-use') return 'Email already registered. Please log in.';
+    if (code === 'auth/weak-password') return 'Password should be at least 6 characters.';
+    return msg.replace('Firebase:', '').trim() || 'An unexpected error occurred.';
 };
 
 const INACTIVITY_LIMIT = 30 * 60 * 1000; 
@@ -38,6 +55,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { showNotification } = useNotification();
+  const [isPasswordAccount, setIsPasswordAccount] = useState(false);
+  const [isGoogleAccount, setIsGoogleAccount] = useState(false);
   
   const idleTimerRef = useRef<any>(null);
   const heartbeatTimerRef = useRef<any>(null);
@@ -46,6 +65,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        setIsPasswordAccount(firebaseUser.providerData.some(p => p.providerId === 'password'));
+        setIsGoogleAccount(firebaseUser.providerData.some(p => p.providerId === 'google.com'));
         try {
             const userDocRef = doc(db, 'users', firebaseUser.uid);
             const userDoc = await getDoc(userDocRef);
@@ -73,11 +94,20 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     avatarUrl: userData.avatarUrl || firebaseUser.photoURL,
                     contributionPoints: userData.contributionPoints || 0,
                     savedQuestions: userData.savedQuestions || [],
+                    createdAt: userData.createdAt,
                     lastActive: userData.lastActive,
                     isVerified: userData.isVerified,
-                    isBanned: userData.isBanned
+                    isBanned: userData.isBanned,
+                    badges: userData.badges || [],
+                    hasCompletedOnboarding: userData.hasCompletedOnboarding,
+                    infractionCount: userData.infractionCount,
+                    chatBanUntil: userData.chatBanUntil,
                 });
             } else {
+                // This case handles Google Sign-in for the first time where a user doc doesn't exist yet.
+                // It will be created in the loginWithGoogle function.
+                // For other cases, if a user exists in Auth but not Firestore, it's an anomaly.
+                // We create a skeleton profile to prevent the app from crashing.
                 const newUser = {
                     id: firebaseUser.uid,
                     email: firebaseUser.email || '',
@@ -86,7 +116,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     role: 'student' as const,
                     level: 100 as Level,
                     avatarUrl: firebaseUser.photoURL || undefined,
-                    savedQuestions: []
+                    savedQuestions: [],
+                    badges: []
                 };
                 setUser(newUser);
             }
@@ -104,6 +135,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         }
       } else {
         setUser(null);
+        setIsPasswordAccount(false);
+        setIsGoogleAccount(false);
       }
       setLoading(false);
     });
@@ -159,10 +192,15 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       };
   }, [user?.id]);
 
+  const updateUser = (updates: Partial<User>) => {
+      if (user) {
+          setUser(prevUser => ({ ...prevUser!, ...updates }));
+      }
+  };
+
   const login = async (email: string, pass: string) => {
     try {
         await signInWithEmailAndPassword(auth, email, pass);
-        // Auth state listener handles the rest
     } catch (error: any) {
         throw error;
     }
@@ -171,9 +209,6 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const loginWithGoogle = async (): Promise<boolean> => {
     try {
         const provider = new GoogleAuthProvider();
-        // REMOVED 'select_account' prompt to speed up flow
-        // provider.setCustomParameters({ prompt: 'select_account' });
-
         const result = await signInWithPopup(auth, provider);
         const firebaseUser = result.user;
         let isIncompleteProfile = false;
@@ -192,10 +227,13 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             email: firebaseUser.email,
             role: 'student',
             level: 100,
+            username: '', // To be filled in setup
+            matricNumber: '', // To be filled in setup
             createdAt: new Date().toISOString(),
-            photoURL: firebaseUser.photoURL,
+            avatarUrl: firebaseUser.photoURL,
             savedQuestions: [],
-            lastActive: new Date().toISOString()
+            lastActive: new Date().toISOString(),
+            badges: []
           });
 
           await setDoc(userRef, cleanData);
@@ -217,7 +255,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         if (error.code === 'auth/unauthorized-domain') {
             showNotification(`Domain unauthorized in Firebase console.`, 'error');
         } else if (error.code !== 'auth/popup-closed-by-user') {
-            showNotification(error.message || "Sign-in failed.", "error");
+            showNotification(getFriendlyErrorMessage(error), "error");
         }
         throw error;
     }
@@ -225,20 +263,23 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
 
   const checkUsernameAvailability = async (username: string): Promise<boolean> => {
       if (!username || username.length < 3) return false;
-      const cleanName = username.trim().toLowerCase();
+      const cleanName = username.trim().toLowerCase().replace(/\s/g, '');
       try {
         const q = query(collection(db, 'users'), where('username', '==', cleanName));
         const querySnapshot = await getDocs(q);
         return querySnapshot.empty;
       } catch (error: any) {
-          return true; // Optimistic fallback
+          return true;
       }
   };
 
   const signup = async (data: { name: string; email: string; pass: string; level: Level; username: string; matricNumber: string; avatarUrl?: string }) => {
       try {
-          const cleanUsername = data.username.trim().toLowerCase();
-          await checkUsernameAvailability(cleanUsername); // Just to verify, though handled in UI
+          const cleanUsername = data.username.trim().toLowerCase().replace(/\s/g, '');
+          const isAvailable = await checkUsernameAvailability(cleanUsername);
+          if (!isAvailable) {
+              throw new Error("Username is already taken.");
+          }
           
           const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.pass);
           const firebaseUser = userCredential.user;
@@ -260,7 +301,9 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             matricNumber: data.matricNumber || '',
             avatarUrl: data.avatarUrl,
             savedQuestions: [],
-            lastActive: new Date().toISOString()
+            badges: [],
+            lastActive: new Date().toISOString(),
+            hasCompletedOnboarding: false, // Explicitly set for new users
           };
 
           await setDoc(doc(db, 'users', firebaseUser.uid), sanitizeData({...newUser, createdAt: new Date().toISOString()}));
@@ -283,6 +326,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const toggleBookmark = async (questionId: string) => {
       if (!user) return;
       const currentSaved = user.savedQuestions || [];
+      const userBadges = user.badges || [];
       let newSaved: string[];
 
       const isBookmarking = !currentSaved.includes(questionId);
@@ -295,15 +339,63 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
           showNotification("Bookmark removed", "info");
       }
 
-      setUser({ ...user, savedQuestions: newSaved });
+      updateUser({ savedQuestions: newSaved });
 
+      const userRef = doc(db, 'users', user.id);
       try {
-          const userRef = doc(db, 'users', user.id);
           await updateDoc(userRef, { savedQuestions: newSaved });
+
+          if (isBookmarking) {
+              const newBadgeAwards: string[] = [];
+              if (newSaved.length >= 1 && !userBadges.includes('BOOKWORM_1')) newBadgeAwards.push('BOOKWORM_1');
+              if (newSaved.length >= 10 && !userBadges.includes('BOOKWORM_10')) newBadgeAwards.push('BOOKWORM_10');
+              if (newSaved.length >= 25 && !userBadges.includes('ARCHIVIST_PRO')) newBadgeAwards.push('ARCHIVIST_PRO');
+
+              if (newBadgeAwards.length > 0) {
+                  const allBadges = [...new Set([...userBadges, ...newBadgeAwards])];
+                  await updateDoc(userRef, { badges: allBadges });
+                  updateUser({ badges: allBadges });
+                  showNotification(`Unlocked: ${newBadgeAwards.join(', ')}`, "success");
+              }
+          }
       } catch (e) {
           showNotification("Failed to sync bookmark", "error");
-          setUser(user);
+          updateUser({ savedQuestions: currentSaved });
       }
+  };
+
+  const linkGoogleAccount = async () => {
+    if (!auth.currentUser) throw new Error("No user is logged in.");
+    try {
+        const provider = new GoogleAuthProvider();
+        await linkWithPopup(auth.currentUser, provider);
+        showNotification("Google account linked successfully!", "success");
+        setIsGoogleAccount(true);
+    } catch (error: any) {
+        if (error.code === 'auth/credential-already-in-use') {
+            showNotification("This Google account is already linked to another user.", "error");
+        } else {
+            showNotification(getFriendlyErrorMessage(error), "error");
+        }
+        throw error;
+    }
+  };
+
+  const addPassword = async (password: string) => {
+    if (!auth.currentUser || !auth.currentUser.email) {
+        throw new Error("No user is logged in or user has no email.");
+    }
+    if (password.length < 6) throw new Error("Password must be at least 6 characters.");
+
+    try {
+        const credential = EmailAuthProvider.credential(auth.currentUser.email, password);
+        await linkWithCredential(auth.currentUser, credential);
+        showNotification("Password added successfully!", "success");
+        setIsPasswordAccount(true);
+    } catch (error: any) {
+        showNotification(getFriendlyErrorMessage(error), "error");
+        throw error;
+    }
   };
 
   const value = {
@@ -314,7 +406,12 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     signup,
     logout,
     checkUsernameAvailability,
-    toggleBookmark
+    toggleBookmark,
+    linkGoogleAccount,
+    addPassword,
+    updateUser,
+    isPasswordAccount,
+    isGoogleAccount,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

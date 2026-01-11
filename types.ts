@@ -1,9 +1,10 @@
 
-export type Level = 100 | 200 | 300 | 400;
+
+export type Level = 100 | 200 | 300 | 400 | 'General';
 
 export type Page = 'home' | 'questions' | 'executives' | 'lecturers' | 'announcements' | 'login' | 'admin' | 'profile' | 'community';
 
-export type Role = 'student' | 'executive' | 'lecturer' | 'admin' | 'librarian' | 'vice_president' | 'supplement';
+export type Role = 'student' | 'executive' | 'lecturer' | 'admin' | 'librarian' | 'vice_president' | 'supplement' | 'alumni';
 
 export interface PastQuestion {
   id: string;
@@ -11,6 +12,7 @@ export interface PastQuestion {
   courseCode: string;
   courseTitle: string;
   year: number;
+  semester?: 1 | 2 | 'N/A';
   lecturer?: string; // Added for smart finder
   fileUrl?: string; 
   storagePath?: string; // Path in Dropbox/Storage for deletion
@@ -18,8 +20,10 @@ export interface PastQuestion {
   textContent?: string;
   uploadedBy?: string;
   uploadedByEmail?: string;
+  uploadedByName?: string;
   status?: 'pending' | 'approved';
   createdAt?: string;
+  category?: "Past Question" | "Lecture Note" | "Handout" | "Textbook" | "Other";
 }
 
 export interface PendingQuestion extends PastQuestion {
@@ -71,6 +75,11 @@ export interface User {
   lastActive?: string; 
   isVerified?: boolean; // Added for blue tick
   isBanned?: boolean; // Added for suspension
+  badges?: string[];
+  viewedSessionWrapTimestamp?: string;
+  hasCompletedOnboarding?: boolean;
+  infractionCount?: number;
+  chatBanUntil?: string;
 }
 
 export interface CommunityGroup {
@@ -98,4 +107,29 @@ export interface TestResult {
   totalQuestions: number;
   level: Level;
   date: string;
+}
+
+export interface MarketplaceItem {
+    id: string;
+    title: string;
+    description: string;
+    price: number;
+    category: 'Goods' | 'Services' | 'Accommodation';
+    imageUrl: string;
+    sellerId: string;
+    sellerName: string;
+    sellerVerified: boolean;
+    contact: string;
+    createdAt: string;
+}
+
+export interface Notification {
+    id: string;
+    userId: string;
+    message: string;
+    type: 'info' | 'success' | 'warning' | 'error';
+    createdAt: string;
+    read: boolean;
+    title?: string;
+    link?: string;
 }

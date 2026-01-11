@@ -1,9 +1,14 @@
 import React from 'react';
 
-export const Logo: React.FC<{ className?: string }> = ({ className = 'h-24 w-24' }) => (
-  <img 
-    src="/logo.svg" 
-    alt="FINSA Logo" 
-    className={`${className} object-contain`} 
-  />
-);
+// Use the new website-specific logo for the UI, keeping the official one for SEO/favicon.
+const LOGO_SRC = '/website-logo.svg';
+
+export const Logo: React.FC<{ className?: string }> = ({ className = 'h-24 w-24' }) => {
+  return (
+    <img 
+      src={LOGO_SRC} 
+      alt="FINSA AAUA Portal Logo" 
+      className={`${className} object-contain`} 
+    />
+  );
+};

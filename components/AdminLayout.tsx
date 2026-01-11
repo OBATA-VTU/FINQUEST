@@ -7,7 +7,7 @@ import { AuthContext } from '../contexts/AuthContext';
 interface AdminNavItemProps {
     to: string;
     label: string;
-    icon: React.ReactNode;
+    icon: React.ReactElement<{ className?: string }>;
     onClick?: () => void;
 }
 
@@ -24,7 +24,7 @@ const AdminNavItem: React.FC<AdminNavItemProps> = ({ to, label, icon, onClick })
         {({ isActive }) => (
             <>
                 <div className={`${isActive ? 'text-indigo-400' : 'text-indigo-300 group-hover:text-white'}`}>
-                    {icon}
+                    {React.cloneElement(icon, { className: "w-5 h-5" })}
                 </div>
                 <span className="font-medium text-sm tracking-wide">{label}</span>
             </>
@@ -106,6 +106,19 @@ export const AdminLayout: React.FC = () => {
         return <Navigate to="/dashboard" replace />;
     }
 
+    const canSee = (page: string) => {
+        if (isSuperAdmin) return true;
+        const librarianPages = ['materials', 'news', 'lecturers', 'community', 'gallery', 'approvals'];
+        const vpPages = librarianPages;
+        const supplementPages = librarianPages;
+
+        if (isLibrarian) return librarianPages.includes(page);
+        if (isVP) return vpPages.includes(page);
+        if (isSupplement) return supplementPages.includes(page);
+        
+        return false;
+    };
+
     return (
         <div className="h-screen bg-slate-50 flex font-sans overflow-hidden">
             
@@ -156,25 +169,26 @@ export const AdminLayout: React.FC = () => {
                     </AdminNavSection>
 
                     <AdminNavSection title="Content Management" isExpanded={expandedSections.management} onToggle={() => toggleSection('management')}>
-                        <AdminNavItem 
-                            to="/admin/approvals" 
-                            label="Pending Approvals" 
-                            icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                            onClick={closeSidebar}
-                        />
-                        <AdminNavItem 
-                            to="/admin/content" 
-                            label="Content & Materials" 
-                            icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>}
-                            onClick={closeSidebar}
-                        />
+                        {canSee('approvals') && <AdminNavItem to="/admin/approvals" label="Pending Approvals" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} onClick={closeSidebar} />}
+                        {canSee('materials') && <AdminNavItem to="/admin/materials" label="Materials" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>} onClick={closeSidebar} />}
+                        {canSee('news') && <AdminNavItem to="/admin/news" label="News" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>} onClick={closeSidebar} />}
+                        {canSee('executives') && <AdminNavItem to="/admin/executives" label="Executives" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>} onClick={closeSidebar} />}
+                        {canSee('lecturers') && <AdminNavItem to="/admin/lecturers" label="Lecturers" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>} onClick={closeSidebar} />}
+                        {canSee('community') && <AdminNavItem to="/admin/community" label="Community Groups" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>} onClick={closeSidebar} />}
+                        {canSee('gallery') && <AdminNavItem to="/admin/gallery" label="Gallery" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} onClick={closeSidebar} />}
                     </AdminNavSection>
 
                     <AdminNavSection title="System" isExpanded={expandedSections.system} onToggle={() => toggleSection('system')}>
                         <AdminNavItem 
                             to="/admin/users" 
-                            label={isSuperAdmin || isSupplement ? "User Management" : "User Directory"} 
+                            label={isSuperAdmin || isSupplement ? "All Users" : "User Directory"} 
                             icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
+                            onClick={closeSidebar}
+                        />
+                         <AdminNavItem 
+                            to="/admin/active-users" 
+                            label="Active Users" 
+                            icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
                             onClick={closeSidebar}
                         />
                         {isSuperAdmin && (
@@ -200,13 +214,13 @@ export const AdminLayout: React.FC = () => {
             </aside>
 
             {/* Main Content Area */}
-            <div className="flex-1 min-w-0 flex flex-col h-full bg-slate-50">
+            <div className="flex-1 min-w-0 flex flex-col h-full bg-slate-50 dark:bg-slate-950">
                 {/* Mobile Header Toggle */}
-                <div className="xl:hidden bg-white border-b border-slate-200 p-4 flex items-center gap-4">
-                    <button onClick={() => setIsOpen(true)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg">
+                <div className="xl:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center gap-4">
+                    <button onClick={() => setIsOpen(true)} className="p-2 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
                     </button>
-                    <span className="font-bold text-slate-800">{panelTitle}</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{panelTitle}</span>
                 </div>
 
                 <main className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12">

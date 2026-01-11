@@ -7,14 +7,9 @@ import { Footer } from './Footer';
 export const Layout: React.FC = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { pathname } = useLocation();
-    const mainRef = useRef<HTMLDivElement>(null);
-
-    // Scroll to top of the main content area whenever the route changes
-    useEffect(() => {
-        if (mainRef.current) {
-            mainRef.current.scrollTo(0, 0);
-        }
-    }, [pathname]);
+    
+    // NOTE: The scroll-to-top logic has been moved to a dedicated <ScrollToTop /> component
+    // in App.tsx for better reliability across all routes, including those outside the Layout.
 
     // Intelligent Footer Logic
     // We strictly define pages where the footer IS expected (Public/Info pages)
@@ -42,7 +37,7 @@ export const Layout: React.FC = () => {
                 {/* We use h-full and overflow-y-auto here so normal pages scroll, 
                     but pages like Chat (Community) can opt to hide overflow and manage scrolling internally */}
                 <main 
-                    ref={mainRef}
+                    id="main-content"
                     className={`flex-1 relative z-0 animate-fade-in ${pathname === '/community' ? 'overflow-hidden' : 'overflow-y-auto'}`}
                 >
                     <div className={pathname === '/community' ? 'h-full' : 'min-h-full flex flex-col'}>

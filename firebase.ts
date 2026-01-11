@@ -2,6 +2,7 @@ import { initializeApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
+import { getFunctions } from 'firebase/functions';
 
 // Use Environment Variables first, fallback to hardcoded (development) values
 const firebaseConfig = {
@@ -19,5 +20,6 @@ const app: FirebaseApp = initializeApp(firebaseConfig);
 const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
 const storage: FirebaseStorage = getStorage(app);
+const functions = getFunctions(app);
 
-export { auth, db, storage };
+export { app, auth, db, storage, functions };
