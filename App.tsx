@@ -35,7 +35,6 @@ import { CountdownPage } from './pages/CountdownPage';
 import ScrollToTop from './components/ScrollToTop';
 import { NotificationHandler } from './components/NotificationHandler';
 import { SEOMetadataUpdater } from './components/SEOMetadataUpdater';
-import { OnboardingTour } from './components/OnboardingTour';
 
 import { AdminMaterialsPage } from './pages/AdminMaterialsPage';
 import { AdminNewsPage } from './pages/AdminNewsPage';
@@ -85,7 +84,6 @@ const AppContent: React.FC = () => {
   const auth = useContext(AuthContext);
   const [sessionWrapInfo, setSessionWrapInfo] = useState<{ start: string; end: string; session: string } | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     const checkSessionAndOnboarding = async () => {
@@ -94,8 +92,18 @@ const AppContent: React.FC = () => {
         return;
       }
       try {
+        // Silently mark onboarding as complete for any user who hasn't done it.
+        // This permanently removes the onboarding tour without user interaction.
         if (auth.user.hasCompletedOnboarding !== true) {
-            setShowOnboarding(true);
+            try {
+                await updateDoc(doc(db, 'users', auth.user.id), {
+                    hasCompletedOnboarding: true,
+                });
+                auth.updateUser({ hasCompletedOnboarding: true });
+            } catch (error) {
+                // This is a non-critical background update, so we just log the error.
+                console.warn("Failed to silently update onboarding status.", error);
+            }
         }
 
         const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
@@ -138,20 +146,6 @@ const AppContent: React.FC = () => {
     }
     setSessionWrapInfo(null);
   };
-
-  const handleFinishOnboarding = async () => {
-    setShowOnboarding(false); // Hide UI first for better responsiveness
-    if (auth?.user) {
-        try {
-            await updateDoc(doc(db, 'users', auth.user.id), {
-                hasCompletedOnboarding: true,
-            });
-            auth.updateUser({ hasCompletedOnboarding: true });
-        } catch (error) {
-            console.error("Failed to save onboarding status. It may appear on next login.", error);
-        }
-    }
-  };
   
   if (checkingSession) {
     return <div className="h-screen w-screen bg-slate-950"></div>;
@@ -159,10 +153,6 @@ const AppContent: React.FC = () => {
 
   if (sessionWrapInfo) {
     return <SessionWrapPage info={sessionWrapInfo} onFinish={handleFinishWrap} />;
-  }
-
-  if (showOnboarding) {
-      return <OnboardingTour onFinish={handleFinishOnboarding} />;
   }
   
   return (
