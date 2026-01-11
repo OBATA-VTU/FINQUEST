@@ -1,15 +1,13 @@
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
 import { uploadDocument, deleteDocument } from '../utils/api';
 import { LEVELS } from '../constants';
 import { GoogleGenAI, Type } from "@google/genai";
-import { AuthContext } from '../contexts/AuthContext';
 
 export const AdminMaterialsPage: React.FC = () => {
-  const auth = useContext(AuthContext);
   const [contentItems, setContentItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { showNotification } = useNotification();

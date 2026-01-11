@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch, deleteDoc, updateDoc } from 'firebase/firestore';
@@ -61,7 +62,7 @@ export const AdminSettingsPage: React.FC = () => {
         if (window.google) {
             const client = window.google.accounts.oauth2.initCodeClient({
                 client_id: GOOGLE_DRIVE_CLIENT_ID,
-                scope: 'https://www.googleapis.com/auth/drive.file',
+                scope: 'https://www.googleapis.com/auth/drive',
                 callback: handleGoogleAuthCallback,
             });
             setTokenClient(client);
