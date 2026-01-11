@@ -1,13 +1,13 @@
 import React from 'react';
 
-// Hardcode the logo path and remove settings dependency for consistency.
-const LOGO_SRC = '/logo.svg';
+// Use the new website-specific logo for the UI, keeping the official one for SEO/favicon.
+const LOGO_SRC = '/website-logo.svg';
 
 export const Logo: React.FC<{ className?: string }> = ({ className = 'h-24 w-24' }) => {
   return (
     <img 
       src={LOGO_SRC} 
-      alt="FINSA AAUA Department Logo" 
+      alt="FINSA AAUA Portal Logo" 
       className={`${className} object-contain`} 
     />
   );

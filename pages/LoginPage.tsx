@@ -182,6 +182,18 @@ export const LoginPage: React.FC = () => {
   const isUsernameInvalid = ['taken', 'short', 'invalid_format'].includes(usernameStatus);
 
   if (viewState !== 'auth') {
+      const [previewUrl, setPreviewUrl] = useState(auth?.user?.avatarUrl || '');
+
+      useEffect(() => {
+          if (profileImage) {
+              const objectUrl = URL.createObjectURL(profileImage);
+              setPreviewUrl(objectUrl);
+              return () => URL.revokeObjectURL(objectUrl);
+          } else {
+              setPreviewUrl(auth?.user?.avatarUrl || '');
+          }
+      }, [profileImage, auth?.user?.avatarUrl]);
+      
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
             <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-100 dark:border-slate-700">
@@ -210,9 +222,24 @@ export const LoginPage: React.FC = () => {
                     </div>
                 )}
                 <div className="mb-6">
-                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Profile Photo (Optional)</label>
-                    <input type="file" onChange={e => e.target.files && setProfileImage(e.target.files[0])} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 text-center">Profile Photo</label>
+                    <div className="flex justify-center">
+                        <label htmlFor="profile-photo-upload" className="relative group cursor-pointer">
+                            <div className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 overflow-hidden flex items-center justify-center text-3xl font-bold text-slate-400">
+                                {previewUrl ? (
+                                    <img src={previewUrl} alt="Profile Preview" className="w-full h-full object-cover" />
+                                ) : (
+                                    auth?.user?.name.charAt(0).toUpperCase()
+                                )}
+                            </div>
+                            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                                Change
+                            </div>
+                        </label>
+                        <input id="profile-photo-upload" type="file" className="hidden" onChange={e => e.target.files && setProfileImage(e.target.files[0])} accept="image/*" />
+                    </div>
                 </div>
+
                 <button onClick={handleFinishSetup} disabled={isLoading} className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 disabled:opacity-50">
                     {isLoading ? 'Saving...' : 'Finish Setup'}
                 </button>
@@ -289,4 +316,3 @@ export const LoginPage: React.FC = () => {
     </div>
   );
 };
-    

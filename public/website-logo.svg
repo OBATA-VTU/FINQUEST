@@ -1,0 +1,10 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="logoGradient" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#4F46E5"/> <!-- indigo-600 -->
+            <stop offset="1" stop-color="#A5B4FC"/> <!-- indigo-300 -->
+        </linearGradient>
+    </defs>
+    <!-- Abstract 'F' shape suggesting growth and structure -->
+    <path d="M25 85V15H75V30H40V47.5H65V62.5H40V85H25Z" fill="url(#logoGradient)"/>
+</svg>
