@@ -3,7 +3,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { TestResult, Announcement, PastQuestion } from '../types';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { getBadge } from '../utils/badges';
@@ -93,33 +93,13 @@ export const UserDashboardPage: React.FC = () => {
               news.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
               setRecentNews(news.slice(0, 3));
 
-              // 3. Optimized Recommended Questions
-              const levelQuery = query(
-                  collection(db, 'questions'),
-                  where('status', '==', 'approved'),
-                  where('level', '==', user.level),
-                  orderBy('createdAt', 'desc'),
-                  limit(3)
-              );
-              const generalQuery = query(
-                  collection(db, 'questions'),
-                  where('status', '==', 'approved'),
-                  where('level', '==', 'General'),
-                  orderBy('createdAt', 'desc'),
-                  limit(3)
-              );
-              const [levelSnap, generalSnap] = await Promise.all([
-                  getDocs(levelQuery),
-                  getDocs(generalQuery),
-              ]);
-
-              const levelQuestions = levelSnap.docs.map(d => ({ id: d.id, ...d.data() } as PastQuestion));
-              const generalQuestions = generalSnap.docs.map(d => ({ id: d.id, ...d.data() } as PastQuestion));
-              
-              const allRecommended = [...levelQuestions, ...generalQuestions];
-              const uniqueRecommended = Array.from(new Map(allRecommended.map(q => [q.id, q])).values());
-              uniqueRecommended.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
-              setRecommendedQuestions(uniqueRecommended.slice(0, 3));
+              // 3. Recommended Questions
+              const recQ = query(collection(db, 'questions'), where('status', '==', 'approved'));
+              const recSnap = await getDocs(recQ);
+              const allQuestions = recSnap.docs.map(d => ({ id: d.id, ...d.data() } as PastQuestion));
+              const levelQuestions = allQuestions.filter(q => q.level === user.level || q.level === 'General');
+              levelQuestions.sort((a, b) => b.year - a.year);
+              setRecommendedQuestions(levelQuestions.slice(0, 3));
 
           } catch (e) {
               console.error("Failed to fetch dashboard data", e);

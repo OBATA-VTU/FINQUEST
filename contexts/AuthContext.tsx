@@ -104,10 +104,6 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     chatBanUntil: userData.chatBanUntil,
                 });
             } else {
-                // This case handles Google Sign-in for the first time where a user doc doesn't exist yet.
-                // It will be created in the loginWithGoogle function.
-                // For other cases, if a user exists in Auth but not Firestore, it's an anomaly.
-                // We create a skeleton profile to prevent the app from crashing.
                 const newUser = {
                     id: firebaseUser.uid,
                     email: firebaseUser.email || '',
@@ -227,10 +223,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             email: firebaseUser.email,
             role: 'student',
             level: 100,
-            username: '', // To be filled in setup
-            matricNumber: '', // To be filled in setup
             createdAt: new Date().toISOString(),
-            avatarUrl: firebaseUser.photoURL,
+            photoURL: firebaseUser.photoURL,
             savedQuestions: [],
             lastActive: new Date().toISOString(),
             badges: []
@@ -302,8 +296,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             avatarUrl: data.avatarUrl,
             savedQuestions: [],
             badges: [],
-            lastActive: new Date().toISOString(),
-            hasCompletedOnboarding: false, // Explicitly set for new users
+            lastActive: new Date().toISOString()
           };
 
           await setDoc(doc(db, 'users', firebaseUser.uid), sanitizeData({...newUser, createdAt: new Date().toISOString()}));

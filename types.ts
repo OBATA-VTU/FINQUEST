@@ -1,5 +1,4 @@
 
-
 export type Level = 100 | 200 | 300 | 400 | 'General';
 
 export type Page = 'home' | 'questions' | 'executives' | 'lecturers' | 'announcements' | 'login' | 'admin' | 'profile' | 'community';
@@ -20,7 +19,6 @@ export interface PastQuestion {
   textContent?: string;
   uploadedBy?: string;
   uploadedByEmail?: string;
-  uploadedByName?: string;
   status?: 'pending' | 'approved';
   createdAt?: string;
   category?: "Past Question" | "Lecture Note" | "Handout" | "Textbook" | "Other";

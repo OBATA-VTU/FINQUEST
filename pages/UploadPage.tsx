@@ -1,7 +1,7 @@
 import React, { useState, FormEvent, useRef, useEffect, useContext } from 'react';
 import { Level } from '../types';
 import { LEVELS } from '../constants';
-import { uploadFile, uploadToImgBB, trackAiUsage } from '../utils/api';
+import { uploadDocument, uploadToImgBB, trackAiUsage } from '../utils/api';
 import { db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { AuthContext } from '../contexts/AuthContext';
@@ -76,7 +76,6 @@ export const UploadPage: React.FC = () => {
                 category,
                 uploadedBy: auth.user.id,
                 uploadedByEmail: auth.user.email,
-                uploadedByName: auth.user.username,
                 status: 'pending', // User uploads always require approval
                 createdAt: new Date().toISOString()
             };
@@ -84,7 +83,7 @@ export const UploadPage: React.FC = () => {
             if (uploadType === 'document') {
                 if (!file) throw new Error("Document file not selected.");
                 setUploadStatus('Uploading Document...');
-                const { url, path } = await uploadFile(file, 'past_questions', setUploadProgress);
+                const { url, path } = await uploadDocument(file, 'past_questions', setUploadProgress);
                 questionData.fileUrl = url;
                 questionData.storagePath = path;
             } else if (uploadType === 'images') {
@@ -105,7 +104,7 @@ export const UploadPage: React.FC = () => {
                 if (!canUseAi) throw new Error("Insufficient points for AI generation.");
                 setUploadStatus('Generating with AI...');
                 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-                const prompt = `Generate comprehensive, university-level study notes/lecture material on the topic: "${courseTitle}". Course Code: ${courseCode}. Format in clean Markdown.`;
+                const prompt = `Generate comprehensive, university-level study notes/lecture material on the topic: "${courseTitle}". Format in clean Markdown. Include a summary, key concepts, detailed explanation, and conclusion.`;
                 const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
                 trackAiUsage();
                 const aiText = result.text;
@@ -161,7 +160,6 @@ export const UploadPage: React.FC = () => {
             suffix + 
             textContent.substring(end);
 
-        // FIX: Corrected undefined function call from 'setContent' to 'setTextContent'.
         setTextContent(newText);
         
         setTimeout(() => {
@@ -188,7 +186,7 @@ export const UploadPage: React.FC = () => {
             </div>
             <textarea 
                 ref={textAreaRef}
-                className="w-full h-64 p-4 bg-transparent outline-none resize-y text-slate-700 dark:text-slate-200" 
+                className="w-full p-4 h-64 bg-transparent outline-none resize-y text-slate-700 dark:text-slate-200" 
                 placeholder="Type your material here... Use the tools above for formatting." 
                 value={textContent} 
                 onChange={e => setTextContent(e.target.value)} 

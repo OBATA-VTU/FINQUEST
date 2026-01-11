@@ -9,9 +9,10 @@ import { AuthContext } from '../contexts/AuthContext';
 
 interface QuestionCardProps {
   question: PastQuestion;
+  uploaderName?: string;
 }
 
-export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
+export const QuestionCard: React.FC<QuestionCardProps> = ({ question, uploaderName }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const { showNotification } = useNotification();
@@ -148,9 +149,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
             {question.courseTitle}
         </h4>
 
-        {question.uploadedByName && (
+        {uploaderName && (
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 mb-3">
-                Uploaded by <span className="font-bold text-indigo-600 dark:text-indigo-400">@{question.uploadedByName}</span>
+                Uploaded by <span className="font-bold text-indigo-600 dark:text-indigo-400">@{uploaderName.split('@')[0]}</span>
             </p>
         )}
 

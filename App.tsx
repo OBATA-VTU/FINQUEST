@@ -35,6 +35,7 @@ import { CountdownPage } from './pages/CountdownPage';
 import ScrollToTop from './components/ScrollToTop';
 import { NotificationHandler } from './components/NotificationHandler';
 import { SEOMetadataUpdater } from './components/SEOMetadataUpdater';
+import { OnboardingTour } from './components/OnboardingTour';
 
 import { AdminMaterialsPage } from './pages/AdminMaterialsPage';
 import { AdminNewsPage } from './pages/AdminNewsPage';
@@ -55,7 +56,6 @@ const LAUNCH_DATE = new Date('2026-01-10T12:00:00+01:00');
 
 const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNode, adminOnly?: boolean }) => {
     const auth = useContext(AuthContext);
-    const location = useLocation();
     
     if (auth?.loading) {
         return null; 
@@ -63,11 +63,6 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
 
     if (!auth?.user) {
         return <Navigate to="/login" replace />;
-    }
-    
-    // Enforce profile completion before accessing protected routes.
-    if ((!auth.user.matricNumber || !auth.user.username) && location.pathname !== '/login') {
-      return <Navigate to="/login" replace />;
     }
 
     if (adminOnly && !['admin', 'librarian', 'vice_president', 'supplement'].includes(auth.user.role)) {
@@ -90,6 +85,7 @@ const AppContent: React.FC = () => {
   const auth = useContext(AuthContext);
   const [sessionWrapInfo, setSessionWrapInfo] = useState<{ start: string; end: string; session: string } | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     const checkSessionAndOnboarding = async () => {
@@ -98,18 +94,8 @@ const AppContent: React.FC = () => {
         return;
       }
       try {
-        // Silently mark onboarding as complete for any user who hasn't done it.
-        // This permanently removes the onboarding tour without user interaction.
         if (auth.user.hasCompletedOnboarding !== true) {
-            try {
-                await updateDoc(doc(db, 'users', auth.user.id), {
-                    hasCompletedOnboarding: true,
-                });
-                auth.updateUser({ hasCompletedOnboarding: true });
-            } catch (error) {
-                // This is a non-critical background update, so we just log the error.
-                console.warn("Failed to silently update onboarding status.", error);
-            }
+            setShowOnboarding(true);
         }
 
         const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
@@ -152,6 +138,16 @@ const AppContent: React.FC = () => {
     }
     setSessionWrapInfo(null);
   };
+
+  const handleFinishOnboarding = async () => {
+    if (auth?.user) {
+        await updateDoc(doc(db, 'users', auth.user.id), {
+            hasCompletedOnboarding: true,
+        });
+        auth.updateUser({ hasCompletedOnboarding: true });
+    }
+    setShowOnboarding(false);
+  };
   
   if (checkingSession) {
     return <div className="h-screen w-screen bg-slate-950"></div>;
@@ -159,6 +155,10 @@ const AppContent: React.FC = () => {
 
   if (sessionWrapInfo) {
     return <SessionWrapPage info={sessionWrapInfo} onFinish={handleFinishWrap} />;
+  }
+
+  if (showOnboarding) {
+      return <OnboardingTour onFinish={handleFinishOnboarding} />;
   }
   
   return (

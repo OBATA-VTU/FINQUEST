@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useContext, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useContext, useEffect } from 'react';
 import { QuestionCard } from '../components/QuestionCard';
 import { AdBanner } from '../components/AdBanner';
 import { PastQuestion, User } from '../types';
@@ -8,13 +8,13 @@ import { AuthContext } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
-import { useNotification } from '../contexts/NotificationContext';
 
 const CATEGORIES = ["All", "Past Question", "Lecture Note", "Handout", "Textbook", "Other"];
 
 export const PastQuestionsPage: React.FC = () => {
-  const [filteredQuestions, setFilteredQuestions] = useState<PastQuestion[]>([]);
+  const [questions, setQuestions] = useState<PastQuestion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userMap, setUserMap] = useState<Record<string, string>>({});
   
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,55 +24,61 @@ export const PastQuestionsPage: React.FC = () => {
 
   const auth = useContext(AuthContext);
   const navigate = useNavigate();
-  const { showNotification } = useNotification();
 
   useEffect(() => {
-    const fetchFilteredData = async () => {
+    const fetchAllData = async () => {
         setLoading(true);
         try {
-            let constraints = [where("status", "==", "approved")];
+            const [questionsQuerySnapshot, usersQuerySnapshot] = await Promise.all([
+                getDocs(query(collection(db, "questions"), where("status", "==", "approved"))),
+                getDocs(collection(db, "users"))
+            ]);
 
-            if (selectedLevel !== 'all') {
-                constraints.push(where("level", "==", selectedLevel === 'General' ? 'General' : Number(selectedLevel)));
-            }
-            
-            if (selectedCategory !== 'All') {
-                constraints.push(where("category", "==", selectedCategory));
-            }
-
-            const q = query(collection(db, "questions"), ...constraints);
-            
-            const querySnapshot = await getDocs(q);
-            let results = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PastQuestion));
-
-            // Client-side search filtering (more flexible than Firestore's text search)
-            if (searchTerm) {
-                const lowerTerm = searchTerm.toLowerCase().trim();
-                results = results.filter(res => 
-                    (res.courseCode?.toLowerCase().includes(lowerTerm)) ||
-                    (res.courseTitle?.toLowerCase().includes(lowerTerm)) ||
-                    (res.lecturer?.toLowerCase().includes(lowerTerm))
-                );
-            }
-
-            // Client-side sorting
-            results.sort((a, b) => {
-                const dateA = new Date(a.createdAt || 0).getTime();
-                const dateB = new Date(b.createdAt || 0).getTime();
-                if (sortOrder === 'newest') return dateB - dateA;
-                return dateA - dateB;
+            const usersData: Record<string, string> = {};
+            usersQuerySnapshot.forEach(doc => {
+                const userData = doc.data() as User;
+                usersData[doc.id] = userData.username || userData.name;
             });
+            setUserMap(usersData);
 
-            setFilteredQuestions(results);
+            const firebaseQuestions = questionsQuerySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PastQuestion));
+            setQuestions(firebaseQuestions);
         } catch (error) {
-            console.error("Error fetching filtered data: ", error);
-            showNotification("Could not load materials. Check your network.", "error");
+            console.error("Error fetching data: ", error);
         } finally {
             setLoading(false);
         }
     };
-    fetchFilteredData();
-  }, [selectedLevel, selectedCategory, searchTerm, sortOrder]);
+    fetchAllData();
+  }, []);
+
+  // Main Filter Logic
+  const filteredQuestions = useMemo(() => {
+    let filtered = questions;
+
+    if (selectedLevel !== 'all') {
+        filtered = filtered.filter(q => String(q.level) === selectedLevel);
+    }
+    
+    if (selectedCategory !== 'All') {
+        filtered = filtered.filter(q => q.category === selectedCategory);
+    }
+
+    if (searchTerm) {
+        const lowerTerm = searchTerm.toLowerCase().trim();
+        filtered = filtered.filter(q => 
+            (q.courseCode && q.courseCode.toLowerCase().includes(lowerTerm)) ||
+            (q.courseTitle && q.courseTitle.toLowerCase().includes(lowerTerm)) ||
+            (q.lecturer && q.lecturer.toLowerCase().includes(lowerTerm))
+        );
+    }
+
+    return filtered.sort((a, b) => {
+        if (sortOrder === 'newest') return (b.year || 0) - (a.year || 0) || new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        return (a.year || 0) - (b.year || 0) || new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+    });
+
+  }, [questions, selectedLevel, searchTerm, selectedCategory, sortOrder]);
 
   const FilterPanel = () => (
     <div className="w-full lg:w-72 lg:flex-shrink-0 space-y-6">
@@ -132,7 +138,7 @@ export const PastQuestionsPage: React.FC = () => {
       
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
-            <aside className="lg:sticky lg:top-24 lg:self-start">
+            <aside className="lg:sticky lg:top-8 lg:self-start">
                 <FilterPanel />
             </aside>
             
@@ -141,26 +147,26 @@ export const PastQuestionsPage: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                         {[...Array(6)].map((_, i) => <div key={i} className="h-48 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse"></div>)}
                     </div>
+                ) : filteredQuestions.length === 0 ? (
+                    <div className="text-center py-24 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 animate-fade-in flex flex-col items-center">
+                        <svg className="w-16 h-16 text-slate-300 dark:text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Materials Found</h3>
+                        <p className="text-slate-500 dark:text-slate-400 mt-2 max-w-sm">Try adjusting your filters or contributing new material. If you believe this is an error, please wait a moment for the database to sync.</p>
+                    </div>
                 ) : (
-                  <div className="space-y-6">
-                      <div className="flex justify-between items-center px-2">
-                          <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{filteredQuestions.length} item(s) found</p>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {filteredQuestions.map(q => <QuestionCard key={q.id} question={q} />)}
-                      </div>
-
-                      {filteredQuestions.length === 0 && (
-                          <div className="text-center py-24 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 animate-fade-in flex flex-col items-center">
-                              <svg className="w-16 h-16 text-slate-300 dark:text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                              <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Results Found</h3>
-                              <p className="text-slate-500 dark:text-slate-400 mt-2">Try adjusting your filters or search term.</p>
-                          </div>
-                      )}
-                  </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in">
+                        {filteredQuestions.map(q => {
+                            const uploaderName = userMap[q.uploadedBy || ''] || q.uploadedByEmail || 'Admin';
+                            return (
+                                <div key={q.id} className="relative group">
+                                    <QuestionCard question={q} uploaderName={uploaderName} />
+                                </div>
+                            );
+                        })}
+                    </div>
                 )}
-                <AdBanner />
+                
+                <div className="mt-12"><AdBanner /></div>
             </main>
         </div>
       </div>
