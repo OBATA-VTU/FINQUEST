@@ -11,8 +11,8 @@ admin.initializeApp();
 // firebase functions:config:set google.client_secret="YOUR_GOOGLE_CLIENT_SECRET"
 //
 // These credentials should be the same ones used in your vite.config.ts and AdminSettingsPage.
-const GOOGLE_CLIENT_ID = functions.config().google.client_id;
-const GOOGLE_CLIENT_SECRET = functions.config().google.client_secret;
+const GOOGLE_CLIENT_ID = functions.config().google?.client_id;
+const GOOGLE_CLIENT_SECRET = functions.config().google?.client_secret;
 
 /**
  * A callable Cloud Function to securely upload files to a shared Google Drive.
@@ -20,6 +20,15 @@ const GOOGLE_CLIENT_SECRET = functions.config().google.client_secret;
  * to perform uploads on behalf of any authenticated user.
  */
 exports.uploadFileToDrive = functions.https.onCall(async (data, context) => {
+    // 0. Environment Configuration Check
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+        console.error("FATAL: Google OAuth environment variables are not set in Firebase Functions config.");
+        throw new functions.https.HttpsError(
+            "failed-precondition",
+            "The server is missing Google OAuth configuration. The administrator needs to run the 'firebase functions:config:set' commands and redeploy."
+        );
+    }
+    
     // 1. Authentication Check: Ensure the user is logged in.
     if (!context.auth) {
         throw new functions.https.HttpsError("unauthenticated", "You must be logged in to upload files.");
