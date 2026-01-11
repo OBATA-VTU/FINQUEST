@@ -1,5 +1,6 @@
 
 
+
 import React, { useContext, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
@@ -27,7 +28,7 @@ import { NotesPage } from './pages/NotesPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { UploadPage } from './pages/UploadPage';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
-import { NotificationProvider } from './contexts/NotificationContext';
+import { NotificationProvider } from './contexts/NotificationProvider';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { Layout } from './components/Layout';
@@ -35,7 +36,6 @@ import { CountdownPage } from './pages/CountdownPage';
 import ScrollToTop from './components/ScrollToTop';
 import { NotificationHandler } from './components/NotificationHandler';
 import { SEOMetadataUpdater } from './components/SEOMetadataUpdater';
-import { OnboardingTour } from './components/OnboardingTour';
 
 import { AdminMaterialsPage } from './pages/AdminMaterialsPage';
 import { AdminNewsPage } from './pages/AdminNewsPage';
@@ -85,19 +85,14 @@ const AppContent: React.FC = () => {
   const auth = useContext(AuthContext);
   const [sessionWrapInfo, setSessionWrapInfo] = useState<{ start: string; end: string; session: string } | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    const checkSessionAndOnboarding = async () => {
+    const checkSession = async () => {
       if (!auth?.user) {
         setCheckingSession(false);
         return;
       }
       try {
-        if (auth.user.hasCompletedOnboarding !== true) {
-            setShowOnboarding(true);
-        }
-
         const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
         if (settingsDoc.exists()) {
           const settings = settingsDoc.data();
@@ -127,7 +122,7 @@ const AppContent: React.FC = () => {
         setCheckingSession(false);
       }
     };
-    checkSessionAndOnboarding();
+    checkSession();
   }, [auth?.user]);
 
   const handleFinishWrap = async () => {
@@ -139,30 +134,12 @@ const AppContent: React.FC = () => {
     setSessionWrapInfo(null);
   };
 
-  const handleFinishOnboarding = async () => {
-    setShowOnboarding(false); // Hide UI first for better responsiveness
-    if (auth?.user) {
-        try {
-            await updateDoc(doc(db, 'users', auth.user.id), {
-                hasCompletedOnboarding: true,
-            });
-            auth.updateUser({ hasCompletedOnboarding: true });
-        } catch (error) {
-            console.error("Failed to save onboarding status. It may appear on next login.", error);
-        }
-    }
-  };
-  
   if (checkingSession) {
     return <div className="h-screen w-screen bg-slate-950"></div>;
   }
 
   if (sessionWrapInfo) {
     return <SessionWrapPage info={sessionWrapInfo} onFinish={handleFinishWrap} />;
-  }
-
-  if (showOnboarding) {
-      return <OnboardingTour onFinish={handleFinishOnboarding} />;
   }
   
   return (

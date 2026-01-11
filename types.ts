@@ -77,7 +77,6 @@ export interface User {
   isBanned?: boolean; // Added for suspension
   badges?: string[];
   viewedSessionWrapTimestamp?: string;
-  hasCompletedOnboarding?: boolean;
   infractionCount?: number;
   chatBanUntil?: string;
 }

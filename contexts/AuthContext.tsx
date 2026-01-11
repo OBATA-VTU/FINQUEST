@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { User, Level } from '../types';
 import { auth, db } from '../firebase';
@@ -99,7 +100,6 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     isVerified: userData.isVerified,
                     isBanned: userData.isBanned,
                     badges: userData.badges || [],
-                    hasCompletedOnboarding: userData.hasCompletedOnboarding,
                     infractionCount: userData.infractionCount,
                     chatBanUntil: userData.chatBanUntil,
                 });
