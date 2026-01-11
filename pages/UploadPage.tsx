@@ -1,3 +1,4 @@
+
 import React, { useState, FormEvent, useRef, useEffect, useContext } from 'react';
 import { Level } from '../types';
 import { LEVELS } from '../constants';
@@ -76,6 +77,7 @@ export const UploadPage: React.FC = () => {
                 category,
                 uploadedBy: auth.user.id,
                 uploadedByEmail: auth.user.email,
+                uploadedByName: auth.user.username,
                 status: 'pending', // User uploads always require approval
                 createdAt: new Date().toISOString()
             };
@@ -160,6 +162,7 @@ export const UploadPage: React.FC = () => {
             suffix + 
             textContent.substring(end);
 
+        // FIX: 'setContent' is not defined. It should be 'setTextContent'.
         setTextContent(newText);
         
         setTimeout(() => {
@@ -186,7 +189,7 @@ export const UploadPage: React.FC = () => {
             </div>
             <textarea 
                 ref={textAreaRef}
-                className="w-full p-4 h-64 bg-transparent outline-none resize-y text-slate-700 dark:text-slate-200" 
+                className="w-full h-64 p-4 bg-transparent outline-none resize-y text-slate-700 dark:text-slate-200" 
                 placeholder="Type your material here... Use the tools above for formatting." 
                 value={textContent} 
                 onChange={e => setTextContent(e.target.value)} 

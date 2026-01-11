@@ -140,13 +140,17 @@ const AppContent: React.FC = () => {
   };
 
   const handleFinishOnboarding = async () => {
+    setShowOnboarding(false); // Hide UI first for better responsiveness
     if (auth?.user) {
-        await updateDoc(doc(db, 'users', auth.user.id), {
-            hasCompletedOnboarding: true,
-        });
-        auth.updateUser({ hasCompletedOnboarding: true });
+        try {
+            await updateDoc(doc(db, 'users', auth.user.id), {
+                hasCompletedOnboarding: true,
+            });
+            auth.updateUser({ hasCompletedOnboarding: true });
+        } catch (error) {
+            console.error("Failed to save onboarding status. It may appear on next login.", error);
+        }
     }
-    setShowOnboarding(false);
   };
   
   if (checkingSession) {
