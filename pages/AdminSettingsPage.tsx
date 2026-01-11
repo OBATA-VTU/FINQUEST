@@ -1,14 +1,13 @@
-
 import React, { useState, useEffect, useContext } from 'react';
-import { db } from '../firebase';
+import { db, functions } from '../firebase';
 import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch, deleteDoc, updateDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
 import { AuthContext } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { uploadToImgBB } from '../utils/api';
+import { httpsCallable } from 'firebase/functions';
 
 const GOOGLE_DRIVE_CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID;
-const GOOGLE_DRIVE_CLIENT_SECRET = process.env.GOOGLE_DRIVE_CLIENT_SECRET;
 
 declare global {
   interface Window {
@@ -34,6 +33,30 @@ export const AdminSettingsPage: React.FC = () => {
   const [wipeConfirmText, setWipeConfirmText] = useState('');
   const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // NEW SECURE AUTH FLOW
+  const handleGoogleAuthCallback = async (response: any) => {
+      const { code } = response;
+      if (code) {
+          showNotification("Authorization received. Connecting...", "info");
+          try {
+              const exchangeFunction = httpsCallable(functions, 'exchangeAuthCodeForTokens');
+              const result: any = await exchangeFunction({ code });
+
+              if (result.data.success) {
+                  showNotification(`Google Drive connected for ${result.data.email}`, "success");
+                  setDriveSettings(prev => ({ ...prev, connected_email: result.data.email }));
+              } else {
+                  throw new Error("Backend function reported an error.");
+              }
+          } catch (error: any) {
+              console.error("Google Auth Error:", error);
+              showNotification(`Connection failed: ${error.message}`, "error");
+          }
+      } else {
+          showNotification("Authorization code not received from Google.", "error");
+      }
+  };
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -62,8 +85,11 @@ export const AdminSettingsPage: React.FC = () => {
         if (window.google) {
             const client = window.google.accounts.oauth2.initCodeClient({
                 client_id: GOOGLE_DRIVE_CLIENT_ID,
-                scope: 'https://www.googleapis.com/auth/drive',
+                scope: 'https://www.googleapis.com/auth/drive.file', // Correct scope for creating files
+                ux_mode: 'popup',
                 callback: handleGoogleAuthCallback,
+                // Add this to ensure a refresh token is always requested
+                prompt: 'consent' 
             });
             setTokenClient(client);
         } else {
@@ -75,48 +101,6 @@ export const AdminSettingsPage: React.FC = () => {
     return () => { document.body.removeChild(script); };
   }, []);
 
-  const handleGoogleAuthCallback = async (response: any) => {
-      showNotification("Authorization code received. Exchanging for tokens...", "info");
-      try {
-          if (!GOOGLE_DRIVE_CLIENT_SECRET) {
-              throw new Error("Google Client Secret is not configured in Vercel environment variables.");
-          }
-
-          const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: new URLSearchParams({
-                code: response.code,
-                client_id: GOOGLE_DRIVE_CLIENT_ID,
-                client_secret: GOOGLE_DRIVE_CLIENT_SECRET,
-                redirect_uri: window.location.origin,
-                grant_type: 'authorization_code',
-              }),
-          });
-          
-          const tokens = await tokenResponse.json();
-          if (!tokenResponse.ok) throw new Error(tokens.error_description || "Token exchange failed.");
-
-          const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-              headers: { Authorization: `Bearer ${tokens.access_token}` },
-          });
-          const userProfile = await userResponse.json();
-          
-          await setDoc(doc(db, 'config', 'google_drive_settings'), {
-              access_token: tokens.access_token,
-              refresh_token: tokens.refresh_token,
-              expires_at: Date.now() + (tokens.expires_in * 1000),
-              connected_email: userProfile.email,
-          }, { merge: true });
-
-          showNotification(`Google Drive connected for ${userProfile.email}`, "success");
-          setDriveSettings(prev => ({ ...prev, connected_email: userProfile.email }));
-
-      } catch (error: any) {
-          console.error("Google Auth Error:", error);
-          showNotification(`Connection failed: ${error.message}`, "error");
-      }
-  };
 
   const handleSaveLogo = async () => {
     if (!logoFile) return;

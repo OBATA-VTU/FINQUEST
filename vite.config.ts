@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
       'process.env.API_KEY': JSON.stringify(env.VITE_GOOGLE_GENAI_API_KEY || ""),
       'process.env.DROPBOX_ACCESS_TOKEN': JSON.stringify(env.VITE_DROPBOX_ACCESS_TOKEN || ""),
       'process.env.GOOGLE_DRIVE_CLIENT_ID': JSON.stringify(env.VITE_GOOGLE_DRIVE_CLIENT_ID || ""),
-      'process.env.GOOGLE_DRIVE_CLIENT_SECRET': JSON.stringify(env.VITE_GOOGLE_DRIVE_CLIENT_SECRET || ""),
+      // CLIENT_SECRET MUST NOT BE EXPOSED TO THE FRONTEND. REMOVED.
     },
     build: {
       outDir: 'dist',

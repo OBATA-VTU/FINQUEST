@@ -7,6 +7,68 @@ admin.initializeApp();
 const GOOGLE_CLIENT_ID = functions.config().google?.client_id;
 const GOOGLE_CLIENT_SECRET = functions.config().google?.client_secret;
 
+// NEW SECURE FUNCTION FOR OAUTH TOKEN EXCHANGE
+exports.exchangeAuthCodeForTokens = functions.https.onCall(async (data, context) => {
+    functions.logger.info("exchangeAuthCodeForTokens invoked.");
+
+    if (!context.auth || !['admin', 'librarian', 'vice_president', 'supplement'].includes(context.auth.token.role)) {
+        functions.logger.error("Unauthorized user attempted to exchange auth code.");
+        throw new functions.https.HttpsError("permission-denied", "You must be an administrator to perform this action.");
+    }
+    
+    const { code } = data;
+    if (!code) {
+        throw new functions.https.HttpsError("invalid-argument", "The function must be called with an authorization code.");
+    }
+
+    try {
+        const oauth2Client = new google.auth.OAuth2(
+            GOOGLE_CLIENT_ID,
+            GOOGLE_CLIENT_SECRET,
+            "postmessage" // Important for client-side web apps
+        );
+
+        functions.logger.info("Exchanging authorization code for tokens...");
+        const { tokens } = await oauth2Client.getToken(code);
+        functions.logger.info("Tokens received from Google.");
+
+        if (!tokens.refresh_token) {
+            functions.logger.warn("No refresh token received. User may have already granted permission.");
+        }
+        
+        oauth2Client.setCredentials(tokens);
+
+        const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+        const userInfo = await oauth2.userinfo.get();
+        const userEmail = userInfo.data.email;
+
+        functions.logger.info(`Successfully authenticated as ${userEmail}. Saving refresh token.`);
+
+        const settingsToSave = {
+            refresh_token: tokens.refresh_token,
+            connected_email: userEmail,
+        };
+
+        // We only save the refresh token if a new one is provided.
+        if (!tokens.refresh_token) {
+            delete settingsToSave.refresh_token;
+        }
+
+        await admin.firestore().collection("config").doc("google_drive_settings").set(settingsToSave, { merge: true });
+
+        functions.logger.info("Refresh token and email saved to Firestore.");
+        return { success: true, email: userEmail };
+
+    } catch (error) {
+        functions.logger.error("!!! GOOGLE OAUTH TOKEN EXCHANGE FAILED !!!", {
+            error: error.message,
+            response: error.response?.data
+        });
+        throw new functions.https.HttpsError("unknown", error.message || "Failed to exchange authorization code.");
+    }
+});
+
+
 exports.uploadFileToDrive = functions
     .runWith({ timeoutSeconds: 300 })
     .https.onCall(async (data, context) => {
