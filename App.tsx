@@ -55,6 +55,7 @@ const LAUNCH_DATE = new Date('2026-01-10T12:00:00+01:00');
 
 const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNode, adminOnly?: boolean }) => {
     const auth = useContext(AuthContext);
+    const location = useLocation();
     
     if (auth?.loading) {
         return null; 
@@ -62,6 +63,11 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
 
     if (!auth?.user) {
         return <Navigate to="/login" replace />;
+    }
+    
+    // Enforce profile completion before accessing protected routes.
+    if ((!auth.user.matricNumber || !auth.user.username) && location.pathname !== '/login') {
+      return <Navigate to="/login" replace />;
     }
 
     if (adminOnly && !['admin', 'librarian', 'vice_president', 'supplement'].includes(auth.user.role)) {
