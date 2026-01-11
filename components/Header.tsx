@@ -1,11 +1,10 @@
 
-
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Logo } from './Logo';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { collection, query, where, limit, onSnapshot, doc, writeBatch, updateDoc, orderBy } from 'firebase/firestore';
+import { collection, query, where, limit, onSnapshot, doc, writeBatch, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Notification as FirestoreNotification } from '../types';
 
@@ -52,26 +51,21 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
   const handleClearAll = async () => {
       if (unreadCount === 0) return;
       const batch = writeBatch(db);
-      const unreadNotes = dbNotifications.filter(note => !note.read);
-      
-      unreadNotes.forEach(note => {
+      dbNotifications.forEach(note => {
           if (!note.read) {
               const noteRef = doc(db, 'notifications', note.id);
               batch.update(noteRef, { read: true });
           }
       });
-      
-      try {
-        await batch.commit();
-      } catch (error) {
-        console.error("Failed to mark notifications as read:", error);
-      }
+      await batch.commit();
+      setDbNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
   };
   
-  const handleNotificationClick = (notification: FirestoreNotification) => {
+  const handleNotificationClick = async (notification: FirestoreNotification) => {
       setShowNotifications(false);
       if (!notification.read) {
-          updateDoc(doc(db, 'notifications', notification.id), { read: true });
+          await updateDoc(doc(db, 'notifications', notification.id), { read: true });
       }
       navigate('/notifications', { state: { highlightId: notification.id } });
   };

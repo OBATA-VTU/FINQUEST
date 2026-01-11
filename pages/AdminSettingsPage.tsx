@@ -4,8 +4,6 @@ import { db } from '../firebase';
 import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch, deleteDoc, updateDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
 import { AuthContext } from '../contexts/AuthContext';
-import { useSettings } from '../contexts/SettingsContext';
-import { uploadToImgBB } from '../utils/api';
 
 const GOOGLE_DRIVE_CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID;
 const GOOGLE_DRIVE_CLIENT_SECRET = process.env.GOOGLE_DRIVE_CLIENT_SECRET;
@@ -18,17 +16,14 @@ declare global {
 
 export const AdminSettingsPage: React.FC = () => {
   const auth = useContext(AuthContext);
-  const settings = useSettings();
   const isSuperAdmin = auth?.user?.role === 'admin';
   const { showNotification } = useNotification();
 
   const [socialLinks, setSocialLinks] = useState({ facebook: '', twitter: '', instagram: '', whatsapp: '', telegram: '', tiktok: '' });
   const [siteSettings, setSiteSettings] = useState({ session: '2025/2026', showExecutives: true, uploadService: 'dropbox' });
+  
   const [driveSettings, setDriveSettings] = useState({ folder_id: '', connected_email: '' });
   const [tokenClient, setTokenClient] = useState<any>(null);
-
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   const [isWipeModalOpen, setIsWipeModalOpen] = useState(false);
   const [wipeConfirmText, setWipeConfirmText] = useState('');
@@ -118,21 +113,6 @@ export const AdminSettingsPage: React.FC = () => {
       }
   };
 
-  const handleSaveLogo = async () => {
-    if (!logoFile) return;
-    setIsUploadingLogo(true);
-    try {
-        const newLogoUrl = await uploadToImgBB(logoFile);
-        await updateDoc(doc(db, 'content', 'site_settings'), { logoUrl: newLogoUrl });
-        showNotification("Logo updated successfully!", "success");
-        setLogoFile(null);
-    } catch (e) {
-        showNotification("Logo upload failed.", "error");
-    } finally {
-        setIsUploadingLogo(false);
-    }
-  };
-
   const handleSaveSocial = async () => {
       try {
           await setDoc(doc(db, 'content', 'social_links'), socialLinks);
@@ -152,6 +132,7 @@ export const AdminSettingsPage: React.FC = () => {
       try {
           const batch = writeBatch(db);
           
+          // 1. Advance student levels
           const usersSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'student')));
           usersSnap.forEach(userDoc => {
               const user = userDoc.data();
@@ -162,6 +143,7 @@ export const AdminSettingsPage: React.FC = () => {
               }
           });
 
+          // 2. Update session year and timestamps
           const settingsRef = doc(db, 'content', 'site_settings');
           const oldSettingsSnap = await getDoc(settingsRef);
           const oldSettings = oldSettingsSnap.data() || {};
@@ -174,6 +156,7 @@ export const AdminSettingsPage: React.FC = () => {
               lastSessionEndTimestamp: new Date().toISOString(),
           });
 
+          // 3. Hide executives
           batch.update(settingsRef, { showExecutives: false });
           
           await batch.commit();
@@ -222,23 +205,7 @@ export const AdminSettingsPage: React.FC = () => {
             <p className="text-sm text-slate-500 dark:text-slate-400">Manage global configurations for the portal.</p>
         </div>
         
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
-             <h3 className="font-bold text-slate-800 dark:text-white mb-4">Site Logo</h3>
-             <div className="flex items-center gap-6 mb-4">
-                 <img src={settings?.logoUrl || '/logo.svg'} alt="Current Logo" className="w-24 h-24 rounded-full bg-slate-100 p-2 border-2 border-slate-200 dark:bg-slate-900 dark:border-slate-700 object-contain" />
-                 <div className="flex-1">
-                     <label className="flex flex-col items-center justify-center w-full h-full p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-500 bg-slate-50 dark:bg-slate-700/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
-                         <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{logoFile ? logoFile.name : 'Select a new logo file...'}</span>
-                         <input type="file" className="hidden" accept="image/*,.svg" onChange={(e) => e.target.files && setLogoFile(e.target.files[0])} />
-                     </label>
-                     <p className="text-xs text-slate-400 mt-2">Recommended: SVG or square PNG format.</p>
-                 </div>
-             </div>
-             <button onClick={handleSaveLogo} disabled={!logoFile || isUploadingLogo} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold disabled:opacity-50">
-                {isUploadingLogo ? 'Uploading...' : 'Upload & Save Logo'}
-             </button>
-        </div>
-        
+        {/* Site Settings */}
         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
              <h3 className="font-bold text-slate-800 dark:text-white mb-4">General</h3>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -249,6 +216,7 @@ export const AdminSettingsPage: React.FC = () => {
              <button onClick={handleSaveSite} className="mt-4 w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Save General Settings</button>
         </div>
 
+        {/* Google Drive */}
         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
              <h3 className="font-bold text-slate-800 dark:text-white mb-4">Google Drive Integration</h3>
              {driveSettings.connected_email ? <p className="text-sm text-emerald-600 mb-4">Connected as: {driveSettings.connected_email}</p> : <p className="text-sm text-amber-600 mb-4">Not Connected. Connect to enable Google Drive as the storage option.</p>}
@@ -259,6 +227,7 @@ export const AdminSettingsPage: React.FC = () => {
              <button onClick={() => setDoc(doc(db, 'config', 'google_drive_settings'), driveSettings, { merge: true }).then(() => showNotification("Folder ID Saved", "success"))} className="mt-4 w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Save Drive Settings</button>
         </div>
         
+        {/* Social Links */}
         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
              <h3 className="font-bold text-slate-800 dark:text-white mb-4">Social Media Links</h3>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -270,6 +239,7 @@ export const AdminSettingsPage: React.FC = () => {
              <button onClick={handleSaveSocial} className="mt-4 w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Save Social Links</button>
         </div>
 
+        {/* DANGER ZONE */}
         <div className="bg-rose-50 dark:bg-rose-900/20 p-6 rounded-2xl border-2 border-dashed border-rose-300 dark:border-rose-800">
             <h3 className="font-bold text-rose-800 dark:text-rose-200 mb-4">Danger Zone</h3>
             <div className="space-y-4">

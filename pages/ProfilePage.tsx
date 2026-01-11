@@ -18,6 +18,12 @@ const StatCard: React.FC<{ icon: React.ReactNode, label: string, value: string |
     </div>
 );
 
+// Helper to detect iOS devices
+const isIos = () => {
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  return /iphone|ipad|ipod/.test(userAgent) && !(window as any).MSStream;
+};
+
 export const ProfilePage: React.FC = () => {
   const auth = useContext(AuthContext);
   const navigate = useNavigate();
@@ -30,6 +36,43 @@ export const ProfilePage: React.FC = () => {
   const [testCount, setTestCount] = useState(0);
   const [avgScore, setAvgScore] = useState(0);
   const [loadingStats, setLoadingStats] = useState(true);
+
+  // PWA Install logic
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [canInstall, setCanInstall] = useState(false);
+  const [isIosInstallModalOpen, setIsIosInstallModalOpen] = useState(false);
+
+  useEffect(() => {
+    const isInstalled = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+    if (isInstalled) return;
+
+    const handleBeforeInstall = (e: Event) => {
+        e.preventDefault();
+        setDeferredPrompt(e);
+        setCanInstall(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    
+    if (isIos()) {
+        setCanInstall(true);
+    }
+    
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            setDeferredPrompt(null);
+            setCanInstall(false);
+        }
+    } else if (isIos()) {
+        setIsIosInstallModalOpen(true);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -158,9 +201,11 @@ export const ProfilePage: React.FC = () => {
           )}
 
           <div className="mt-12 text-center flex justify-center gap-4">
-              <button onClick={() => navigate('/download-app')} className="px-10 py-3 bg-indigo-600 text-white font-black rounded-xl hover:bg-indigo-700 transition-all shadow-lg hover:scale-105">
-                  Install App
-              </button>
+              {canInstall && (
+                  <button onClick={handleInstallClick} className="px-10 py-3 bg-indigo-600 text-white font-black rounded-xl hover:bg-indigo-700 transition-all shadow-lg hover:scale-105">
+                      Install App
+                  </button>
+              )}
               <button onClick={async () => { await auth.logout(); navigate('/login'); }} className="px-10 py-3 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 font-black rounded-xl hover:bg-rose-600 hover:text-white dark:hover:bg-rose-800 transition-all">Logout Securely</button>
           </div>
       </div>
@@ -168,6 +213,29 @@ export const ProfilePage: React.FC = () => {
       {/* Modals */}
       <EditProfileModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} />
       <AddPasswordModal isOpen={isAddPasswordModalOpen} onClose={() => setIsAddPasswordModalOpen(false)} />
+      {isIosInstallModalOpen && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsIosInstallModalOpen(false)}>
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 w-full max-w-sm text-center animate-fade-in-up" onClick={e => e.stopPropagation()}>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Install on iOS</h2>
+                <p className="text-slate-600 dark:text-slate-400 mb-6">To install the app on your iPhone or iPad, follow these steps:</p>
+                <ol className="text-left space-y-4">
+                    <li className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center text-blue-500">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                        </div>
+                        <div><strong>1.</strong> Tap the <strong>Share</strong> button in Safari.</div>
+                    </li>
+                    <li className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center text-blue-500">
+                           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                        </div>
+                        <div><strong>2.</strong> Scroll down and tap on <strong>'Add to Home Screen'</strong>.</div>
+                    </li>
+                </ol>
+                <button onClick={() => setIsIosInstallModalOpen(false)} className="mt-8 w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">Got It!</button>
+            </div>
+        </div>
+      )}
     </div>
   );
 };

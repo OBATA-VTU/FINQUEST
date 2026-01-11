@@ -1,60 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" font-family="Arial, sans-serif" font-weight="bold">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <path id="arcTop" d="M 100, 256 A 156, 156, 0, 1, 1, 412, 256" />
-    <path id="arcBottom" d="M 442, 256 A 186, 186, 0, 0, 1, 70, 256" />
-    <style>
-      .heavy { font-weight: 900; }
-      .currency { font-size: 60px; fill: #FF0000; text-anchor: middle; font-family: serif; }
-    </style>
+    <path id="txtTop" d="M 70,256 A 186,186 0 1,1 442,256" />
+    <path id="txtBot" d="M 90,256 A 166,166 0 0,0 422,256" />
+    <path id="bannerPath" d="M 120,440 Q 256,480 392,440" />
   </defs>
 
-  <!-- Main Ring & Borders -->
-  <circle cx="256" cy="256" r="240" fill="#00004d" />
-  <circle cx="256" cy="256" r="215" fill="white" />
+  <!-- Background Circle (White) -->
+  <circle cx="256" cy="256" r="240" fill="white" stroke="#311b92" stroke-width="12" />
   
-  <!-- Motto Background -->
-  <circle cx="256" cy="256" r="210" fill="#00004d" stroke="white" stroke-width="4" />
-  <circle cx="256" cy="256" r="185" fill="#00004d" stroke="white" stroke-width="4" />
-  
-  <!-- Central Circle -->
-  <g>
-    <circle cx="256" cy="256" r="150" fill="white" stroke="#00004d" stroke-width="6"/>
-    <path d="M 256 106 A 150 150 0 0 0 256 406 Z" fill="#00004d" />
-    <path d="M 106 256 A 150 150 0 0 1 256 106 L 256 406 A 150 150 0 0 1 106 256 Z" fill="#00004d" />
-    <line x1="256" y1="106" x2="256" y2="406" stroke="#00004d" stroke-width="6"/>
-    <line x1="106" y1="256" x2="406" y2="256" stroke="#00004d" stroke-width="6"/>
+  <!-- Inner Circle Border -->
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#311b92" stroke-width="6" />
+
+  <!-- Quadrants -->
+  <g clip-path="url(#innerClip)">
+    <defs><clipPath id="innerClip"><circle cx="256" cy="256" r="167" /></clipPath></defs>
+    
+    <!-- Top Left (Blue) -->
+    <rect x="0" y="0" width="256" height="256" fill="#311b92" />
+    <!-- Top Right (White) -->
+    <rect x="256" y="0" width="256" height="256" fill="white" />
+    <!-- Bottom Left (White) -->
+    <rect x="0" y="256" width="256" height="256" fill="white" />
+    <!-- Bottom Right (Blue) -->
+    <rect x="256" y="256" width="256" height="256" fill="#311b92" />
   </g>
   
-  <!-- Currency Symbols -->
-  <text class="currency" x="181" y="196">#</text>
-  <text class="currency" x="331" y="196">£</text>
-  <text class="currency" x="181" y="356">$</text>
-  <text class="currency" x="331" y="356">¥</text>
+  <!-- Dividers -->
+  <line x1="256" y1="89" x2="256" y2="423" stroke="white" stroke-width="6" />
+  <line x1="89" y1="256" x2="423" y2="256" stroke="white" stroke-width="6" />
 
-  <!-- Top Text -->
-  <text font-size="36" fill="#00004d" letter-spacing="2" class="heavy">
-    <textPath href="#arcTop" startOffset="50%" text-anchor="middle">
-      FINANCE STUDENTS' ASSOCIATION
-    </textPath>
+  <!-- Symbols -->
+  <!-- TL # (Red) -->
+  <text x="170" y="190" font-family="serif" font-weight="bold" font-size="90" fill="#f43f5e" text-anchor="middle">#</text>
+  <!-- TR £ (Red) -->
+  <text x="342" y="190" font-family="serif" font-weight="bold" font-size="90" fill="#f43f5e" text-anchor="middle">£</text>
+  <!-- BL $ (Red) -->
+  <text x="170" y="360" font-family="serif" font-weight="bold" font-size="90" fill="#f43f5e" text-anchor="middle">$</text>
+  <!-- BR ¥ (Red) -->
+  <text x="342" y="360" font-family="serif" font-weight="bold" font-size="90" fill="#f43f5e" text-anchor="middle">¥</text>
+
+  <!-- Ring Text -->
+  <text font-family="sans-serif" font-weight="900" font-size="30" fill="#311b92" letter-spacing="1">
+    <textPath href="#txtTop" startOffset="50%" text-anchor="middle">FINANCE STUDENTS' ASSOCIATION</textPath>
   </text>
   
-  <!-- Chapter Text -->
-  <text x="256" y="270" font-size="36" fill="white" text-anchor="middle" class="heavy">AAUA CHAPTER</text>
-
-  <!-- Motto Text -->
-  <text font-size="28" fill="white" letter-spacing="2" class="heavy">
-    <textPath href="#arcBottom" startOffset="50%" text-anchor="middle">
-      MOTTO: BREEDING FINANCIAL EXPERTS
-    </textPath>
+  <text font-family="sans-serif" font-weight="bold" font-size="34" fill="#311b92" letter-spacing="3">
+    <textPath href="#txtBot" startOffset="50%" text-anchor="middle">AAUA CHAPTER</textPath>
   </text>
-  
+
   <!-- Red Dots -->
-  <circle cx="120" cy="280" r="10" fill="red"/>
-  <circle cx="392" cy="280" r="10" fill="red"/>
+  <circle cx="45" cy="256" r="12" fill="#f43f5e" />
+  <circle cx="467" cy="256" r="12" fill="#f43f5e" />
 
-  <!-- Side Wings -->
-  <g fill="#00004d">
-    <path d="M 40,290 L 70,290 L 70,260 L 90,260 L 90,230 L 70,230 L 70,200 L 40,200 L 65,245 Z" />
-    <path d="M 472,290 L 442,290 L 442,260 L 422,260 L 422,230 L 442,230 L 442,200 L 472,200 L 447,245 Z" />
-  </g>
+  <!-- Banner/Motto -->
+  <path d="M 100,430 Q 256,470 412,430 L 392,470 Q 256,510 120,470 Z" fill="white" stroke="#311b92" stroke-width="3" />
+  <text font-family="sans-serif" font-weight="bold" font-size="16" fill="#311b92" letter-spacing="1">
+     <textPath href="#bannerPath" startOffset="50%" text-anchor="middle">MOTTO: BREEDING FINANCIAL EXPERTS</textPath>
+  </text>
 </svg>

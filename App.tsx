@@ -1,5 +1,4 @@
 
-
 import React, { useContext, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
@@ -29,13 +28,10 @@ import { UploadPage } from './pages/UploadPage';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { SettingsProvider } from './contexts/SettingsContext';
 import { Layout } from './components/Layout';
 import { CountdownPage } from './pages/CountdownPage';
 import ScrollToTop from './components/ScrollToTop';
 import { NotificationHandler } from './components/NotificationHandler';
-import { SEOMetadataUpdater } from './components/SEOMetadataUpdater';
-import { OnboardingTour } from './components/OnboardingTour';
 
 import { AdminMaterialsPage } from './pages/AdminMaterialsPage';
 import { AdminNewsPage } from './pages/AdminNewsPage';
@@ -47,7 +43,6 @@ import { ArcadePage } from './pages/ArcadePage';
 import { MarketplacePage } from './pages/MarketplacePage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { SessionWrapPage } from './pages/SessionWrapPage';
-import { DownloadAppPage } from './pages/DownloadAppPage';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -85,19 +80,14 @@ const AppContent: React.FC = () => {
   const auth = useContext(AuthContext);
   const [sessionWrapInfo, setSessionWrapInfo] = useState<{ start: string; end: string; session: string } | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    const checkSessionAndOnboarding = async () => {
+    const checkSession = async () => {
       if (!auth?.user) {
         setCheckingSession(false);
         return;
       }
       try {
-        if (auth.user.hasCompletedOnboarding !== true) {
-            setShowOnboarding(true);
-        }
-
         const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
         if (settingsDoc.exists()) {
           const settings = settingsDoc.data();
@@ -127,7 +117,7 @@ const AppContent: React.FC = () => {
         setCheckingSession(false);
       }
     };
-    checkSessionAndOnboarding();
+    checkSession();
   }, [auth?.user]);
 
   const handleFinishWrap = async () => {
@@ -138,16 +128,6 @@ const AppContent: React.FC = () => {
     }
     setSessionWrapInfo(null);
   };
-
-  const handleFinishOnboarding = async () => {
-    if (auth?.user) {
-        await updateDoc(doc(db, 'users', auth.user.id), {
-            hasCompletedOnboarding: true,
-        });
-        auth.updateUser({ hasCompletedOnboarding: true });
-    }
-    setShowOnboarding(false);
-  };
   
   if (checkingSession) {
     return <div className="h-screen w-screen bg-slate-950"></div>;
@@ -156,18 +136,12 @@ const AppContent: React.FC = () => {
   if (sessionWrapInfo) {
     return <SessionWrapPage info={sessionWrapInfo} onFinish={handleFinishWrap} />;
   }
-
-  if (showOnboarding) {
-      return <OnboardingTour onFinish={handleFinishOnboarding} />;
-  }
   
   return (
     <>
         <ScrollToTop />
         <NotificationHandler />
-        <SEOMetadataUpdater />
         <Routes>
-            <Route path="/login" element={<LoginPage />} />
             <Route element={<Layout />}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/announcements" element={<AnnouncementsPage />} />
@@ -176,14 +150,12 @@ const AppContent: React.FC = () => {
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="/faq" element={<FAQPage />} />
                 <Route path="/lost-and-found" element={<LostFoundPage />} />
-                <Route path="/download-app" element={<DownloadAppPage />} />
                 
                 <Route path="/dashboard" element={<RequireAuth><UserDashboardPage /></RequireAuth>} />
                 <Route path="/questions" element={<RequireAuth><PastQuestionsPage /></RequireAuth>} />
                 <Route path="/community" element={<RequireAuth><CommunityPage /></RequireAuth>} />
                 <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
                 <Route path="/test" element={<RequireAuth><TestPage /></RequireAuth>} />
-                <Route path="/arcade" element={<RequireAuth><ArcadePage /></RequireAuth>} />
                 <Route path="/notes" element={<RequireAuth><NotesPage /></RequireAuth>} />
                 <Route path="/leaderboard" element={<RequireAuth><LeaderboardPage /></RequireAuth>} />
                 <Route path="/upload" element={<RequireAuth><UploadPage /></RequireAuth>} />
@@ -242,9 +214,7 @@ const App: React.FC = () => {
     <ThemeProvider>
         <NotificationProvider>
           <AuthProvider>
-            <SettingsProvider>
-              <AppContent />
-            </SettingsProvider>
+            <AppContent />
           </AuthProvider>
         </NotificationProvider>
     </ThemeProvider>

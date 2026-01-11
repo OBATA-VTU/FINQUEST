@@ -98,10 +98,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     lastActive: userData.lastActive,
                     isVerified: userData.isVerified,
                     isBanned: userData.isBanned,
-                    badges: userData.badges || [],
-                    hasCompletedOnboarding: userData.hasCompletedOnboarding,
-                    infractionCount: userData.infractionCount,
-                    chatBanUntil: userData.chatBanUntil,
+                    badges: userData.badges || []
                 });
             } else {
                 const newUser = {
