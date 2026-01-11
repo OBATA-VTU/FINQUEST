@@ -70,7 +70,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
         setUploadProgress(5);
 
         try {
-            // Use the new uploadDocument wrapper
+            // FIX: The 'uploadDocument' function expects the file as its first argument, not the user object.
             const { url, path } = await uploadDocument(file, 'past_questions', (progress) => {
                 setUploadProgress(progress);
                 setUploadStatus('Uploading Document...');

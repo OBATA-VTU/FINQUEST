@@ -1,5 +1,6 @@
-import { db } from '../firebase';
+import { db, functions } from '../firebase';
 import { doc, setDoc, increment, getDoc, updateDoc } from 'firebase/firestore';
+import { httpsCallable } from "firebase/functions";
 
 const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || "a4aa97ad337019899bb59b4e94b149e0";
 const DROPBOX_ACCESS_TOKEN = process.env.DROPBOX_ACCESS_TOKEN;
@@ -14,6 +15,9 @@ interface DriveTokenData {
   expires_at: number;
 }
 
+// NOTE: This function is now ONLY for admin-side operations (like file deletion)
+// where the user is guaranteed to be an admin and can therefore read the config.
+// It is NOT used for general user uploads.
 const getGoogleAuthToken = async (): Promise<string> => {
     const tokenDocRef = doc(db, 'config', 'google_drive_settings');
     const tokenDoc = await getDoc(tokenDocRef);
@@ -61,6 +65,25 @@ const getGoogleAuthToken = async (): Promise<string> => {
 
     return newTokens.access_token;
 };
+
+
+// Helper to convert File to Base64 string for transport to the Cloud Function.
+const fileToBase64 = (file: File): Promise<string> => 
+    new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+            const result = reader.result as string;
+            // Remove the data URL prefix e.g. "data:image/png;base64,"
+            const base64 = result.split(',')[1];
+            if (base64) {
+                resolve(base64);
+            } else {
+                reject(new Error("Failed to read file as base64."));
+            }
+        };
+        reader.onerror = error => reject(error);
+    });
 
 export const trackAiUsage = async () => {
     try {
@@ -162,48 +185,36 @@ export const uploadFile = (file: File, folder: string = 'materials', onProgress?
 export const uploadFileToGoogleDrive = async (file: File, onProgress?: (progress: number) => void): Promise<{ url: string, path: string }> => {
     try {
         onProgress?.(10);
-        const accessToken = await getGoogleAuthToken();
-        const settingsDoc = await getDoc(doc(db, 'config', 'google_drive_settings'));
-        const folderId = settingsDoc.exists() ? settingsDoc.data().folder_id : null;
-
-        if (!folderId) {
-            throw new Error("Google Drive Folder ID not set in Admin Settings.");
-        }
-        
+        // 1. Convert the file to a base64 string for transport.
+        const fileContent = await fileToBase64(file);
         onProgress?.(30);
-        const metadata = { name: file.name, parents: [folderId] };
-        const formData = new FormData();
-        formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-        formData.append('file', file);
-        
-        const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${accessToken}` },
-            body: formData,
-        });
 
-        if (!response.ok) {
-            const errorBody = await response.json().catch(() => ({}));
-            const message = errorBody?.error?.message || response.statusText;
-            throw new Error(`Google Drive upload failed: ${message}`);
+        // 2. Get a reference to the callable Cloud Function.
+        const uploadToDrive = httpsCallable(functions, 'uploadFileToDrive');
+        onProgress?.(50);
+        
+        // 3. Call the function with the file's data.
+        const result = await uploadToDrive({
+            fileContent,
+            fileName: file.name,
+            mimeType: file.type || 'application/octet-stream',
+        });
+        
+        onProgress?.(90);
+
+        // 4. Process the response from the Cloud Function.
+        const data = result.data as { success: boolean, url: string, path: string, message?: string };
+        if (data.success) {
+            onProgress?.(100);
+            return { url: data.url, path: data.path };
+        } else {
+            // This error comes from the return statement in the cloud function
+            throw new Error(data.message || "The cloud function reported an error.");
         }
-        
-        const result = await response.json();
-        const fileId = result.id;
-        
-        await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ role: 'reader', type: 'anyone' }),
-        });
-        
-        onProgress?.(100);
-        const publicUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
-        return { url: publicUrl, path: fileId };
-
-    } catch (error) {
+    } catch (error: any) {
         console.error("Google Drive upload failed:", error);
-        throw error;
+        // This error comes from a thrown HttpsError in the cloud function
+        throw new Error(error.message || "An unexpected error occurred during the upload. Check the console for details.");
     }
 };
 
@@ -215,6 +226,8 @@ export const uploadDocument = async (file: File, folder: string = 'materials', o
         if (uploadService === 'google_drive') {
             return uploadFileToGoogleDrive(file, onProgress);
         }
+        
+        // Default to Dropbox
         return uploadFile(file, folder, onProgress);
     } catch (error) {
         console.error("Failed to determine upload service, defaulting to Dropbox.", error);
