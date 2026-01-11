@@ -15,20 +15,11 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    // Check if the user has an administrative role.
-    // FIX: Expanded to include all roles that can access the admin panel.
+    // Check if the user has the 'admin' role in their user profile
+    // Note: This costs one extra read operation per request.
     function isAdmin() {
       return isAuthenticated() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'librarian', 'vice_president', 'supplement'];
-    }
-    
-    // --- SECURE CONFIGURATION ---
-    // This collection stores sensitive data like API keys.
-    // Reading is restricted to admins to allow for existence checks.
-    // Writing is forbidden from the client to protect keys. Only backend functions can write.
-    match /config/{docId} {
-      allow read: if isAdmin();
-      allow write: if docId == 'google_drive_settings' && isAdmin(); // Allow admin to write OAuth tokens
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // --- USERS COLLECTION ---
@@ -40,9 +31,9 @@ service cloud.firestore {
       allow create: if isOwner(userId) && request.resource.data.role == 'student';
       
       // Update: 
-      // 1. Owner can update a limited set of their profile fields.
-      // 2. Admin can update anything.
-      allow update: if (isOwner(userId) && request.writeFields.hasOnly(['name', 'level', 'matricNumber', 'avatarUrl', 'username', 'savedQuestions', 'lastActive', 'badges'])) || isAdmin();
+      // 1. Owner can update their profile (avatar, name) BUT CANNOT change their 'role' or 'isBanned' status.
+      // 2. Admin can update anything (including roles and bans).
+      allow update: if (isOwner(userId) && request.resource.data.role == resource.data.role && request.resource.data.isBanned == resource.data.isBanned) || isAdmin();
       
       // Delete: Only admins can delete users
       allow delete: if isAdmin();
@@ -57,7 +48,7 @@ service cloud.firestore {
       allow create: if isAdmin();
       
       // Delete: Users can dismiss (delete) their own notifications. Admins can delete any.
-      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     // --- PAST QUESTIONS (ARCHIVES) ---
@@ -80,8 +71,8 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       // Create: Auth users can send messages, must be marked as sender
       allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
-      // Delete: Only Admins (for moderation) or owner
-      allow delete: if isAdmin() || (isAuthenticated() && resource.data.senderId == request.auth.uid);
+      // Delete: Only Admins (for moderation)
+      allow delete: if isAdmin();
     }
 
     // --- TEST RESULTS (History) ---
@@ -95,62 +86,51 @@ service cloud.firestore {
     // --- LEADERBOARD (Best Scores) ---
     match /leaderboard/{userId} {
       allow read: if true;
-      // Users can update their score, Admins can manage records.
-      allow write: if isOwner(userId) || isAdmin();
+      // Users can create/update their own entry in leaderboard to update best score
+      allow write: if isOwner(userId);
     }
     
     // --- PRIVATE NOTES (New) ---
     match /notes/{noteId} {
-      // Admins need full access for moderation/wipe, owners have full control of their own.
+      // Only the creator can read, update, or delete their notes
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow read, update, delete: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow read, update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
     // --- SYSTEM STATS (New - For Admin Health) ---
     match /system_stats/{docId} {
       allow read: if isAdmin();
-      // FIX: Allow any authenticated user to create or update the 'ai_usage' doc.
-      // This is necessary for the trackAiUsage function which creates the doc on the first run for a non-admin user.
-      allow write: if docId == 'ai_usage' && isAuthenticated();
+      // Allow authenticated users to increment usage counters (e.g. for AI calls)
+      allow update: if isAuthenticated(); 
+      allow create: if isAdmin();
     }
 
     // --- LOST & FOUND ---
     match /lost_items/{itemId} {
-      // Anyone can read approved/recovered items.
-      allow read: if resource.data.status == 'approved' || resource.data.status == 'recovered' || isAdmin();
+      // Read: Public sees Approved/Recovered. Owner sees their own pending. Admin sees all.
+      allow read: if resource.data.status == 'approved' || 
+                     resource.data.status == 'recovered' || 
+                     (isAuthenticated() && (resource.data.finderId == request.auth.uid || isAdmin()));
       
-      // Any authenticated user can create an item, but it must be set to 'approved' immediately.
-      allow create: if isAuthenticated() && request.resource.data.status == 'approved';
+      // Create: Any logged in user can report a lost item
+      allow create: if isAuthenticated();
       
       // Update: 
       // 1. Owner can mark status as 'recovered'.
-      // 2. Admin can edit anything (for moderation).
+      // 2. Admin can approve ('approved') or edit.
       allow update: if (isAuthenticated() && resource.data.finderId == request.auth.uid && request.resource.data.status == 'recovered') || isAdmin();
       
       // Delete: Admin only
       allow delete: if isAdmin();
     }
-    
-    // --- MARKETPLACE (New) ---
-    match /marketplace/{itemId} {
-        allow read: if isAuthenticated();
-        // Create: Auth users can create listings, must be marked as sender
-        allow create: if isAuthenticated() && request.resource.data.sellerId == request.auth.uid;
-        // Update/Delete: Owner or Admin
-        allow update, delete: if (isAuthenticated() && resource.data.sellerId == request.auth.uid) || isAdmin();
-    }
 
     // --- PUBLIC CONTENT (Managed by Admin) ---
     // Includes: Announcements, Gallery, Executives, Lecturers, Site Settings
-    match /content/{docId} {
-      allow read: if true;
-      // Allow admin to write anything, and allow ANYONE to write to the impression poll
-      allow write: if isAdmin() || docId == 'impression_poll';
-    }
     match /announcements/{docId} { allow read: if true; allow write: if isAdmin(); }
     match /gallery/{docId} { allow read: if true; allow write: if isAdmin(); }
     match /executives/{docId} { allow read: if true; allow write: if isAdmin(); }
     match /lecturers/{docId} { allow read: if true; allow write: if isAdmin(); }
+    match /content/{docId} { allow read: if true; allow write: if isAdmin(); }
     match /groups/{docId} { allow read: if true; allow write: if isAdmin(); }
   }
 }

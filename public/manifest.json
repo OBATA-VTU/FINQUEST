@@ -1,4 +1,3 @@
-
 {
   "id": "/",
   "name": "FINSA - Department of Finance AAUA",
@@ -8,8 +7,7 @@
   "scope": "/",
   "display": "standalone",
   "background_color": "#0f172a",
-  "theme_color": "#ffffff",
-  "theme_color_dark": "#0f172a",
+  "theme_color": "#311b92",
   "orientation": "portrait-primary",
   "lang": "en",
   "dir": "ltr",

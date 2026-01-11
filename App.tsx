@@ -1,6 +1,6 @@
 
-import React, { useContext, useEffect, useState } from 'react';
-import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import React, { useContext } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
 import { UserDashboardPage } from './pages/UserDashboardPage';
 import { PastQuestionsPage } from './pages/PastQuestionsPage';
@@ -11,9 +11,9 @@ import { LoginPage } from './pages/LoginPage';
 import { AdminLayout } from './components/AdminLayout';
 import { AdminPage } from './pages/AdminPage';
 import { AdminApprovalsPage } from './pages/AdminApprovalsPage';
+import { AdminContentPage } from './pages/AdminContentPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { AdminSettingsPage } from './pages/AdminSettingsPage';
-import { AdminActiveUsersPage } from './pages/AdminActiveUsersPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { CommunityPage } from './pages/CommunityPage';
 import { GalleryPage } from './pages/GalleryPage';
@@ -22,32 +22,13 @@ import { TermsPage } from './pages/TermsPage';
 import { TestPage } from './pages/TestPage'; 
 import { LostFoundPage } from './pages/LostFoundPage';
 import { FAQPage } from './pages/FAQPage';
-import { NotesPage } from './pages/NotesPage';
-import { LeaderboardPage } from './pages/LeaderboardPage';
-import { UploadPage } from './pages/UploadPage';
+import { NotesPage } from './pages/NotesPage'; // New
+import { LeaderboardPage } from './pages/LeaderboardPage'; // New
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Layout } from './components/Layout';
-import { CountdownPage } from './pages/CountdownPage';
 import ScrollToTop from './components/ScrollToTop';
-import { NotificationHandler } from './components/NotificationHandler';
-
-import { AdminMaterialsPage } from './pages/AdminMaterialsPage';
-import { AdminNewsPage } from './pages/AdminNewsPage';
-import { AdminExecutivesPage } from './pages/AdminExecutivesPage';
-import { AdminLecturersPage } from './pages/AdminLecturersPage';
-import { AdminCommunityPage } from './pages/AdminCommunityPage';
-import { AdminGalleryPage } from './pages/AdminGalleryPage';
-import { ArcadePage } from './pages/ArcadePage';
-import { MarketplacePage } from './pages/MarketplacePage';
-import { NotificationsPage } from './pages/NotificationsPage';
-import { SessionWrapPage } from './pages/SessionWrapPage';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from './firebase';
-
-// Target launch date: Jan 10, 2026, 12:00 PM West Africa Time (UTC+1)
-const LAUNCH_DATE = new Date('2026-01-10T12:00:00+01:00');
 
 const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNode, adminOnly?: boolean }) => {
     const auth = useContext(AuthContext);
@@ -77,71 +58,14 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
 };
 
 const AppContent: React.FC = () => {
-  const auth = useContext(AuthContext);
-  const [sessionWrapInfo, setSessionWrapInfo] = useState<{ start: string; end: string; session: string } | null>(null);
-  const [checkingSession, setCheckingSession] = useState(true);
-
-  useEffect(() => {
-    const checkSession = async () => {
-      if (!auth?.user) {
-        setCheckingSession(false);
-        return;
-      }
-      try {
-        const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
-        if (settingsDoc.exists()) {
-          const settings = settingsDoc.data();
-          const { lastSessionEndTimestamp, secondToLastSessionEndTimestamp, session } = settings;
-          
-          if (lastSessionEndTimestamp) {
-            const lastWrapViewed = auth.user.viewedSessionWrapTimestamp ? new Date(auth.user.viewedSessionWrapTimestamp).getTime() : 0;
-            const sessionEndedTime = new Date(lastSessionEndTimestamp).getTime();
-            
-            if (sessionEndedTime > lastWrapViewed) {
-              const [currentStartYear] = session.split('/');
-              const previousSessionEndYear = Number(currentStartYear) - 1;
-              const previousSessionStartYear = previousSessionEndYear - 1;
-              const previousSessionString = `${previousSessionStartYear}/${previousSessionEndYear}`;
-              
-              setSessionWrapInfo({
-                start: secondToLastSessionEndTimestamp || new Date('2026-01-10T12:00:00+01:00').toISOString(),
-                end: lastSessionEndTimestamp,
-                session: previousSessionString,
-              });
-            }
-          }
-        }
-      } catch (e) {
-        console.error("Failed to check session wrap status", e);
-      } finally {
-        setCheckingSession(false);
-      }
-    };
-    checkSession();
-  }, [auth?.user]);
-
-  const handleFinishWrap = async () => {
-    if (auth?.user) {
-      await updateDoc(doc(db, 'users', auth.user.id), {
-        viewedSessionWrapTimestamp: new Date().toISOString()
-      });
-    }
-    setSessionWrapInfo(null);
-  };
-  
-  if (checkingSession) {
-    return <div className="h-screen w-screen bg-slate-950"></div>;
-  }
-
-  if (sessionWrapInfo) {
-    return <SessionWrapPage info={sessionWrapInfo} onFinish={handleFinishWrap} />;
-  }
-  
   return (
     <>
         <ScrollToTop />
-        <NotificationHandler />
         <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<LoginPage />} />
+            
+            {/* Main App Routes */}
             <Route element={<Layout />}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/announcements" element={<AnnouncementsPage />} />
@@ -151,6 +75,7 @@ const AppContent: React.FC = () => {
                 <Route path="/faq" element={<FAQPage />} />
                 <Route path="/lost-and-found" element={<LostFoundPage />} />
                 
+                {/* Protected Routes */}
                 <Route path="/dashboard" element={<RequireAuth><UserDashboardPage /></RequireAuth>} />
                 <Route path="/questions" element={<RequireAuth><PastQuestionsPage /></RequireAuth>} />
                 <Route path="/community" element={<RequireAuth><CommunityPage /></RequireAuth>} />
@@ -158,29 +83,23 @@ const AppContent: React.FC = () => {
                 <Route path="/test" element={<RequireAuth><TestPage /></RequireAuth>} />
                 <Route path="/notes" element={<RequireAuth><NotesPage /></RequireAuth>} />
                 <Route path="/leaderboard" element={<RequireAuth><LeaderboardPage /></RequireAuth>} />
-                <Route path="/upload" element={<RequireAuth><UploadPage /></RequireAuth>} />
-                <Route path="/marketplace" element={<RequireAuth><MarketplacePage /></RequireAuth>} />
-                <Route path="/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
                 
+                {/* Gated Public-ish Pages */}
                 <Route path="/executives" element={<RequireAuth><ExecutivesPage /></RequireAuth>} />
                 <Route path="/lecturers" element={<RequireAuth><LecturersPage /></RequireAuth>} />
             </Route>
 
+            {/* Admin Routes */}
             <Route path="/admin" element={<RequireAuth adminOnly><AdminLayout /></RequireAuth>}>
                 <Route index element={<Navigate to="/admin/dashboard" replace />} />
                 <Route path="dashboard" element={<AdminPage />} />
                 <Route path="approvals" element={<AdminApprovalsPage />} />
-                <Route path="materials" element={<AdminMaterialsPage />} />
-                <Route path="news" element={<AdminNewsPage />} />
-                <Route path="executives" element={<AdminExecutivesPage />} />
-                <Route path="lecturers" element={<AdminLecturersPage />} />
-                <Route path="community" element={<AdminCommunityPage />} />
-                <Route path="gallery" element={<AdminGalleryPage />} />
+                <Route path="content" element={<AdminContentPage />} />
                 <Route path="users" element={<AdminUsersPage />} />
-                <Route path="active-users" element={<AdminActiveUsersPage />} />
                 <Route path="settings" element={<AdminSettingsPage />} />
             </Route>
             
+            {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     </>
@@ -188,28 +107,6 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  const isBeforeLaunch = new Date() < LAUNCH_DATE;
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (location.pathname.includes('/cdq')) {
-      sessionStorage.setItem('FINSA_LAUNCH_BYPASS', 'true');
-      const newPath = location.pathname.replace(/\/cdq/g, '') || '/';
-      navigate(newPath, { replace: true });
-    }
-  }, [location.pathname, navigate]);
-
-  const isBypassActive = sessionStorage.getItem('FINSA_LAUNCH_BYPASS') === 'true';
-
-  if (isBeforeLaunch && !isBypassActive) {
-    return (
-      <ThemeProvider>
-        <CountdownPage />
-      </ThemeProvider>
-    );
-  }
-
   return (
     <ThemeProvider>
         <NotificationProvider>

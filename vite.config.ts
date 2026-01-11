@@ -14,9 +14,6 @@ export default defineConfig(({ mode }) => {
       // This is required for @google/genai to work in the browser build.
       // Use fallback to empty string to prevent JSON.stringify(undefined)
       'process.env.API_KEY': JSON.stringify(env.VITE_GOOGLE_GENAI_API_KEY || ""),
-      'process.env.DROPBOX_ACCESS_TOKEN': JSON.stringify(env.VITE_DROPBOX_ACCESS_TOKEN || ""),
-      'process.env.GOOGLE_DRIVE_CLIENT_ID': JSON.stringify(env.VITE_GOOGLE_DRIVE_CLIENT_ID || ""),
-      'process.env.GOOGLE_DRIVE_CLIENT_SECRET': JSON.stringify(env.VITE_GOOGLE_DRIVE_CLIENT_SECRET || ""),
     },
     build: {
       outDir: 'dist',

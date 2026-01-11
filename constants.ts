@@ -1,6 +1,6 @@
 import { PastQuestion, Level, Executive, Lecturer, Announcement, PendingQuestion, CommunityGroup } from './types';
 
-export const LEVELS: Level[] = [100, 200, 300, 400, 'General'];
+export const LEVELS: Level[] = [100, 200, 300, 400];
 
 // Empty mocks to force data fetching from Firebase
 export const MOCK_QUESTIONS: PastQuestion[] = [];

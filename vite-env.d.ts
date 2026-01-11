@@ -9,8 +9,6 @@ interface ImportMetaEnv {
   readonly VITE_IMGBB_API_KEY: string
   readonly VITE_GOOGLE_GENAI_API_KEY: string
   readonly VITE_DROPBOX_ACCESS_TOKEN: string
-  readonly VITE_GOOGLE_DRIVE_CLIENT_ID: string
-  readonly VITE_GOOGLE_DRIVE_CLIENT_SECRET: string
 }
 
 interface ImportMeta {

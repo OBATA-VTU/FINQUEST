@@ -1,37 +1,25 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+
+import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { collection, addDoc, query, where, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
-
-// Simple Markdown to HTML Renderer Component
-const MarkdownRenderer: React.FC<{ text: string; className?: string }> = ({ text, className }) => {
-    const createMarkup = () => {
-        if (!text) return { __html: '' };
-        // Chain of replacements for markdown syntax
-        const html = text
-            .replace(/</g, "&lt;").replace(/>/g, "&gt;") // Escape HTML tags first
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/_(.*?)_/g, '<em>$1</em>')
-            .replace(/~~(.*?)~~/g, '<s>$1</s>')
-            .replace(/^## (.*$)/gim, '<h2 class="text-lg font-bold mt-2 mb-1">$1</h2>')
-            .replace(/^- (.*$)/gim, '<li class="ml-4 list-disc">$1</li>')
-            .replace(/\n/g, '<br />')
-            // Cleanup: remove <br> before lists/headings
-            .replace(/<br \/>(<h2|<li)/g, '$1')
-            .replace(/(<\/h2>|<\/li>)<br \/>/g, '$1');
-
-        return { __html: html };
-    };
-    return <div className={className} dangerouslySetInnerHTML={createMarkup()} />;
-};
 
 interface Note {
     id: string;
     title: string;
     content: string;
     createdAt: string;
+    color: string;
 }
+
+const COLORS = [
+    'bg-yellow-100 dark:bg-yellow-900/30', 
+    'bg-green-100 dark:bg-green-900/30', 
+    'bg-blue-100 dark:bg-blue-900/30', 
+    'bg-rose-100 dark:bg-rose-900/30',
+    'bg-purple-100 dark:bg-purple-900/30'
+];
 
 export const NotesPage: React.FC = () => {
     const auth = useContext(AuthContext);
@@ -44,7 +32,7 @@ export const NotesPage: React.FC = () => {
     // Form State
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
-    const textAreaRef = useRef<HTMLTextAreaElement>(null);
+    const [color, setColor] = useState(COLORS[0]);
 
     useEffect(() => {
         fetchNotes();
@@ -70,16 +58,11 @@ export const NotesPage: React.FC = () => {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!auth?.user) return;
-
-        if (!title.trim()) {
-            showNotification("Title cannot be empty.", "warning");
-            return;
-        }
         
         try {
             if (isEditing) {
                 await updateDoc(doc(db, 'notes', isEditing.id), {
-                    title, content
+                    title, content, color
                 });
                 showNotification("Note updated", "success");
             } else {
@@ -87,6 +70,7 @@ export const NotesPage: React.FC = () => {
                     userId: auth.user.id,
                     title,
                     content,
+                    color,
                     createdAt: new Date().toISOString()
                 });
                 showNotification("Note created", "success");
@@ -114,52 +98,18 @@ export const NotesPage: React.FC = () => {
             setIsEditing(note);
             setTitle(note.title);
             setContent(note.content);
+            setColor(note.color);
         } else {
             setIsCreating(true);
             setTitle('');
             setContent('');
+            setColor(COLORS[0]);
         }
     };
 
     const closeModal = () => {
         setIsEditing(null);
         setIsCreating(false);
-    };
-
-    const applyFormat = (format: 'bold' | 'italic' | 'strike' | 'h2' | 'ul') => {
-        const textarea = textAreaRef.current;
-        if (!textarea) return;
-
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const selectedText = content.substring(start, end);
-
-        let prefix = '', suffix = '';
-        switch (format) {
-            case 'bold': prefix = '**'; suffix = '**'; break;
-            case 'italic': prefix = '_'; suffix = '_'; break;
-            case 'strike': prefix = '~~'; suffix = '~~'; break;
-            case 'h2': prefix = '\n## '; suffix = '\n'; break;
-            case 'ul': prefix = '\n- '; suffix = ''; break;
-        }
-
-        const newText = 
-            content.substring(0, start) + 
-            prefix + 
-            (selectedText || '') + 
-            suffix + 
-            content.substring(end);
-
-        setContent(newText);
-        
-        setTimeout(() => {
-            textarea.focus();
-            if (selectedText) {
-                textarea.setSelectionRange(start + prefix.length, end + prefix.length);
-            } else {
-                textarea.setSelectionRange(start + prefix.length, start + prefix.length);
-            }
-        }, 0);
     };
 
     return (
@@ -194,15 +144,15 @@ export const NotesPage: React.FC = () => {
                         {notes.map((note, idx) => (
                             <div 
                                 key={note.id} 
-                                className="bg-yellow-50 dark:bg-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group relative border border-yellow-100 dark:border-slate-700"
+                                className={`p-6 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group relative border border-black/5 dark:border-white/5 ${note.color}`}
                                 style={{ animationDelay: `${idx * 100}ms` }}
                             >
                                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                                    <button onClick={() => openModal(note)} className="p-2 bg-white/50 dark:bg-slate-700/50 rounded-full hover:bg-white text-indigo-600"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
-                                    <button onClick={() => handleDelete(note.id)} className="p-2 bg-white/50 dark:bg-slate-700/50 rounded-full hover:bg-white text-rose-600"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                                    <button onClick={() => openModal(note)} className="p-2 bg-white/50 rounded-full hover:bg-white text-indigo-600"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
+                                    <button onClick={() => handleDelete(note.id)} className="p-2 bg-white/50 rounded-full hover:bg-white text-rose-600"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
                                 </div>
                                 <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 mb-3 pr-16">{note.title}</h3>
-                                <MarkdownRenderer text={note.content} className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed max-h-40 overflow-hidden" />
+                                <p className="text-slate-700 dark:text-slate-300 text-sm whitespace-pre-wrap leading-relaxed max-h-40 overflow-hidden">{note.content}</p>
                                 <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-4 uppercase tracking-widest">{new Date(note.createdAt).toLocaleDateString()}</p>
                             </div>
                         ))}
@@ -218,35 +168,32 @@ export const NotesPage: React.FC = () => {
                                     <h3 className="font-bold text-xl text-slate-800 dark:text-white">{isEditing ? 'Edit Note' : 'New Note'}</h3>
                                     <button type="button" onClick={closeModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
                                 </div>
-                                <div className="p-6 flex-1 overflow-y-auto">
+                                <div className="p-6 flex-1 overflow-y-auto space-y-4">
                                     <input 
-                                        className="w-full text-2xl font-bold bg-transparent outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 text-slate-800 dark:text-white mb-4" 
+                                        className="w-full text-2xl font-bold bg-transparent outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 text-slate-800 dark:text-white" 
                                         placeholder="Title" 
                                         value={title} 
                                         onChange={e => setTitle(e.target.value)} 
                                         required 
                                         autoFocus
                                     />
-                                    <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
-                                        <div className="p-2 border-b border-slate-200 dark:border-slate-700 flex items-center gap-1 bg-slate-50 dark:bg-slate-800 flex-wrap">
-                                            <button type="button" onClick={() => applyFormat('bold')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center font-bold" title="Bold">B</button>
-                                            <button type="button" onClick={() => applyFormat('italic')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center italic font-serif" title="Italic">I</button>
-                                            <button type="button" onClick={() => applyFormat('strike')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center line-through" title="Strikethrough">S</button>
-                                            <div className="w-px h-6 bg-slate-300 dark:bg-slate-600 mx-1"></div>
-                                            <button type="button" onClick={() => applyFormat('h2')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center font-bold text-sm" title="Heading">H2</button>
-                                            <button type="button" onClick={() => applyFormat('ul')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center" title="List Item">
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" /></svg>
-                                            </button>
-                                        </div>
-                                        <textarea 
-                                            ref={textAreaRef}
-                                            className="w-full h-64 p-4 resize-none bg-transparent outline-none text-slate-600 dark:text-slate-300 leading-relaxed" 
-                                            placeholder="Start typing..." 
-                                            value={content} 
-                                            onChange={e => setContent(e.target.value)} 
-                                            required 
-                                        />
+                                    <div className="flex gap-2">
+                                        {COLORS.map(c => (
+                                            <button 
+                                                key={c} 
+                                                type="button" 
+                                                onClick={() => setColor(c)}
+                                                className={`w-6 h-6 rounded-full border-2 ${color === c ? 'border-indigo-600 scale-110' : 'border-transparent'} ${c}`}
+                                            ></button>
+                                        ))}
                                     </div>
+                                    <textarea 
+                                        className="w-full h-64 resize-none bg-transparent outline-none text-slate-600 dark:text-slate-300 leading-relaxed" 
+                                        placeholder="Start typing..." 
+                                        value={content} 
+                                        onChange={e => setContent(e.target.value)} 
+                                        required 
+                                    />
                                 </div>
                                 <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3 bg-slate-50 dark:bg-slate-900/50">
                                     <button type="button" onClick={closeModal} className="px-6 py-2 rounded-lg font-bold text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition">Cancel</button>
