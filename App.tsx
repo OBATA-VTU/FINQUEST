@@ -48,6 +48,7 @@ import { MarketplacePage } from './pages/MarketplacePage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { SessionWrapPage } from './pages/SessionWrapPage';
 import { DownloadAppPage } from './pages/DownloadAppPage';
+import { InputPage } from './pages/InputPage';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -149,6 +150,8 @@ const AppContent: React.FC = () => {
         <SEOMetadataUpdater />
         <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/input" element={<RequireAuth><InputPage /></RequireAuth>} />
+
             <Route element={<Layout />}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/announcements" element={<AnnouncementsPage />} />
