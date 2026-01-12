@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useContext, useEffect } from 'react';
 import { QuestionCard } from '../components/QuestionCard';
 import { AdBanner } from '../components/AdBanner';

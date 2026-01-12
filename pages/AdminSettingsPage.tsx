@@ -111,13 +111,14 @@ export const AdminSettingsPage: React.FC = () => {
               expires_at: Date.now() + (tokens.expires_in * 1000),
           }, { merge: true });
 
-          // Write public email to public settings
+          // Write public email and AUTOMATICALLY set upload service to public settings
           await updateDoc(doc(db, 'content', 'site_settings'), {
-              googleDriveConnectedEmail: userProfile.email
+              googleDriveConnectedEmail: userProfile.email,
+              uploadService: 'google_drive'
           });
 
-          showNotification(`Google Drive connected for ${userProfile.email}`, "success");
-          setSiteSettings(prev => ({ ...prev, googleDriveConnectedEmail: userProfile.email }));
+          showNotification(`Google Drive connected for ${userProfile.email}. Upload service set to Google Drive.`, "success");
+          setSiteSettings(prev => ({ ...prev, googleDriveConnectedEmail: userProfile.email, uploadService: 'google_drive' }));
 
       } catch (error: any) {
           console.error("Google Auth Error:", error);
@@ -321,7 +322,7 @@ export const AdminSettingsPage: React.FC = () => {
         </div>
         
         {isAdvanceModalOpen && <ConfirmationModal title="Confirm Session Advancement" onConfirm={handleAdvanceSession} onCancel={() => setIsAdvanceModalOpen(false)} isProcessing={isProcessing}>This will promote all students to the next level (400L become Alumni), set the executives page to hidden, and trigger the "Session Wrap" for all users on their next login. This is irreversible.</ConfirmationModal>}
-        {isWipeModalOpen && <ConfirmationModal title="Confirm Data Wipe" onConfirm={handleWipeData} onCancel={() => setIsWipeModalOpen(false)} isProcessing={isProcessing} needsTextInput={true} confirmText={wipeConfirmText} onTextChange={setWipeConfirmText}>This will permanently delete all test results, community messages, private notes, and lost/found items. User accounts and uploaded materials will NOT be affected.</ConfirmationModal>}
+        {isWipeModalOpen && <ConfirmationModal title="Confirm Data Wipe" onConfirm={handleWipeData} onCancel={() => setIsWipeModalOpen(false)} isProcessing={isProcessing} needsTextInput={true} confirmText={wipeConfirmText} onTextChange={setWipeConfirmText}>This will permanently delete all user-generated data has been wiped.</ConfirmationModal>}
     </div>
   );
 };
