@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useContext, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
@@ -28,7 +30,7 @@ import { NotesPage } from './pages/NotesPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { UploadPage } from './pages/UploadPage';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
-import { NotificationProvider } from './contexts/NotificationProvider';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { Layout } from './components/Layout';
