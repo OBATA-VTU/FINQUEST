@@ -11,6 +11,7 @@ interface ImportMetaEnv {
   readonly VITE_DROPBOX_ACCESS_TOKEN: string
   readonly VITE_GOOGLE_DRIVE_CLIENT_ID: string
   readonly VITE_GOOGLE_DRIVE_CLIENT_SECRET: string
+  readonly VITE_TEST_GOOGLE_DRIVE_REFRESH_TOKEN: string
 }
 
 interface ImportMeta {
