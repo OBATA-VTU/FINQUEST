@@ -187,8 +187,8 @@ export const uploadFileToGoogleDrive = async (file: File, onProgress?: (progress
     try {
         onProgress?.(10);
         const accessToken = await getGoogleAuthToken();
-        const settingsDoc = await getDoc(doc(db, 'config', 'google_drive_settings'));
-        const folderId = settingsDoc.exists() ? settingsDoc.data().folder_id : null;
+        const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
+        const folderId = settingsDoc.exists() ? settingsDoc.data().googleDriveFolderId : null;
 
         if (!folderId) {
             throw new Error("Google Drive Folder ID not set in Admin Settings.");

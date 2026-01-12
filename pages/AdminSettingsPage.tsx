@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch, deleteDoc, updateDoc } from 'firebase/firestore';
@@ -23,8 +22,7 @@ export const AdminSettingsPage: React.FC = () => {
   const { showNotification } = useNotification();
 
   const [socialLinks, setSocialLinks] = useState({ facebook: '', twitter: '', instagram: '', whatsapp: '', telegram: '', tiktok: '' });
-  const [siteSettings, setSiteSettings] = useState({ session: '2025/2026', showExecutives: true, uploadService: 'dropbox' });
-  const [driveSettings, setDriveSettings] = useState({ folder_id: '', connected_email: '' });
+  const [siteSettings, setSiteSettings] = useState({ session: '2025/2026', showExecutives: true, uploadService: 'dropbox', googleDriveFolderId: '', googleDriveConnectedEmail: '' });
   const [tokenClient, setTokenClient] = useState<any>(null);
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -38,18 +36,22 @@ export const AdminSettingsPage: React.FC = () => {
   useEffect(() => {
     const fetchSettings = async () => {
         try {
-            const [sDoc, sSetDoc, driveDoc] = await Promise.all([
+            const [sDoc, sSetDoc] = await Promise.all([
                 getDoc(doc(db, 'content', 'social_links')),
                 getDoc(doc(db, 'content', 'site_settings')),
-                getDoc(doc(db, 'config', 'google_drive_settings')),
             ]);
             
             if (sDoc.exists()) setSocialLinks(sDoc.data() as any);
             if (sSetDoc.exists()) {
                 const data = sSetDoc.data();
-                setSiteSettings({ session: data.session || '2025/2026', showExecutives: data.showExecutives !== undefined ? data.showExecutives : true, uploadService: data.uploadService || 'dropbox' });
+                setSiteSettings({
+                    session: data.session || '2025/2026',
+                    showExecutives: data.showExecutives !== undefined ? data.showExecutives : true,
+                    uploadService: data.uploadService || 'dropbox',
+                    googleDriveFolderId: data.googleDriveFolderId || '',
+                    googleDriveConnectedEmail: data.googleDriveConnectedEmail || ''
+                });
             }
-            if (driveDoc.exists()) setDriveSettings(driveDoc.data() as any);
         } catch (e: any) { console.error("Failed to fetch settings:", e); }
     };
     fetchSettings();
@@ -102,15 +104,20 @@ export const AdminSettingsPage: React.FC = () => {
           });
           const userProfile = await userResponse.json();
           
+          // Write secret tokens to a protected location
           await setDoc(doc(db, 'config', 'google_drive_settings'), {
               access_token: tokens.access_token,
               refresh_token: tokens.refresh_token,
               expires_at: Date.now() + (tokens.expires_in * 1000),
-              connected_email: userProfile.email,
           }, { merge: true });
 
+          // Write public email to public settings
+          await updateDoc(doc(db, 'content', 'site_settings'), {
+              googleDriveConnectedEmail: userProfile.email
+          });
+
           showNotification(`Google Drive connected for ${userProfile.email}`, "success");
-          setDriveSettings(prev => ({ ...prev, connected_email: userProfile.email }));
+          setSiteSettings(prev => ({ ...prev, googleDriveConnectedEmail: userProfile.email }));
 
       } catch (error: any) {
           console.error("Google Auth Error:", error);
@@ -142,7 +149,12 @@ export const AdminSettingsPage: React.FC = () => {
 
   const handleSaveSite = async () => {
       try {
-          await setDoc(doc(db, 'content', 'site_settings'), siteSettings, { merge: true });
+          await updateDoc(doc(db, 'content', 'site_settings'), {
+              session: siteSettings.session,
+              showExecutives: siteSettings.showExecutives,
+              uploadService: siteSettings.uploadService,
+              googleDriveFolderId: siteSettings.googleDriveFolderId
+          });
           showNotification("Site settings updated", "success");
       } catch(e) { showNotification("Update failed", "error"); }
   };
@@ -269,23 +281,24 @@ export const AdminSettingsPage: React.FC = () => {
         </div>
         
         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
-             <h3 className="font-bold text-slate-800 dark:text-white mb-4">General</h3>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Academic Session</label><input className={inputStyles} value={siteSettings.session} onChange={e => setSiteSettings({...siteSettings, session: e.target.value})} /></div>
-                <div><label className="text-xs font-bold text-slate-500 mb-1 block">File Upload Service</label><select className={`${inputStyles} bg-white`} value={siteSettings.uploadService} onChange={e => setSiteSettings({...siteSettings, uploadService: e.target.value})}><option value="dropbox">Dropbox</option><option value="google_drive">Google Drive</option></select></div>
-                <div className="md:col-span-2 flex items-center gap-3 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-xl"><input type="checkbox" id="showExecs" checked={siteSettings.showExecutives} onChange={e => setSiteSettings({...siteSettings, showExecutives: e.target.checked})} className="h-4 w-4 rounded" /><label htmlFor="showExecs" className="text-sm font-medium dark:text-slate-300">Show Executives Page</label></div>
+             <h3 className="font-bold text-slate-800 dark:text-white mb-4">General & File Uploads</h3>
+             <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label className="text-xs font-bold text-slate-500 mb-1 block">Academic Session</label><input className={inputStyles} value={siteSettings.session} onChange={e => setSiteSettings({...siteSettings, session: e.target.value})} /></div>
+                    <div><label className="text-xs font-bold text-slate-500 mb-1 block">File Upload Service</label><select className={`${inputStyles} bg-white`} value={siteSettings.uploadService} onChange={e => setSiteSettings({...siteSettings, uploadService: e.target.value})}><option value="dropbox">Dropbox</option><option value="google_drive">Google Drive</option></select></div>
+                </div>
+                <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-xl"><input type="checkbox" id="showExecs" checked={siteSettings.showExecutives} onChange={e => setSiteSettings({...siteSettings, showExecutives: e.target.checked})} className="h-4 w-4 rounded" /><label htmlFor="showExecs" className="text-sm font-medium dark:text-slate-300">Show Executives Page</label></div>
+                
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
+                    <h4 className="font-bold text-slate-600 dark:text-slate-300 mb-2">Google Drive Integration</h4>
+                    {siteSettings.googleDriveConnectedEmail ? <p className="text-sm text-emerald-600 mb-4">Connected as: {siteSettings.googleDriveConnectedEmail}</p> : <p className="text-sm text-amber-600 mb-4">Not Connected. Connect to enable Google Drive as the storage option.</p>}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label className="text-xs font-bold text-slate-500 mb-1 block">Folder ID</label><input className={inputStyles} placeholder="Enter Google Drive Folder ID" value={siteSettings.googleDriveFolderId} onChange={e => setSiteSettings({...siteSettings, googleDriveFolderId: e.target.value})} /></div>
+                        <button onClick={() => tokenClient?.requestCode()} className="bg-white border border-slate-300 text-slate-700 py-2 rounded-lg font-bold self-end flex items-center justify-center gap-2" disabled={!tokenClient}><img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google"/> Connect Drive</button>
+                    </div>
+                </div>
              </div>
-             <button onClick={handleSaveSite} className="mt-4 w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Save General Settings</button>
-        </div>
-
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
-             <h3 className="font-bold text-slate-800 dark:text-white mb-4">Google Drive Integration</h3>
-             {driveSettings.connected_email ? <p className="text-sm text-emerald-600 mb-4">Connected as: {driveSettings.connected_email}</p> : <p className="text-sm text-amber-600 mb-4">Not Connected. Connect to enable Google Drive as the storage option.</p>}
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Folder ID</label><input className={inputStyles} placeholder="Enter Google Drive Folder ID" value={driveSettings.folder_id} onChange={e => setDriveSettings({...driveSettings, folder_id: e.target.value})} /></div>
-                <button onClick={() => tokenClient?.requestCode()} className="bg-white border border-slate-300 text-slate-700 py-2 rounded-lg font-bold self-end flex items-center justify-center gap-2" disabled={!tokenClient}><img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google"/> Connect Drive</button>
-             </div>
-             <button onClick={() => setDoc(doc(db, 'config', 'google_drive_settings'), driveSettings, { merge: true }).then(() => showNotification("Folder ID Saved", "success"))} className="mt-4 w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Save Drive Settings</button>
+             <button onClick={handleSaveSite} className="mt-6 w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Save General Settings</button>
         </div>
         
         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
