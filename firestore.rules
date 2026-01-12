@@ -22,11 +22,11 @@ service cloud.firestore {
     
     // --- SECURE CONFIGURATION ---
     match /config/{docId} {
-      // WARNING: This rule has been relaxed for testing purposes.
-      // It allows any logged-in user to read the Google Drive API tokens.
+      // WARNING: This rule has been relaxed for testing.
+      // It allows any logged-in student or admin to read the Google Drive API tokens.
       // This is insecure and should NOT be used in a production environment.
-      // For production, a user-specific OAuth flow should be implemented.
-      allow read: if isAuthenticated();
+      allow read: if isAdmin() || (isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student');
+      
       allow write: if docId == 'google_drive_settings' && isAdmin(); 
     }
 
