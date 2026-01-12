@@ -237,12 +237,15 @@ export const uploadDocument = async (file: File, folder: string = 'materials', o
         const uploadService = settingsDoc.exists() ? settingsDoc.data().uploadService : 'dropbox';
 
         if (uploadService === 'google_drive') {
-            return uploadFileToGoogleDrive(file, onProgress);
+            return await uploadFileToGoogleDrive(file, onProgress);
         }
-        return uploadFile(file, folder, onProgress);
+        // Default to Dropbox
+        return await uploadFile(file, folder, onProgress);
     } catch (error) {
-        console.error("Failed to determine upload service, defaulting to Dropbox.", error);
-        return uploadFile(file, folder, onProgress);
+        // This will now catch the *real* error from either getDoc, uploadFileToGoogleDrive, or uploadFile
+        // and propagate it up to the UI component, instead of silently falling back.
+        console.error("Upload process failed:", error);
+        throw error;
     }
 };
 
