@@ -11,6 +11,76 @@ import { useNotification } from '../contexts/NotificationContext';
 
 const CATEGORIES = ["All", "Past Question", "Lecture Note", "Handout", "Textbook", "Other"];
 
+interface FilterPanelProps {
+  localSearchTerm: string;
+  onSearchTermChange: (term: string) => void;
+  onSearchSubmit: (e: React.FormEvent) => void;
+  selectedCategory: string;
+  onCategoryChange: (category: string) => void;
+  selectedLevel: string;
+  onLevelChange: (level: string) => void;
+  sortOrder: 'newest' | 'oldest';
+  onSortOrderChange: (order: 'newest' | 'oldest') => void;
+  onContributeClick: () => void;
+}
+
+const FilterPanel: React.FC<FilterPanelProps> = ({
+  localSearchTerm, onSearchTermChange, onSearchSubmit,
+  selectedCategory, onCategoryChange,
+  selectedLevel, onLevelChange,
+  sortOrder, onSortOrderChange,
+  onContributeClick
+}) => (
+  <div className="w-full lg:w-72 lg:flex-shrink-0 space-y-6">
+      {/* Search */}
+      <form onSubmit={onSearchSubmit}>
+          <div className="relative">
+              <input
+                  type="text"
+                  placeholder="Search by code, title..."
+                  value={localSearchTerm}
+                  onChange={(e) => onSearchTermChange(e.target.value)}
+                  className="w-full pl-10 pr-12 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
+              />
+              <svg className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              <button type="submit" aria-label="Search" className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </button>
+          </div>
+      </form>
+      
+      {/* Redesigned Filters with Dropdowns */}
+      <div>
+          <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">Category</label>
+          <select value={selectedCategory} onChange={e => onCategoryChange(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
+              {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+          </select>
+      </div>
+      
+      <div>
+          <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">Level</label>
+          <select value={selectedLevel} onChange={e => onLevelChange(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
+              <option value="all">All Levels</option>
+              {LEVELS.map(l => <option key={l} value={String(l)}>{l === 'General' ? l : `${l} Level`}</option>)}
+          </select>
+      </div>
+
+      {/* Sort */}
+      <div>
+          <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">Sort by</label>
+          <select value={sortOrder} onChange={e => onSortOrderChange(e.target.value as any)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+          </select>
+      </div>
+
+      <button onClick={onContributeClick} className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-500 text-white font-bold rounded-xl shadow-lg hover:bg-emerald-600 transition-transform hover:-translate-y-1">
+           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+          Contribute Material
+      </button>
+  </div>
+);
+
 export const PastQuestionsPage: React.FC = () => {
   const [filteredQuestions, setFilteredQuestions] = useState<PastQuestion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,57 +149,6 @@ export const PastQuestionsPage: React.FC = () => {
     setSearchTerm(localSearchTerm);
   };
 
-  const FilterPanel = () => (
-    <div className="w-full lg:w-72 lg:flex-shrink-0 space-y-6">
-        {/* Search */}
-        <form onSubmit={handleSearchSubmit}>
-            <div className="relative">
-                <input
-                    type="text"
-                    placeholder="Search by code, title..."
-                    value={localSearchTerm}
-                    onChange={(e) => setLocalSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-12 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
-                />
-                <svg className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                <button type="submit" aria-label="Search" className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                </button>
-            </div>
-        </form>
-        
-        {/* Redesigned Filters with Dropdowns */}
-        <div>
-            <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">Category</label>
-            <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
-                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-            </select>
-        </div>
-        
-        <div>
-            <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">Level</label>
-            <select value={selectedLevel} onChange={e => setSelectedLevel(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
-                <option value="all">All Levels</option>
-                {LEVELS.map(l => <option key={l} value={String(l)}>{l === 'General' ? l : `${l} Level`}</option>)}
-            </select>
-        </div>
-
-        {/* Sort */}
-        <div>
-            <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">Sort by</label>
-            <select value={sortOrder} onChange={e => setSortOrder(e.target.value as any)} className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-            </select>
-        </div>
-
-        <button onClick={() => navigate('/upload')} className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-500 text-white font-bold rounded-xl shadow-lg hover:bg-emerald-600 transition-transform hover:-translate-y-1">
-             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-            Contribute Material
-        </button>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 transition-colors duration-300">
       
@@ -143,7 +162,18 @@ export const PastQuestionsPage: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
             <aside className="lg:sticky lg:top-24 lg:self-start">
-                <FilterPanel />
+                <FilterPanel 
+                  localSearchTerm={localSearchTerm}
+                  onSearchTermChange={setLocalSearchTerm}
+                  onSearchSubmit={handleSearchSubmit}
+                  selectedCategory={selectedCategory}
+                  onCategoryChange={setSelectedCategory}
+                  selectedLevel={selectedLevel}
+                  onLevelChange={setSelectedLevel}
+                  sortOrder={sortOrder}
+                  onSortOrderChange={setSortOrder}
+                  onContributeClick={() => navigate('/upload')}
+                />
             </aside>
             
             <main className="flex-1 min-w-0">

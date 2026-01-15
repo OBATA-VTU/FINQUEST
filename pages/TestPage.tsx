@@ -425,16 +425,38 @@ const NotesScreen: React.FC<{ notes: string, topic: string, onBack: () => void }
     const createMarkup = () => {
         if (!notes) return { __html: '' };
         const html = notes
-            .replace(/</g, "&lt;").replace(/>/g, "&gt;")
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/_(.*?)_/g, '<em>$1</em>')
-            .replace(/~~(.*?)~~/g, '<s>$1</s>')
-            .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>')
-            .replace(/^- (.*$)/gim, '<li class="ml-5 list-disc">$1</li>')
+            .replace(/</g, "&lt;").replace(/>/g, "&gt;") // Security first
+            .replace(/^### (.*$)/gim, '<h3 class="text-lg font-bold mt-3 mb-1">$1</h3>') // H3
+            .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>') // H2
+            .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-5 mb-3">$1</h1>') // H1
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold with **
+            .replace(/__(.*?)__/g, '<strong>$1</strong>') // Bold with __
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')       // Italic with *
+            .replace(/_(.*?)_/g, '<em>$1</em>')         // Italic with _
+            .replace(/~~(.*?)~~/g, '<s>$1</s>')         // Strikethrough
+            .replace(/^- (.*$)/gim, '<li class="ml-5 list-disc">$1</li>') // Unordered list
+            .replace(/^\* (.*$)/gim, '<li class="ml-5 list-disc">$1</li>') // Unordered list with *
             .replace(/\n/g, '<br />')
-            .replace(/<br \/>(<h2|<li)/g, '$1')
-            .replace(/(<\/h2>|<\/li>)<br \/>/g, '$1');
+            .replace(/<br \/>(<h1|<h2|<h3|<li)/g, '$1')
+            .replace(/(<\/h1>|<\/h2>|<\/h3>|<\/li>)<br \/>/g, '$1');
         return { __html: html };
+    };
+    
+    const handleShareNotes = async () => {
+        const shareText = `Check out these AI-generated study notes on "${topic}" from the FINSA Portal!`;
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: `FINSA Notes: ${topic}`,
+                    text: shareText,
+                    url: window.location.origin,
+                });
+            } catch (error) {
+                console.log('Sharing failed:', error);
+            }
+        } else {
+            alert("Your browser doesn't support direct sharing. You can copy the notes manually.");
+        }
     };
 
     return (
@@ -442,7 +464,13 @@ const NotesScreen: React.FC<{ notes: string, topic: string, onBack: () => void }
             <div className="max-w-4xl mx-auto">
                 <button onClick={onBack} className="text-sm font-bold text-slate-500 hover:text-indigo-600 mb-6 flex items-center gap-2">← Back to Configuration</button>
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-8">
-                    <h2 className="text-3xl font-serif font-bold text-slate-900 dark:text-white mb-6">Study Notes: {topic}</h2>
+                    <div className="flex justify-between items-start mb-6">
+                        <h2 className="text-3xl font-serif font-bold text-slate-900 dark:text-white">Study Notes: {topic}</h2>
+                        <button onClick={handleShareNotes} className="flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-xs font-bold rounded-lg transition-colors border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100">
+                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>
+                            Share
+                        </button>
+                    </div>
                     <div 
                         className="prose prose-slate dark:prose-invert max-w-none leading-relaxed"
                         dangerouslySetInnerHTML={createMarkup()}
