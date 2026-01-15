@@ -25,9 +25,6 @@ export const AdminSettingsPage: React.FC = () => {
   const [siteSettings, setSiteSettings] = useState({ session: '2025/2026', showExecutives: true, uploadService: 'dropbox', googleDriveFolderId: '', googleDriveConnectedEmail: '' });
   const [tokenClient, setTokenClient] = useState<any>(null);
 
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-
   const [isWipeModalOpen, setIsWipeModalOpen] = useState(false);
   const [wipeConfirmText, setWipeConfirmText] = useState('');
   const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
@@ -124,21 +121,6 @@ export const AdminSettingsPage: React.FC = () => {
           console.error("Google Auth Error:", error);
           showNotification(`Connection failed: ${error.message}`, "error");
       }
-  };
-
-  const handleSaveLogo = async () => {
-    if (!logoFile) return;
-    setIsUploadingLogo(true);
-    try {
-        const newLogoUrl = await uploadToImgBB(logoFile);
-        await updateDoc(doc(db, 'content', 'site_settings'), { logoUrl: newLogoUrl });
-        showNotification("Logo updated successfully!", "success");
-        setLogoFile(null);
-    } catch (e) {
-        showNotification("Logo upload failed.", "error");
-    } finally {
-        setIsUploadingLogo(false);
-    }
   };
 
   const handleSaveSocial = async () => {
@@ -262,23 +244,6 @@ export const AdminSettingsPage: React.FC = () => {
         <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Platform Settings</h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">Manage global configurations for the portal.</p>
-        </div>
-        
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
-             <h3 className="font-bold text-slate-800 dark:text-white mb-4">Site Logo</h3>
-             <div className="flex items-center gap-6 mb-4">
-                 <img src={settings?.logoUrl || '/logo.svg'} alt="Current Logo" className="w-24 h-24 rounded-full bg-slate-100 p-2 border-2 border-slate-200 dark:bg-slate-900 dark:border-slate-700 object-contain" />
-                 <div className="flex-1">
-                     <label className="flex flex-col items-center justify-center w-full h-full p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-500 bg-slate-50 dark:bg-slate-700/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
-                         <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{logoFile ? logoFile.name : 'Select a new logo file...'}</span>
-                         <input type="file" className="hidden" accept="image/*,.svg" onChange={(e) => e.target.files && setLogoFile(e.target.files[0])} />
-                     </label>
-                     <p className="text-xs text-slate-400 mt-2">Recommended: SVG or square PNG format.</p>
-                 </div>
-             </div>
-             <button onClick={handleSaveLogo} disabled={!logoFile || isUploadingLogo} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold disabled:opacity-50">
-                {isUploadingLogo ? 'Uploading...' : 'Upload & Save Logo'}
-             </button>
         </div>
         
         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">

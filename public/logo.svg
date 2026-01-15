@@ -1,64 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" font-family="Arial, sans-serif" font-weight="bold">
+<svg width="512" height="512" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <path id="arcTop" d="M 90, 256 A 166, 166, 0, 1, 1, 422, 256" />
-    <path id="arcBottom" d="M 442, 256 A 186, 186, 0, 0, 1, 70, 256" />
-    <style>
-      .heavy { font-weight: 900; }
-      .currency { font-size: 60px; fill: #FF0000; text-anchor: middle; font-family: serif; }
-    </style>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4f46e5;" />
+      <stop offset="100%" style="stop-color:#a78bfa;" />
+    </linearGradient>
   </defs>
-
-  <!-- Main Ring & Borders -->
-  <circle cx="256" cy="256" r="240" fill="#00004d" />
-  <circle cx="256" cy="256" r="215" fill="white" />
-  
-  <!-- Motto Background -->
-  <circle cx="256" cy="256" r="210" fill="#00004d" stroke="white" stroke-width="4" />
-  <circle cx="256" cy="256" r="185" fill="#00004d" stroke="white" stroke-width="4" />
-  
-  <!-- Central Circle -->
-  <g>
-    <circle cx="256" cy="256" r="150" fill="white" stroke="#00004d" stroke-width="6"/>
-    <path d="M 256 106 A 150 150 0 0 0 256 406 Z" fill="#00004d" />
-    <path d="M 406 256 A 150 150 0 0 1 256 406 L 256 106 A 150 150 0 0 1 406 256 Z" fill="white" />
-    <path d="M 106 256 A 150 150 0 0 1 256 106 L 256 406 A 150 150 0 0 1 106 256 Z" fill="#00004d" />
-    <line x1="256" y1="106" x2="256" y2="406" stroke="#00004d" stroke-width="6"/>
-    <line x1="106" y1="256" x2="406" y2="256" stroke="#00004d" stroke-width="6"/>
-  </g>
-  
-  <!-- Currency Symbols -->
-  <text class="currency" x="181" y="196">#</text>
-  <text class="currency" x="331" y="196">£</text>
-  <text class="currency" x="181" y="356">$</text>
-  <text class="currency" x="331" y="356">¥</text>
-
-  <!-- Top Text -->
-  <text font-size="34" fill="#00004d" letter-spacing="2.5" class="heavy">
-    <textPath href="#arcTop" startOffset="50%" text-anchor="middle">
-      FINANCE STUDENTS' ASSOCIATION
-    </textPath>
-  </text>
-  
-  <!-- Chapter Text -->
-  <text x="256" y="270" font-size="36" fill="white" text-anchor="middle" class="heavy">AAUA CHAPTER</text>
-
-  <!-- Motto Text -->
-  <text font-size="28" fill="white" letter-spacing="2" class="heavy">
-    <textPath href="#arcBottom" startOffset="50%" text-anchor="middle">
-      MOTTO: BREEDING FINANCIAL EXPERTS
-    </textPath>
-  </text>
-  
-  <!-- Red Dots -->
-  <circle cx="120" cy="280" r="10" fill="red"/>
-  <circle cx="392" cy="280" r="10" fill="red"/>
-
-  <!-- Tiny Circle Detail -->
-  <circle cx="373" cy="256" r="4" fill="none" stroke="black" stroke-width="1.5" />
-
-  <!-- Side Wings -->
-  <g fill="#00004d" stroke="#00004d" stroke-width="1">
-    <path d="M 40,290 L 70,290 L 70,260 L 90,260 L 90,230 L 70,230 L 70,200 L 40,200 L 65,245 Z" />
-    <path d="M 472,290 L 442,290 L 442,260 L 422,260 L 422,230 L 442,230 L 442,200 L 472,200 L 447,245 Z" />
-  </g>
+  <circle cx="50" cy="50" r="48" fill="#1e1b4b" stroke="url(#grad)" stroke-width="4" />
+  <path d="M 35 28 L 35 72 M 35 48 L 55 48 M 35 28 L 65 28" stroke="white" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
 </svg>
