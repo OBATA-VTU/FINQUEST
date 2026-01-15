@@ -1,4 +1,3 @@
-
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { GoogleGenAI } from "@google/genai";
@@ -353,6 +352,28 @@ const ResultsScreen: React.FC<{ onRestart: () => void }> = ({ onRestart }) => {
         localStorage.removeItem('lastTestResults');
         localStorage.removeItem(storageKey);
     }, []);
+    
+    const handleShareResult = async () => {
+        if (!results) return;
+        const shareText = `I scored ${results.score}% on a FINSA practice test! 🚀 Can you beat my score? Challenge yourself on the FINSA AAUA Portal.`;
+        const shareUrl = window.location.origin;
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'FINSA Test Result',
+                    text: shareText,
+                    url: shareUrl,
+                });
+            } catch (error) {
+                console.log('Sharing failed:', error);
+            }
+        } else {
+            // Fallback for desktop browsers
+            const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+            window.open(twitterUrl, '_blank');
+        }
+    };
 
     if (!results) {
         return <div className="min-h-screen flex items-center justify-center p-4"><div className="text-center"><h2 className="text-xl font-bold dark:text-white">No results to display.</h2><button onClick={onRestart} className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg">Start New Test</button></div></div>
@@ -368,7 +389,11 @@ const ResultsScreen: React.FC<{ onRestart: () => void }> = ({ onRestart }) => {
                     <h2 className="text-2xl font-serif font-bold text-slate-800 dark:text-white mb-2">Test Complete!</h2>
                     <p className="text-slate-500 dark:text-slate-400">Here's how you performed.</p>
                     <div className={`my-8 text-7xl font-black ${score >= 50 ? 'text-emerald-500' : 'text-rose-500'}`}>{score}%</div>
-                    <div className="flex justify-center gap-4"><button onClick={onRestart} className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700">Play Again</button><button onClick={handleDownloadReview} className="px-8 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-white font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700">Download Review</button></div>
+                    <div className="flex flex-col sm:flex-row justify-center gap-4">
+                        <button onClick={onRestart} className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700">Play Again</button>
+                        <button onClick={handleShareResult} className="px-8 py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600">Share Score</button>
+                        <button onClick={handleDownloadReview} className="px-8 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-white font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700">Download Review</button>
+                    </div>
                 </div>
                 <div className="space-y-4">
                     <h3 className="font-bold text-lg text-slate-900 dark:text-white">Review Your Answers</h3>
@@ -397,19 +422,31 @@ const ResultsScreen: React.FC<{ onRestart: () => void }> = ({ onRestart }) => {
 };
 
 const NotesScreen: React.FC<{ notes: string, topic: string, onBack: () => void }> = ({ notes, topic, onBack }) => {
+    const createMarkup = () => {
+        if (!notes) return { __html: '' };
+        const html = notes
+            .replace(/</g, "&lt;").replace(/>/g, "&gt;")
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/_(.*?)_/g, '<em>$1</em>')
+            .replace(/~~(.*?)~~/g, '<s>$1</s>')
+            .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>')
+            .replace(/^- (.*$)/gim, '<li class="ml-5 list-disc">$1</li>')
+            .replace(/\n/g, '<br />')
+            .replace(/<br \/>(<h2|<li)/g, '$1')
+            .replace(/(<\/h2>|<\/li>)<br \/>/g, '$1');
+        return { __html: html };
+    };
+
     return (
         <div className="min-h-screen bg-slate-100 dark:bg-slate-900 p-4 md:p-8 animate-fade-in">
             <div className="max-w-4xl mx-auto">
                 <button onClick={onBack} className="text-sm font-bold text-slate-500 hover:text-indigo-600 mb-6 flex items-center gap-2">← Back to Configuration</button>
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-8">
                     <h2 className="text-3xl font-serif font-bold text-slate-900 dark:text-white mb-6">Study Notes: {topic}</h2>
-                    <div className="prose prose-slate dark:prose-invert max-w-none leading-relaxed">
-                        {notes.split('\n').map((line, index) => {
-                            if (line.startsWith('## ')) return <h2 key={index} className="text-xl font-bold mt-4 mb-2">{line.substring(3)}</h2>;
-                            if (line.startsWith('* ')) return <li key={index} className="ml-5 list-disc">{line.substring(2)}</li>;
-                            return <p key={index}>{line}</p>;
-                        })}
-                    </div>
+                    <div 
+                        className="prose prose-slate dark:prose-invert max-w-none leading-relaxed"
+                        dangerouslySetInnerHTML={createMarkup()}
+                    />
                 </div>
             </div>
         </div>
