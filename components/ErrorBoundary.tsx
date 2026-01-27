@@ -16,14 +16,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     error: null,
   };
 
-  // The constructor is only needed if state is derived from props, or for side effects.
-  // Since state is initialized as a class property, the explicit `this.state = {...}` in constructor is removed.
-  // For `this.props`, `super(props)` in the constructor (if present) ensures it's available.
-  // In this case, `React.Component` handles `this.props` correctly without an explicit constructor if it's not needed for state.
-  // Keeping a minimal constructor to align with previous intent if other initializations were implied.
-  // REMOVED: constructor(props: ErrorBoundaryProps) {
-  // REMOVED:   super(props);
-  // REMOVED: }
+  // FIX: Added constructor with super(props) to properly initialize this.props.
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+  }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };

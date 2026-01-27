@@ -1,5 +1,4 @@
 
-
 import React, { useEffect, useState, useRef, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Announcement, GalleryItem } from '../types';
@@ -120,7 +119,7 @@ export const HomePage: React.FC = () => {
       
       <section className="bg-slate-900 py-4 border-y border-indigo-900/50 overflow-hidden">
         <div className="flex animate-marquee whitespace-nowrap">
-            {[...Array(2)].map((_, i) => (
+            {Array.from({length: 2}).map((_, i) => (
                 <React.Fragment key={i}>
                     <span className="text-lg font-bold text-indigo-300 mx-8">Verified Past Questions</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
                     <span className="text-lg font-bold text-indigo-300 mx-8">AI-Powered CBT Practice</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
@@ -140,11 +139,11 @@ export const HomePage: React.FC = () => {
                         <h3 className="text-5xl font-black text-indigo-600 dark:text-indigo-400 mb-2">{loadingStats ? '...' : stats.users}+</h3>
                         <p className="font-bold text-slate-500 dark:text-slate-400">Registered Students</p>
                     </div>
-                    <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 animate-slide-in-up hover:-translate-y-2 transition-transform duration-300" style={{animationDelay: '150ms'}}>
+                    <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 animate-slide-in-up" style={{animationDelay: '150ms'}}>
                         <h3 className="text-5xl font-black text-emerald-600 dark:text-emerald-400 mb-2">{loadingStats ? '...' : stats.materials}+</h3>
                         <p className="font-bold text-slate-500 dark:text-slate-400">Study Materials</p>
                     </div>
-                    <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 animate-slide-in-up hover:-translate-y-2 transition-transform duration-300" style={{animationDelay: '300ms'}}>
+                    <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 animate-slide-in-up" style={{animationDelay: '300ms'}}>
                         <h3 className="text-5xl font-black text-rose-600 dark:text-rose-400 mb-2">{loadingStats ? '...' : stats.tests}+</h3>
                         <p className="font-bold text-slate-500 dark:text-slate-400">Tests Completed</p>
                     </div>
