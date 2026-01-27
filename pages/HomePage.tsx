@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState, useRef, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Announcement, GalleryItem } from '../types';
@@ -99,7 +100,7 @@ export const HomePage: React.FC = () => {
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <button
-                        onClick={() => navigate('/login')}
+                        onClick={() => navigate('/signup')} {/* Changed to /signup */}
                         className="group w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 bg-white text-indigo-950 font-bold rounded-full shadow-lg shadow-white/10 hover:shadow-xl hover:shadow-white/20 transition-all duration-300 transform hover:scale-[1.03]"
                     >
                         <span className="text-sm uppercase tracking-wider">Student Portal</span>
@@ -320,7 +321,7 @@ export const HomePage: React.FC = () => {
         <div className="container mx-auto px-4 max-w-4xl relative">
               <h2 className="text-4xl md:text-6xl font-serif font-bold mb-8">Ready to Excel?</h2>
               <p className="text-indigo-200 text-xl mb-12 font-light">Join thousands of students using the FINSA portal to access resources, connect with mentors, and master their degree.</p>
-              <button onClick={() => navigate('/login')} className="group relative inline-flex items-center justify-center gap-3 px-12 py-5 bg-white text-indigo-950 font-bold rounded-full shadow-2xl hover:bg-indigo-50 transition uppercase tracking-widest text-sm transform hover:scale-105 duration-300 overflow-hidden">
+              <button onClick={() => navigate('/signup')} className="group relative inline-flex items-center justify-center gap-3 px-12 py-5 bg-white text-indigo-950 font-bold rounded-full shadow-2xl hover:bg-indigo-50 transition uppercase tracking-widest text-sm transform hover:scale-105 duration-300 overflow-hidden">
                 <span className="absolute left-0 top-0 h-full w-full bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shine"></span>
                 Access Student Portal
               </button>

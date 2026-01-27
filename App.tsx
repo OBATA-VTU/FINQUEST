@@ -1,10 +1,3 @@
-
-
-
-
-
-
-
 import React, { useContext, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
@@ -13,7 +6,8 @@ import { PastQuestionsPage } from './pages/PastQuestionsPage';
 import { ExecutivesPage } from './pages/ExecutivesPage';
 import { LecturersPage } from './pages/LecturersPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
-import { LoginPage } from './pages/LoginPage';
+import { SignInPage } from './pages/SignInPage'; // NEW: Dedicated Sign In Page
+import { SignUpPage } from './pages/SignUpPage'; // NEW: Dedicated Sign Up Page
 import { AdminLayout } from './components/AdminLayout';
 import { AdminPage } from './pages/AdminPage';
 import { AdminApprovalsPage } from './pages/AdminApprovalsPage';
@@ -59,6 +53,7 @@ import { db } from './firebase';
 // Target launch date: Jan 10, 2026, 12:00 PM West Africa Time (UTC+1)
 const LAUNCH_DATE = new Date('2026-01-10T12:00:00+01:00');
 
+// NEW: RequireAuth now redirects to /signup by default for unauthenticated users.
 const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNode, adminOnly?: boolean }) => {
     const auth = useContext(AuthContext);
     
@@ -67,7 +62,7 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
     }
 
     if (!auth?.user) {
-        return <Navigate to="/login" replace />;
+        return <Navigate to="/signup" replace />; // Redirect to signup
     }
 
     if (adminOnly && !['admin', 'librarian', 'vice_president', 'supplement'].includes(auth.user.role)) {
@@ -153,7 +148,10 @@ const AppContent: React.FC = () => {
         <NotificationHandler />
         <SEOMetadataUpdater />
         <Routes>
-            <Route path="/login" element={<LoginPage />} />
+            {/* NEW: Dedicated auth routes */}
+            <Route path="/login" element={<SignInPage />} />
+            <Route path="/signup" element={<SignUpPage />} />
+            {/* Input page for testing purposes, accessible by authenticated users */}
             <Route path="/input" element={<RequireAuth><InputPage /></RequireAuth>} />
 
             <Route element={<Layout />}>
@@ -197,7 +195,8 @@ const AppContent: React.FC = () => {
                 <Route path="settings" element={<AdminSettingsPage />} />
             </Route>
             
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Redirect any unmatched routes to the home page if not authenticated, or dashboard if authenticated */}
+            <Route path="*" element={auth?.user ? <Navigate to="/dashboard" replace /> : <Navigate to="/signup" replace />} />
         </Routes>
     </>
   );
@@ -209,6 +208,7 @@ const App: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // This allows bypassing the countdown page for development/testing
     if (location.pathname.includes('/cdq')) {
       sessionStorage.setItem('FINSA_LAUNCH_BYPASS', 'true');
       const newPath = location.pathname.replace(/\/cdq/g, '') || '/';

@@ -17,12 +17,14 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { useNotification } from './NotificationContext';
+import { useNavigate } from 'react-router-dom';
+
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, pass: string) => Promise<void>;
-  loginWithGoogle: () => Promise<boolean>; 
+  loginWithGoogle: () => Promise<{ needsProfileCompletion: boolean }>; 
   signup: (data: { name: string; email: string; pass: string; level: Level; username: string; matricNumber: string; avatarUrl?: string }) => Promise<void>;
   logout: () => Promise<void>;
   checkUsernameAvailability: (username: string) => Promise<boolean>;
@@ -62,6 +64,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const idleTimerRef = useRef<any>(null);
   const heartbeatTimerRef = useRef<any>(null);
   const lastInteractionRef = useRef<number>(Date.now());
+  const navigate = useNavigate(); // Using useNavigate here for logout redirect
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -104,26 +107,34 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                     chatBanUntil: userData.chatBanUntil,
                 });
             } else {
-                const newUser = {
+                // This scenario means a Firebase user exists but no Firestore profile.
+                // This typically happens with Google sign-ins where profile completion is pending.
+                // We'll set a basic user and rely on the UI to prompt for completion.
+                const newUser: User = {
                     id: firebaseUser.uid,
                     email: firebaseUser.email || '',
                     name: firebaseUser.displayName || 'User',
-                    username: '', 
-                    role: 'student' as const,
-                    level: 100 as Level,
+                    username: '', // Explicitly empty to flag for completion
+                    matricNumber: '', // Explicitly empty to flag for completion
+                    role: 'student',
+                    level: 100,
                     avatarUrl: firebaseUser.photoURL || undefined,
                     savedQuestions: [],
-                    badges: []
+                    badges: [],
+                    createdAt: new Date().toISOString(), // Store creation time for new user
+                    lastActive: new Date().toISOString(),
                 };
                 setUser(newUser);
+                // No notification here; UI will handle the "complete profile" prompt
             }
         } catch (error) {
             console.error("Error fetching user profile:", error);
+             // Fallback if Firestore fetch fails but Firebase user exists
              setUser({
                     id: firebaseUser.uid,
                     email: firebaseUser.email || '',
                     name: firebaseUser.displayName || 'User',
-                    username: 'error',
+                    username: 'error_profile_load', // Indicate a loading error
                     role: 'student',
                     level: 100,
                     savedQuestions: []
@@ -202,12 +213,13 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     }
   };
 
-  const loginWithGoogle = async (): Promise<boolean> => {
+  // Modified to explicitly return needsProfileCompletion flag
+  const loginWithGoogle = async (): Promise<{ needsProfileCompletion: boolean }> => {
     try {
         const provider = new GoogleAuthProvider();
         const result = await signInWithPopup(auth, provider);
         const firebaseUser = result.user;
-        let isIncompleteProfile = false;
+        let needsProfileCompletion = false;
 
         const userRef = doc(db, 'users', firebaseUser.uid);
         const userDoc = await getDoc(userRef);
@@ -218,32 +230,39 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         }
         
         if (!userDoc.exists()) {
-           const cleanData = sanitizeData({
+           // NEW USER - create basic profile and flag for completion
+           const newUser: User = {
+            id: firebaseUser.uid,
+            email: firebaseUser.email || '',
             name: firebaseUser.displayName || 'User',
-            email: firebaseUser.email,
+            username: '', // Mark as incomplete
+            matricNumber: '', // Mark as incomplete
             role: 'student',
-            level: 100,
-            createdAt: new Date().toISOString(),
-            photoURL: firebaseUser.photoURL,
+            level: 100, // Default level
+            avatarUrl: firebaseUser.photoURL || undefined,
             savedQuestions: [],
-            lastActive: new Date().toISOString(),
-            badges: []
-          });
+            badges: [],
+            createdAt: new Date().toISOString(),
+            lastActive: new Date().toISOString()
+          };
 
-          await setDoc(userRef, cleanData);
-          showNotification("Account created! Please complete your profile.", "success");
-          isIncompleteProfile = true;
+          await setDoc(userRef, sanitizeData(newUser));
+          setUser(newUser); // Update context user state
+          showNotification("Welcome! Please complete your profile details.", "info");
+          needsProfileCompletion = true;
+
         } else {
+          // EXISTING USER - check if profile is already complete
           const data = userDoc.data();
           if (!data.matricNumber || !data.username) {
-              isIncompleteProfile = true;
-              showNotification("Profile incomplete.", "info");
+              needsProfileCompletion = true;
+              showNotification("Profile incomplete. Please complete your details.", "info");
           } else {
               showNotification("Welcome back!", "success");
           }
         }
         
-        return isIncompleteProfile;
+        return { needsProfileCompletion };
     } catch (error: any) {
         console.error("Google Sign-in Error:", error);
         if (error.code === 'auth/unauthorized-domain') {
@@ -263,7 +282,9 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         const querySnapshot = await getDocs(q);
         return querySnapshot.empty;
       } catch (error: any) {
-          return true;
+          // In case of error (e.g., network issue), assume available to not block user,
+          // but actual creation might still fail due to Firestore rules or conflict.
+          return true; 
       }
   };
 
@@ -283,7 +304,9 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
               displayName: data.name,
               photoURL: data.avatarUrl || null
             });
-          } catch(e) {}
+          } catch(e) {
+            console.warn("Failed to update Firebase user profile:", e);
+          }
 
           const newUser: User = {
             id: firebaseUser.uid,
@@ -296,14 +319,15 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             avatarUrl: data.avatarUrl,
             savedQuestions: [],
             badges: [],
+            createdAt: new Date().toISOString(), // Ensure creation timestamp is set
             lastActive: new Date().toISOString()
           };
 
-          await setDoc(doc(db, 'users', firebaseUser.uid), sanitizeData({...newUser, createdAt: new Date().toISOString()}));
-          setUser(newUser);
+          await setDoc(doc(db, 'users', firebaseUser.uid), sanitizeData(newUser));
+          setUser(newUser); // Update context user state
           showNotification("Account created successfully!", "success");
       } catch (error: any) {
-          throw error;
+          throw error; // Re-throw to be caught by UI component
       }
   };
 
@@ -311,8 +335,11 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     try {
         await signOut(auth);
         setUser(null);
+        showNotification("Logged out successfully.", "info");
+        navigate('/signup'); // Redirect to signup page after logout
     } catch (e) {
         console.error("Logout failed", e);
+        showNotification("Logout failed. Please try again.", "error");
     }
   };
 

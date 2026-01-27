@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { db } from '../firebase';
@@ -282,4 +283,3 @@ export const CommunityPage: React.FC = () => {
       </div>
   );
 };
-    
