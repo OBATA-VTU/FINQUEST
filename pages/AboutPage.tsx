@@ -54,7 +54,7 @@ export const AboutPage: React.FC = () => {
                          <h2 className="text-3xl font-serif font-bold text-slate-900 dark:text-white mb-4">Our Core Values</h2>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {/* FIX: Added missing 'children' prop to ValueCard components to provide descriptive text for each core value, resolving the TypeScript error. */}
+                        {/* FIX: Added missing 'children' prop to ValueCard components to provide descriptive text for each core value. */}
                         <ValueCard title="Excellence" icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6.343 17.657l-2.828 2.828M20.485 3.515l2.828 2.828M17.657 6.343l2.828-2.828M3.515 20.485l2.828-2.828M12 21v-4M21 12h-4M12 3v4M3 12h4m6 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
                             We pursue the highest standards in teaching, research, and learning.
                         </ValueCard>
