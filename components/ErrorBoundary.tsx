@@ -31,8 +31,9 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   render(): ReactNode {
-    // FIX: Access children directly from this.props to resolve type inference issue.
-    // This removes the redundant destructuring at the top of the render method.
+    // Fix: Destructure 'children' from 'this.props' to address potential type inference issues.
+    const { children } = this.props;
+
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
@@ -50,9 +51,6 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       );
     }
 
-    // The code below correctly accesses children via `this.props.children` as per React class component standards.
-    // If a TypeScript error "Property 'props' does not exist on type 'ErrorBoundary'" occurs here,
-    // it likely indicates an issue with TypeScript configuration or environment setup outside this file.
-    return this.props.children;
+    return children;
   }
 }
