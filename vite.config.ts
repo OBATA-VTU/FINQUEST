@@ -1,3 +1,4 @@
+
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -18,6 +19,7 @@ export default defineConfig(({ mode }) => {
       'process.env.GOOGLE_DRIVE_CLIENT_ID': JSON.stringify(env.VITE_GOOGLE_DRIVE_CLIENT_ID || ""),
       'process.env.GOOGLE_DRIVE_CLIENT_SECRET': JSON.stringify(env.VITE_GOOGLE_DRIVE_CLIENT_SECRET || ""),
       'process.env.TEST_GOOGLE_DRIVE_REFRESH_TOKEN': JSON.stringify(env.VITE_TEST_GOOGLE_DRIVE_REFRESH_TOKEN || ""),
+      'process.env.MEGA_API_KEY': JSON.stringify(env.VITE_MEGA_API_KEY || ""),
     },
     build: {
       outDir: 'dist',

@@ -120,16 +120,14 @@ export const HomePage: React.FC = () => {
       <section className="bg-slate-900 py-4 border-y border-indigo-900/50 overflow-hidden">
         <div className="flex animate-marquee whitespace-nowrap">
             {[0, 1, 2, 3].map((_, i) => (
-                <div key={i}>
-                    {/* Explicit Fragment wrapper to resolve potential parser sensitivity */}
-                    <> 
-                        <span className="text-lg font-bold text-indigo-300 mx-8">Verified Past Questions</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
-                        <span className="text-lg font-bold text-indigo-300 mx-8">AI-Powered CBT Practice</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
-                        <span className="text-lg font-bold text-indigo-300 mx-8">Community Chat Lounge</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
-                        <span className="text-lg font-bold text-indigo-300 mx-8">Gamified Leaderboard</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
-                        <span className="text-lg font-bold text-indigo-300 mx-8">24/7 Access to Resources</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
-                    </>
-                </div>
+                // Using explicit React.Fragment with key as the direct return of map
+                <React.Fragment key={i}> 
+                    <span className="text-lg font-bold text-indigo-300 mx-8">Verified Past Questions</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
+                    <span className="text-lg font-bold text-indigo-300 mx-8">AI-Powered CBT Practice</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
+                    <span className="text-lg font-bold text-indigo-300 mx-8">Community Chat Lounge</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
+                    <span className="text-lg font-bold text-indigo-300 mx-8">Gamified Leaderboard</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
+                    <span className="text-lg font-bold text-indigo-300 mx-8">24/7 Access to Resources</span><span className="text-lg font-bold text-slate-600 mx-8">•</span>
+                </React.Fragment>
             ))}
         </div>
       </section>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch, deleteDoc, updateDoc } from 'firebase/firestore';
@@ -135,7 +136,7 @@ export const AdminSettingsPage: React.FC = () => {
           await updateDoc(doc(db, 'content', 'site_settings'), {
               session: siteSettings.session,
               showExecutives: siteSettings.showExecutives,
-              uploadService: siteSettings.uploadService,
+              uploadService: siteSettings.uploadService, // Now includes 'mega'
               googleDriveFolderId: siteSettings.googleDriveFolderId
           });
           showNotification("Site settings updated", "success");
@@ -250,8 +251,15 @@ export const AdminSettingsPage: React.FC = () => {
              <h3 className="font-bold text-slate-800 dark:text-white mb-4">General & File Uploads</h3>
              <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label className="text-xs font-bold text-slate-500 mb-1 block">Academic Session</label><input className={inputStyles} value={siteSettings.session} onChange={e => setSiteSettings({...siteSettings, session: e.target.value})} /></div>
-                    <div><label className="text-xs font-bold text-slate-500 mb-1 block">File Upload Service</label><select className={`${inputStyles} bg-white`} value={siteSettings.uploadService} onChange={e => setSiteSettings({...siteSettings, uploadService: e.target.value})}><option value="dropbox">Dropbox</option><option value="google_drive">Google Drive</option></select></div>
+                    <div><label className="block text-xs font-bold text-slate-500 mb-1 block">Academic Session</label><input className={inputStyles} value={siteSettings.session} onChange={e => setSiteSettings({...siteSettings, session: e.target.value})} /></div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1 block">File Upload Service</label>
+                      <select className={`${inputStyles} bg-white`} value={siteSettings.uploadService} onChange={e => setSiteSettings({...siteSettings, uploadService: e.target.value})}>
+                          <option value="dropbox">Dropbox</option>
+                          <option value="google_drive">Google Drive</option>
+                          <option value="mega">Mega.nz (BETA)</option> {/* NEW: Mega option */}
+                      </select>
+                    </div>
                 </div>
                 <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-xl"><input type="checkbox" id="showExecs" checked={siteSettings.showExecutives} onChange={e => setSiteSettings({...siteSettings, showExecutives: e.target.checked})} className="h-4 w-4 rounded" /><label htmlFor="showExecs" className="text-sm font-medium dark:text-slate-300">Show Executives Page</label></div>
                 

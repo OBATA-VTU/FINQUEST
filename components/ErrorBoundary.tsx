@@ -30,10 +30,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   render(): ReactNode {
-    // FIX: Add explicit destructuring for `children` from `this.props`
-    // This is a valid refactor and can sometimes help TypeScript with type inference in complex scenarios.
-    const { children } = this.props;
-
+    // FIX: Access children directly from this.props to resolve type inference issue.
+    // This removes the redundant destructuring at the top of the render method.
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
@@ -51,6 +49,6 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       );
     }
 
-    return children;
+    return this.props.children;
   }
 }

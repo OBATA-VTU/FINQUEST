@@ -1,3 +1,4 @@
+
 interface ImportMetaEnv {
   readonly VITE_FIREBASE_API_KEY: string
   readonly VITE_FIREBASE_AUTH_DOMAIN: string
@@ -12,6 +13,7 @@ interface ImportMetaEnv {
   readonly VITE_GOOGLE_DRIVE_CLIENT_ID: string
   readonly VITE_GOOGLE_DRIVE_CLIENT_SECRET: string
   readonly VITE_TEST_GOOGLE_DRIVE_REFRESH_TOKEN: string
+  readonly VITE_MEGA_API_KEY: string
 }
 
 interface ImportMeta {

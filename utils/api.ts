@@ -1,8 +1,10 @@
+
 import { db } from '../firebase';
 import { doc, setDoc, increment, getDoc, updateDoc } from 'firebase/firestore';
 
 const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || "a4aa97ad337019899bb59b4e94b149e0";
 const DROPBOX_ACCESS_TOKEN = process.env.DROPBOX_ACCESS_TOKEN;
+const MEGA_API_KEY = process.env.MEGA_API_KEY; // NEW: Mega API Key
 
 // Credentials for client-side refresh flow
 const GOOGLE_DRIVE_CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID;
@@ -231,6 +233,32 @@ export const uploadFileToGoogleDrive = async (file: File, onProgress?: (progress
     }
 };
 
+// NEW: Placeholder for Mega.nz file upload
+export const uploadFileToMega = async (file: File, onProgress?: (progress: number) => void): Promise<{ url: string, path: string }> => {
+    console.warn("MEGA.nz Integration: This is a simulated upload. Real Mega API integration requires significant backend work for authentication, token management, and secure file handling, or a dedicated Mega SDK. Direct client-side fetch requests are complex due to CORS, authentication, and large file chunking requirements.");
+    
+    // Simulate upload progress
+    onProgress?.(10);
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network latency
+    onProgress?.(50);
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network latency
+    onProgress?.(90);
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network latency
+    
+    if (!MEGA_API_KEY) {
+        throw new Error("MEGA API key is not configured. (Simulated Error)");
+    }
+
+    // Generate a dummy URL and path
+    const dummyFileId = `mega-file-${Date.now()}`;
+    const dummyUrl = `https://dummy.mega.nz/file/${dummyFileId}/${file.name}`;
+    const dummyPath = `${dummyFileId}`; // Use file ID as path for deletion
+
+    onProgress?.(100);
+    return { url: dummyUrl, path: dummyPath };
+};
+
+
 export const uploadDocument = async (file: File, folder: string = 'materials', onProgress?: (progress: number) => void): Promise<{ url: string, path: string }> => {
     try {
         const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
@@ -238,6 +266,8 @@ export const uploadDocument = async (file: File, folder: string = 'materials', o
 
         if (uploadService === 'google_drive') {
             return await uploadFileToGoogleDrive(file, onProgress);
+        } else if (uploadService === 'mega') { // NEW: Handle Mega upload
+            return await uploadFileToMega(file, onProgress);
         }
         // Default to Dropbox
         return await uploadFile(file, folder, onProgress);
@@ -274,15 +304,31 @@ export const deleteFileFromGoogleDrive = async (fileId: string): Promise<void> =
     }
 };
 
+// NEW: Placeholder for Mega.nz file deletion
+export const deleteFileFromMega = async (fileId: string): Promise<void> => {
+    console.warn("MEGA.nz Integration: This is a simulated deletion. Real Mega API deletion requires proper API calls.");
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network latency
+    if (!MEGA_API_KEY) {
+        throw new Error("MEGA API key is not configured. (Simulated Error)");
+    }
+    // In a real scenario, you would make an API call to Mega to delete the file
+    // Example: fetch(`https://api.mega.nz/delete_file?id=${fileId}`, { method: 'POST', ... });
+    console.log(`Simulating deletion of Mega file: ${fileId}`);
+};
+
+
 export const deleteDocument = async (path: string): Promise<void> => {
     try {
         const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
         const uploadService = settingsDoc.exists() ? settingsDoc.data().uploadService : 'dropbox';
         
-        if (uploadService === 'google_drive' || !path.includes('/')) {
+        // Determine service based on configured uploadService OR path pattern
+        if (uploadService === 'google_drive' || (path.includes('drive.google.com') || path.length > 50)) { // Simple heuristic for Google Drive ID
             return deleteFileFromGoogleDrive(path);
+        } else if (uploadService === 'mega' || path.startsWith('mega-file-')) { // NEW: Handle Mega deletion
+            return deleteFileFromMega(path);
         }
-        return deleteFile(path);
+        return deleteFile(path); // Default to Dropbox
     } catch (error) {
         console.error("Could not determine delete service, defaulting to Dropbox.", error);
         return deleteFile(path);
