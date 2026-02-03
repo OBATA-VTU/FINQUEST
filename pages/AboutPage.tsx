@@ -2,7 +2,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const ValueCard = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
+// FIX: Define an explicit interface for ValueCard props for better type inference.
+interface ValueCardProps {
+    icon: React.ReactNode;
+    title: string;
+    children: React.ReactNode;
+}
+
+// FIX: Apply the ValueCardProps interface using React.FC.
+const ValueCard: React.FC<ValueCardProps> = ({ icon, title, children }) => (
     <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 text-center hover:shadow-lg transition-shadow">
         <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 mx-auto mb-4">
             {icon}
@@ -54,7 +62,8 @@ export const AboutPage: React.FC = () => {
                          <h2 className="text-3xl font-serif font-bold text-slate-900 dark:text-white mb-4">Our Core Values</h2>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {/* FIX: Added missing 'children' prop to ValueCard components to provide descriptive text for each core value. */}
+                        {/* FIX: The text content between <ValueCard> tags is correctly passed as 'children' prop.
+                                 The previous error was likely due to type inference issues with the inline prop definition. */}
                         <ValueCard title="Excellence" icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6.343 17.657l-2.828 2.828M20.485 3.515l2.828 2.828M17.657 6.343l2.828-2.828M3.515 20.485l2.828-2.828M12 21v-4M21 12h-4M12 3v4M3 12h4m6 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
                             We pursue the highest standards in teaching, research, and learning.
                         </ValueCard>
