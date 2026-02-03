@@ -31,8 +31,9 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   render(): ReactNode {
-    // Fix: Destructure 'children' from 'this.props' to address potential type inference issues.
-    const { children } = this.props;
+    // Fix: Explicitly assign `this.props` to a local variable to help TypeScript infer the `props` property correctly before destructuring.
+    const componentProps = this.props;
+    const { children } = componentProps;
 
     if (this.state.hasError) {
       return (

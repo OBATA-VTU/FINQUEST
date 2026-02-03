@@ -122,11 +122,11 @@ export const HomePage: React.FC = () => {
             {[0, 1, 2, 3].map((_, i) => (
                 // Using explicit React.Fragment with key as the direct return of map
                 <React.Fragment key={i}> 
-                    <span className="text-lg font-bold text-indigo-300 mx-8">Verified Past Questions</span><span className="text-lg font-bold text-slate-600 mx-8">{'&bull;'}</span>
-                    <span className="text-lg font-bold text-indigo-300 mx-8">AI-Powered CBT Practice</span><span className="text-lg font-bold text-slate-600 mx-8">{'&bull;'}</span>
-                    <span className="text-lg font-bold text-indigo-300 mx-8">Community Chat Lounge</span><span className="text-lg font-bold text-slate-600 mx-8">{'&bull;'}</span>
-                    <span className="text-lg font-bold text-indigo-300 mx-8">Gamified Leaderboard</span><span className="text-lg font-bold text-slate-600 mx-8">{'&bull;'}</span>
-                    <span className="text-lg font-bold text-indigo-300 mx-8">24/7 Access to Resources</span><span className="text-lg font-bold text-slate-600 mx-8">{'&bull;'}</span>
+                    <span className="text-lg font-bold text-indigo-300 mx-8">Verified Past Questions</span><span className="text-lg font-bold text-slate-600 mx-8"> • </span>
+                    <span className="text-lg font-bold text-indigo-300 mx-8">AI-Powered CBT Practice</span><span className="text-lg font-bold text-slate-600 mx-8"> • </span>
+                    <span className="text-lg font-bold text-indigo-300 mx-8">Community Chat Lounge</span><span className="text-lg font-bold text-slate-600 mx-8"> • </span>
+                    <span className="text-lg font-bold text-indigo-300 mx-8">Gamified Leaderboard</span><span className="text-lg font-bold text-slate-600 mx-8"> • </span>
+                    <span className="text-lg font-bold text-indigo-300 mx-8">24/7 Access to Resources</span><span className="text-lg font-bold text-slate-600 mx-8"> • </span>
                 </React.Fragment>
             ))}
         </div>
