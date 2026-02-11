@@ -1,38 +1,36 @@
 
 import { useEffect, useContext, useState } from 'react';
 import { db } from '../firebase';
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 
+/**
+ * Component to handle browser-level push notifications and real-time alerts.
+ * Safely checks for Web Notifications API support to prevent ReferenceError in non-supporting environments.
+ */
 export const NotificationHandler = () => {
     const auth = useContext(AuthContext);
-    const { showNotification } = useNotification();
-    const [permission, setPermission] = useState(Notification.permission);
+    const { showNotification: showUINotification } = useNotification();
+    
+    const [isSupported, setIsSupported] = useState(false);
+    const [permission, setPermission] = useState<NotificationPermission>('default');
 
-    // Effect to handle notification permission request
     useEffect(() => {
-        if (permission === 'default') {
-            // This could be enhanced with a small banner in the UI
-            // For now, let's keep it simple and not prompt automatically.
-            // A user can be prompted via a UI button if desired.
+        // Safely check for browser support on mount
+        const supported = typeof window !== 'undefined' && 'Notification' in window;
+        setIsSupported(supported);
+        if (supported) {
+            setPermission(Notification.permission);
         }
-    }, [permission]);
-
-    // Function to request permission (can be tied to a UI button)
-    const requestPermission = () => {
-        Notification.requestPermission().then(setPermission);
-    };
+    }, []);
 
     // Effect for listening to Firestore changes
     useEffect(() => {
-        if (!auth?.user || permission !== 'granted') return;
+        // Only run if supported, authenticated, and granted
+        if (!isSupported || !auth?.user || permission !== 'granted') return;
 
-        // --- REAL-TIME LISTENERS ---
-        // These listeners will only fire for documents *added* after the listener is attached.
-        // This is more reliable than using a time-based query.
-
-        // Listener for admin broadcasts
+        // Listener for admin broadcasts (global notifications)
         const broadcastQuery = query(
             collection(db, 'notifications'),
             where('userId', '==', 'all')
@@ -42,13 +40,17 @@ export const NotificationHandler = () => {
             snapshot.docChanges().forEach((change) => {
                 if (change.type === "added" && document.hidden) {
                     const data = change.doc.data();
-                    // Ensure it's a reasonably new notification to avoid old ones firing on first load
-                    const notificationTime = new Date(data.createdAt).getTime();
-                    if (Date.now() - notificationTime < 60000) { // Check if created in the last minute
-                        new Notification('FINSA Announcement', {
-                            body: data.message,
-                            icon: '/logo.svg'
-                        });
+                    // Avoid triggering for old notifications (created > 1 min ago)
+                    const notificationTime = data.createdAt ? new Date(data.createdAt).getTime() : 0;
+                    if (Date.now() - notificationTime < 60000) { 
+                        try {
+                            new Notification(data.title || 'FINSA Announcement', {
+                                body: data.message,
+                                icon: '/logo.svg'
+                            });
+                        } catch (e) {
+                            console.warn("Native notification failed:", e);
+                        }
                     }
                 }
             });
@@ -63,13 +65,18 @@ export const NotificationHandler = () => {
         const unsubLostFound = onSnapshot(lostAndFoundQuery, (snapshot) => {
             snapshot.docChanges().forEach((change) => {
                 const data = change.doc.data();
+                // Don't notify the finder themselves
                 if (change.type === "added" && document.hidden && data.finderId !== auth.user?.id) {
-                    const itemTime = new Date(data.dateFound).getTime();
-                    if (Date.now() - itemTime < 60000) { // Check if found in the last minute
-                         new Notification('New Lost & Found Item', {
-                            body: `A ${data.itemName} was found at ${data.locationFound}.`,
-                            icon: '/logo.svg'
-                        });
+                    const itemTime = data.dateFound ? new Date(data.dateFound).getTime() : 0;
+                    if (Date.now() - itemTime < 60000) { 
+                        try {
+                            new Notification('New Lost & Found Item', {
+                                body: `A ${data.itemName} was found at ${data.locationFound}.`,
+                                icon: '/logo.svg'
+                            });
+                        } catch (e) {
+                            console.warn("Native notification failed:", e);
+                        }
                     }
                 }
             });
@@ -80,7 +87,7 @@ export const NotificationHandler = () => {
             unsubLostFound();
         };
 
-    }, [auth?.user, permission]);
+    }, [auth?.user, permission, isSupported]);
 
     return null; // This component does not render anything
 };
