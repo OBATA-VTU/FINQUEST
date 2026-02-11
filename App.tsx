@@ -1,3 +1,4 @@
+
 import React, { useContext, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
@@ -6,8 +7,8 @@ import { PastQuestionsPage } from './pages/PastQuestionsPage';
 import { ExecutivesPage } from './pages/ExecutivesPage';
 import { LecturersPage } from './pages/LecturersPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
-import { SignInPage } from './pages/SignInPage'; // NEW: Dedicated Sign In Page
-import { SignUpPage } from './pages/SignUpPage'; // NEW: Dedicated Sign Up Page
+import { SignInPage } from './pages/SignInPage';
+import { SignUpPage } from './pages/SignUpPage';
 import { AdminLayout } from './components/AdminLayout';
 import { AdminPage } from './pages/AdminPage';
 import { AdminApprovalsPage } from './pages/AdminApprovalsPage';
@@ -50,34 +51,16 @@ import { InputPage } from './pages/InputPage';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
-// Target launch date: Jan 10, 2026, 12:00 PM West Africa Time (UTC+1)
 const LAUNCH_DATE = new Date('2026-01-10T12:00:00+01:00');
 
-// NEW: RequireAuth now redirects to /signup by default for unauthenticated users.
 const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNode, adminOnly?: boolean }) => {
     const auth = useContext(AuthContext);
-    
-    if (auth?.loading) {
-        return null; 
-    }
-
-    if (!auth?.user) {
-        return <Navigate to="/signup" replace />; // Redirect to signup
-    }
+    if (auth?.loading) return null; 
+    if (!auth?.user) return <Navigate to="/login" replace />;
 
     if (adminOnly && !['admin', 'librarian', 'vice_president', 'supplement'].includes(auth.user.role)) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[80vh] text-center px-4 bg-slate-50 dark:bg-slate-900">
-                <div className="bg-red-100 dark:bg-red-900/30 p-6 rounded-full mb-6">
-                    <svg className="w-10 h-10 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                </div>
-                <h2 className="text-3xl font-serif font-bold text-slate-800 dark:text-slate-100 mb-4">Restricted Access</h2>
-                <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-md">You do not have the necessary administrative privileges to view this page.</p>
-                <a href="/dashboard" className="px-8 py-3 bg-indigo-900 text-white rounded-lg hover:bg-indigo-800 transition shadow-lg font-medium">Return to Dashboard</a>
-            </div>
-        );
+        return <Navigate to="/dashboard" replace />;
     }
-
     return <>{children}</>;
 };
 
@@ -88,59 +71,31 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     const checkSession = async () => {
-      if (!auth?.user) {
-        setCheckingSession(false);
-        return;
-      }
+      if (!auth?.user) { setCheckingSession(false); return; }
       try {
         const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
         if (settingsDoc.exists()) {
           const settings = settingsDoc.data();
           const { lastSessionEndTimestamp, secondToLastSessionEndTimestamp, session } = settings;
-          
           if (lastSessionEndTimestamp) {
             const lastWrapViewed = auth.user.viewedSessionWrapTimestamp ? new Date(auth.user.viewedSessionWrapTimestamp).getTime() : 0;
             const sessionEndedTime = new Date(lastSessionEndTimestamp).getTime();
-            
             if (sessionEndedTime > lastWrapViewed) {
-              const [currentStartYear] = session.split('/');
-              const previousSessionEndYear = Number(currentStartYear) - 1;
-              const previousSessionStartYear = previousSessionEndYear - 1;
-              const previousSessionString = `${previousSessionStartYear}/${previousSessionEndYear}`;
-              
               setSessionWrapInfo({
                 start: secondToLastSessionEndTimestamp || new Date('2026-01-10T12:00:00+01:00').toISOString(),
                 end: lastSessionEndTimestamp,
-                session: previousSessionString,
+                session: session || '2025/2026',
               });
             }
           }
         }
-      } catch (e) {
-        console.error("Failed to check session wrap status", e);
-      } finally {
-        setCheckingSession(false);
-      }
+      } catch (e) { console.error(e); } finally { setCheckingSession(false); }
     };
     checkSession();
   }, [auth?.user]);
 
-  const handleFinishWrap = async () => {
-    if (auth?.user) {
-      await updateDoc(doc(db, 'users', auth.user.id), {
-        viewedSessionWrapTimestamp: new Date().toISOString()
-      });
-    }
-    setSessionWrapInfo(null);
-  };
-
-  if (checkingSession) {
-    return <div className="h-screen w-screen bg-slate-950"></div>;
-  }
-
-  if (sessionWrapInfo) {
-    return <SessionWrapPage info={sessionWrapInfo} onFinish={handleFinishWrap} />;
-  }
+  if (checkingSession) return <div className="h-screen w-screen bg-slate-950"></div>;
+  if (sessionWrapInfo) return <SessionWrapPage info={sessionWrapInfo} onFinish={() => setSessionWrapInfo(null)} />;
   
   return (
     <>
@@ -148,10 +103,8 @@ const AppContent: React.FC = () => {
         <NotificationHandler />
         <SEOMetadataUpdater />
         <Routes>
-            {/* NEW: Dedicated auth routes */}
             <Route path="/login" element={<SignInPage />} />
             <Route path="/signup" element={<SignUpPage />} />
-            {/* Input page for testing purposes, accessible by authenticated users */}
             <Route path="/input" element={<RequireAuth><InputPage /></RequireAuth>} />
 
             <Route element={<Layout />}>
@@ -175,7 +128,6 @@ const AppContent: React.FC = () => {
                 <Route path="/upload" element={<RequireAuth><UploadPage /></RequireAuth>} />
                 <Route path="/marketplace" element={<RequireAuth><MarketplacePage /></RequireAuth>} />
                 <Route path="/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
-                
                 <Route path="/executives" element={<RequireAuth><ExecutivesPage /></RequireAuth>} />
                 <Route path="/lecturers" element={<RequireAuth><LecturersPage /></RequireAuth>} />
             </Route>
@@ -194,9 +146,7 @@ const AppContent: React.FC = () => {
                 <Route path="active-users" element={<AdminActiveUsersPage />} />
                 <Route path="settings" element={<AdminSettingsPage />} />
             </Route>
-            
-            {/* Redirect any unmatched routes to the home page if not authenticated, or dashboard if authenticated */}
-            <Route path="*" element={auth?.user ? <Navigate to="/dashboard" replace /> : <Navigate to="/signup" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     </>
   );
@@ -208,7 +158,6 @@ const App: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // This allows bypassing the countdown page for development/testing
     if (location.pathname.includes('/cdq')) {
       sessionStorage.setItem('FINSA_LAUNCH_BYPASS', 'true');
       const newPath = location.pathname.replace(/\/cdq/g, '') || '/';
@@ -219,11 +168,7 @@ const App: React.FC = () => {
   const isBypassActive = sessionStorage.getItem('FINSA_LAUNCH_BYPASS') === 'true';
 
   if (isBeforeLaunch && !isBypassActive) {
-    return (
-      <ThemeProvider>
-        <CountdownPage />
-      </ThemeProvider>
-    );
+    return <ThemeProvider><CountdownPage /></ThemeProvider>;
   }
 
   return (
