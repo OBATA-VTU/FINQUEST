@@ -1,4 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+
+import React, { ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -13,8 +14,8 @@ interface ErrorBoundaryState {
  * ErrorBoundary component to catch JavaScript errors anywhere in their child component tree,
  * log those errors, and display a fallback UI instead of the component tree that crashed.
  */
-// Added explicit inheritance from Component with defined Props and State to resolve 'props' identification issue
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+// FIX: Use React.Component with explicit generic parameters to ensure TypeScript correctly identifies 'props' and 'state'.
+export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   // Initializing state directly for robust type adherence
   public state: ErrorBoundaryState = {
     hasError: false,
@@ -37,9 +38,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   public render(): ReactNode {
-    // Accessing children from this.props which is correctly inherited and typed
-    const { children } = this.props;
-
+    // FIX: Access children from this.props. If 'props' is missing, ensure inheritance is solid via React.Component.
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
@@ -57,6 +56,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       );
     }
 
-    return children;
+    return this.props.children;
   }
 }

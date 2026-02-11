@@ -11,7 +11,10 @@ import {
   signInWithPopup,
   updateProfile,
   setPersistence,
-  browserLocalPersistence
+  browserLocalPersistence,
+  linkWithCredential,
+  linkWithPopup,
+  EmailAuthProvider
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
 import { useNotification } from './NotificationContext';
@@ -27,6 +30,8 @@ interface AuthContextType {
   updateUser: (updates: Partial<User>) => void;
   isPasswordAccount: boolean;
   isGoogleAccount: boolean;
+  addPassword: (password: string) => Promise<void>;
+  linkGoogleAccount: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -135,6 +140,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     showNotification("Logged out successfully", "info");
   };
 
+  const addPassword = async (password: string) => {
+    if (!auth.currentUser) return;
+    try {
+      const credential = EmailAuthProvider.credential(auth.currentUser.email!, password);
+      await linkWithCredential(auth.currentUser, credential);
+      showNotification("Password added successfully! You can now login with email/password.", "success");
+    } catch (error: any) {
+      showNotification(error.message || "Failed to add password", "error");
+      throw error;
+    }
+  };
+
+  const linkGoogleAccount = async () => {
+    if (!auth.currentUser) return;
+    try {
+      const provider = new GoogleAuthProvider();
+      await linkWithPopup(auth.currentUser, provider);
+      showNotification("Google account linked successfully!", "success");
+    } catch (error: any) {
+      showNotification(error.message || "Failed to link Google account", "error");
+      throw error;
+    }
+  };
+
   const toggleBookmark = async (questionId: string) => {
     if (!user) return;
     const isBookmarked = user.savedQuestions?.includes(questionId);
@@ -160,7 +189,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return (
     <AuthContext.Provider value={{ 
       user, loading, login, loginWithGoogle, signup, logout, 
-      toggleBookmark, updateUser, isPasswordAccount, isGoogleAccount 
+      toggleBookmark, updateUser, isPasswordAccount, isGoogleAccount,
+      addPassword, linkGoogleAccount
     }}>
       {children}
     </AuthContext.Provider>
