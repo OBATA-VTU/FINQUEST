@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState, lazy, Suspense } from 'react';
-import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -11,8 +11,10 @@ import { SEOMetadataUpdater } from './components/SEOMetadataUpdater';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
-// Lazy Loaded Pages
-const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
+// Synchronous Import for the Landing Page to ensure "Immediate First Load"
+import { HomePage } from './pages/HomePage';
+
+// Lazy Loaded Pages for performance on navigation
 const UserDashboardPage = lazy(() => import('./pages/UserDashboardPage').then(m => ({ default: m.UserDashboardPage })));
 const PastQuestionsPage = lazy(() => import('./pages/PastQuestionsPage').then(m => ({ default: m.PastQuestionsPage })));
 const ExecutivesPage = lazy(() => import('./pages/ExecutivesPage').then(m => ({ default: m.ExecutivesPage })));
@@ -33,11 +35,26 @@ const MarketplacePage = lazy(() => import('./pages/MarketplacePage').then(m => (
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
 const SessionWrapPage = lazy(() => import('./pages/SessionWrapPage').then(m => ({ default: m.SessionWrapPage })));
 
+/**
+ * Standard Spinning Loader for Page Transitions
+ */
+const PageLoader = () => (
+    <div className="h-[60vh] w-full flex flex-col items-center justify-center bg-transparent animate-fade-in">
+        <div className="relative w-12 h-12">
+            <div className="absolute inset-0 border-4 border-indigo-200 dark:border-indigo-900 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <p className="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-indigo-500 animate-pulse">
+            loading page please wait...
+        </p>
+    </div>
+);
+
 const LAUNCH_DATE = new Date('2026-01-10T12:00:00+01:00');
 
 const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNode, adminOnly?: boolean }) => {
     const auth = useContext(AuthContext);
-    // If loading, we render nothing (null) to allow the app to feel faster once code arrives
+    // On auth loading, we still show nothing to keep it fast
     if (auth?.loading) return null; 
     if (!auth?.user) return <Navigate to="/login" replace />;
     if (adminOnly && !['admin', 'librarian', 'vice_president', 'supplement'].includes(auth.user.role)) {
@@ -71,40 +88,43 @@ const AppContent: React.FC = () => {
     checkSession();
   }, [auth?.user?.id]);
 
-  if (sessionWrapInfo) return <Suspense fallback={null}><SessionWrapPage info={sessionWrapInfo} onFinish={() => setSessionWrapInfo(null)} /></Suspense>;
+  if (sessionWrapInfo) return <Suspense fallback={<PageLoader />}><SessionWrapPage info={sessionWrapInfo} onFinish={() => setSessionWrapInfo(null)} /></Suspense>;
   
   return (
-    <Suspense fallback={null}>
+    <>
         <ScrollToTop />
         <NotificationHandler />
         <SEOMetadataUpdater />
         <Routes>
-            <Route path="/login" element={<SignInPage />} />
-            <Route path="/signup" element={<SignUpPage />} />
+            <Route path="/login" element={<Suspense fallback={<PageLoader />}><SignInPage /></Suspense>} />
+            <Route path="/signup" element={<Suspense fallback={<PageLoader />}><SignUpPage /></Suspense>} />
             <Route element={<Layout />}>
+                {/* HomePage is now immediate */}
                 <Route path="/" element={<HomePage />} />
-                <Route path="/announcements" element={<AnnouncementsPage />} />
-                <Route path="/gallery" element={<GalleryPage />} />
-                <Route path="/dashboard" element={<RequireAuth><UserDashboardPage /></RequireAuth>} />
-                <Route path="/questions" element={<RequireAuth><PastQuestionsPage /></RequireAuth>} />
-                <Route path="/community" element={<RequireAuth><CommunityPage /></RequireAuth>} />
-                <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
-                <Route path="/test" element={<RequireAuth><TestPage /></RequireAuth>} />
-                <Route path="/arcade" element={<RequireAuth><ArcadePage /></RequireAuth>} />
-                <Route path="/notes" element={<RequireAuth><NotesPage /></RequireAuth>} />
-                <Route path="/upload" element={<RequireAuth><UploadPage /></RequireAuth>} />
-                <Route path="/marketplace" element={<RequireAuth><MarketplacePage /></RequireAuth>} />
-                <Route path="/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
-                <Route path="/executives" element={<RequireAuth><ExecutivesPage /></RequireAuth>} />
-                <Route path="/lecturers" element={<RequireAuth><LecturersPage /></RequireAuth>} />
+                
+                {/* Other pages show the requested loader */}
+                <Route path="/announcements" element={<Suspense fallback={<PageLoader />}><AnnouncementsPage /></Suspense>} />
+                <Route path="/gallery" element={<Suspense fallback={<PageLoader />}><GalleryPage /></Suspense>} />
+                <Route path="/dashboard" element={<RequireAuth><Suspense fallback={<PageLoader />}><UserDashboardPage /></Suspense></RequireAuth>} />
+                <Route path="/questions" element={<RequireAuth><Suspense fallback={<PageLoader />}><PastQuestionsPage /></Suspense></RequireAuth>} />
+                <Route path="/community" element={<RequireAuth><Suspense fallback={<PageLoader />}><CommunityPage /></Suspense></RequireAuth>} />
+                <Route path="/profile" element={<RequireAuth><Suspense fallback={<PageLoader />}><ProfilePage /></Suspense></RequireAuth>} />
+                <Route path="/test" element={<RequireAuth><Suspense fallback={<PageLoader />}><TestPage /></Suspense></RequireAuth>} />
+                <Route path="/arcade" element={<RequireAuth><Suspense fallback={<PageLoader />}><ArcadePage /></Suspense></RequireAuth>} />
+                <Route path="/notes" element={<RequireAuth><Suspense fallback={<PageLoader />}><NotesPage /></Suspense></RequireAuth>} />
+                <Route path="/upload" element={<RequireAuth><Suspense fallback={<PageLoader />}><UploadPage /></Suspense></RequireAuth>} />
+                <Route path="/marketplace" element={<RequireAuth><Suspense fallback={<PageLoader />}><MarketplacePage /></Suspense></RequireAuth>} />
+                <Route path="/notifications" element={<RequireAuth><Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense></RequireAuth>} />
+                <Route path="/executives" element={<RequireAuth><Suspense fallback={<PageLoader />}><ExecutivesPage /></Suspense></RequireAuth>} />
+                <Route path="/lecturers" element={<RequireAuth><Suspense fallback={<PageLoader />}><LecturersPage /></Suspense></RequireAuth>} />
             </Route>
-            <Route path="/admin/*" element={<RequireAuth adminOnly><AdminLayout /></RequireAuth>}>
+            <Route path="/admin/*" element={<RequireAuth adminOnly><Suspense fallback={<PageLoader />}><AdminLayout /></Suspense></RequireAuth>}>
                 <Route path="dashboard" element={<AdminPage />} />
                 <Route path="*" element={<Navigate to="dashboard" replace />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-    </Suspense>
+    </>
   );
 };
 
