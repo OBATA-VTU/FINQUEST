@@ -1,42 +1,41 @@
 <svg width="512" height="512" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="mainGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#312e81;" />
-      <stop offset="100%" style="stop-color:#4338ca;" />
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4338ca;" />
+      <stop offset="100%" style="stop-color:#1e1b4b;" />
     </linearGradient>
-    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#818cf8;" />
-      <stop offset="100%" style="stop-color:#6366f1;" />
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#22d3ee;" />
+      <stop offset="100%" style="stop-color:#818cf8;" />
     </linearGradient>
-    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="2" result="blur" />
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.5" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
   </defs>
+
+  <!-- Outer Premium Shield Shape -->
+  <path d="M 50 5 C 70 5 90 15 90 45 C 90 75 50 95 50 95 C 50 95 10 75 10 45 C 10 15 30 5 50 5 Z" fill="url(#shieldGrad)" />
   
-  <!-- Outer Shield/Hexagon Base -->
-  <path d="M 50 5 L 90 25 L 90 75 L 50 95 L 10 75 L 10 25 Z" fill="url(#mainGrad)" />
-  
-  <!-- Inner Decorative Layers -->
-  <path d="M 50 12 L 83 28.5 L 83 71.5 L 50 88 L 17 71.5 L 17 28.5 Z" fill="#ffffff" fill-opacity="0.05" />
-  
-  <!-- Stylized 'F' Pillar -->
-  <g filter="url(#glow)">
+  <!-- Decorative Glass Layer -->
+  <path d="M 50 12 C 65 12 82 20 82 45 C 82 68 50 85 50 85 C 50 85 18 68 18 45 C 18 20 35 12 50 12 Z" fill="white" fill-opacity="0.03" />
+
+  <!-- Stylized 'F' + Growth Curve -->
+  <g filter="url(#softGlow)">
     <!-- Vertical Pillar -->
-    <rect x="35" y="25" width="8" height="50" rx="2" fill="white" />
+    <path d="M 36 28 L 36 72 Q 36 75 39 75 L 41 75 Q 44 75 44 72 L 44 28 Z" fill="white" />
     
-    <!-- Top Horizontal Bar (Modern Tapered) -->
-    <path d="M 35 25 L 65 25 C 68 25 68 33 65 33 L 35 33 Z" fill="white" />
+    <!-- Top Bar (Curved & Tapered) -->
+    <path d="M 36 28 L 68 28 C 72 28 72 36 68 36 L 44 36 L 44 28 Z" fill="white" />
     
-    <!-- Middle Horizontal Bar (Growth Indicator) -->
-    <path d="M 35 43 L 55 43 C 58 43 58 51 55 51 L 35 51 Z" fill="url(#accentGrad)" />
-    
-    <!-- Growth Trends (Small dots/lines representing data) -->
-    <circle cx="72" cy="29" r="2.5" fill="#10b981" />
-    <circle cx="62" cy="47" r="2.5" fill="#818cf8" />
-    <rect x="35" y="70" width="35" height="1.5" rx="0.75" fill="white" fill-opacity="0.3" />
+    <!-- Middle Bar / Growth Arrow -->
+    <path d="M 36 46 L 55 46 Q 60 46 62 42 L 72 25 Q 74 22 76 25 L 78 28 Q 79 30 76 33 L 65 52 Q 62 56 55 56 L 36 56 Z" fill="url(#accentGrad)" />
   </g>
+
+  <!-- Highlight Glint -->
+  <path d="M 25 15 Q 50 8 75 15" fill="none" stroke="white" stroke-width="0.5" stroke-opacity="0.3" stroke-linecap="round" />
   
-  <!-- Modern Geometric Accent -->
-  <path d="M 10 25 L 50 5 L 50 15 L 20 30 Z" fill="white" fill-opacity="0.1" />
+  <!-- Success Indicators (Abstract Data Points) -->
+  <circle cx="74" cy="65" r="2" fill="#22d3ee" fill-opacity="0.6" />
+  <circle cx="78" cy="58" r="1.5" fill="#22d3ee" fill-opacity="0.4" />
 </svg>

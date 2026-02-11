@@ -1,4 +1,4 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -13,15 +13,15 @@ interface ErrorBoundaryState {
  * ErrorBoundary component to catch JavaScript errors anywhere in their child component tree,
  * log those errors, and display a fallback UI instead of the component tree that crashed.
  */
-// Fix: Explicitly extend React.Component with ErrorBoundaryProps and ErrorBoundaryState to ensure this.props and this.state are correctly recognized by TypeScript.
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+// Fix: Use named Component import to ensure proper inheritance and property recognition for this.props and this.state.
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   // Fix: Explicitly initialize state as a class property to ensure it matches ErrorBoundaryState interface.
   public state: ErrorBoundaryState = {
     hasError: false,
     error: null,
   };
 
-  // Fix: Added constructor to ensure super(props) is called, which resolves issues where this.props might be considered undefined in some environments.
+  // Fix: Added constructor to ensure super(props) is called, correctly initializing the component's props.
   constructor(props: ErrorBoundaryProps) {
     super(props);
   }
@@ -37,7 +37,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   public render(): ReactNode {
-    // Fix: Accessing this.state which is now explicitly declared and inherited from React.Component.
+    // Fix: Accessing this.state which is inherited from Component and typed via ErrorBoundaryState.
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
@@ -60,7 +60,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       );
     }
 
-    // Fix: Accessing this.props.children which is inherited from React.Component and typed via ErrorBoundaryProps.
+    // Fix: Accessing this.props.children which is inherited from Component and typed via ErrorBoundaryProps.
     return this.props.children;
   }
 }
