@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "FINSA - Department of Finance AAUA",
+  "name": "FINSA AAUA - Department of Finance",
   "short_name": "FINSA",
-  "description": "The official digital portal for the Finance Department of Adekunle Ajasin University. Access past questions, connect with peers, and stay updated.",
+  "description": "The official digital portal for the Finance Students' Association (FINSA) at Adekunle Ajasin University. Access past questions, connect with peers, and stay updated.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -42,7 +42,7 @@
   ],
   "shortcuts": [
     {
-      "name": "My Dashboard",
+      "name": "FINSA Dashboard",
       "short_name": "Dashboard",
       "url": "/dashboard",
       "icons": [{ "src": "/logo.svg", "sizes": "192x192", "type": "image/svg+xml" }]

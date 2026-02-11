@@ -10,60 +10,61 @@ export const SEOMetadataUpdater: React.FC = () => {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    let title = "FINSA AAUA | Department of Finance Portal";
+    let title = "FINSA AAUA | Department of Finance Hub";
     let description = "Access past questions, CBT practice, and community news at the Department of Finance, AAUA.";
 
     switch (pathname) {
       case '/':
-        title = "FINSA AAUA | Welcome to the Finance Portal";
+        title = "FINSA AAUA | Official Digital Portal";
+        description = "The official digital platform for Finance students at Adekunle Ajasin University. Led by Comr. Sidiku Michael and the 2025/2026 Executive Council.";
         break;
       case '/dashboard':
-        title = "My Dashboard | FINSA Portal";
+        title = "FINSA AAUA | My Dashboard";
         description = "Manage your academic journey, view test scores and contribution points.";
         break;
       case '/questions':
-        title = "Resources Archives | Past Questions & Notes";
-        description = "Browse and download verified past questions and lecture notes for all levels.";
+        title = "FINSA AAUA | Resources Archives";
+        description = "Browse and download verified past questions and lecture notes for all levels in the Finance Department.";
         break;
       case '/community':
-        title = "Student Lounge | FINSA Community";
+        title = "FINSA AAUA | Student Lounge";
         description = "Connect with peers in the official Finance student chat lounge.";
         break;
       case '/gallery':
-        title = "Department Gallery | Captured Moments";
+        title = "FINSA AAUA | Photo Gallery";
         description = "View photos and milestones from the Department of Finance activities and events.";
         break;
       case '/announcements':
-        title = "News & Updates | Latest Bulletins";
-        description = "Stay informed with official announcements from the Finance Department.";
+        title = "FINSA AAUA | News & Bulletins";
+        description = "Stay informed with official announcements from the Finance Department Executive Council.";
         break;
       case '/executives':
-        title = "Executive Council | Department Leadership";
-        description = "Meet the student leaders guiding the Department of Finance.";
+        title = "FINSA AAUA | Executive Council";
+        description = "Meet the student leaders: President Comr. Sidiku Michael, VP Obe Bankole Michael, and more.";
         break;
       case '/lecturers':
-        title = "Academic Faculty | Finance Lecturers";
+        title = "FINSA AAUA | Academic Faculty";
         description = "Meet the distinguished academic faculty and lecturers of the Department of Finance (FAMASSA).";
         break;
       case '/test':
-        title = "CBT Practice Center | Sharpen Your Skills";
+        title = "FINSA AAUA | CBT Practice Center";
         description = "Take AI-powered mock exams and quizzes to prepare for your finance exams.";
         break;
       case '/marketplace':
-        title = "Marketplace | Student Trade Hub";
+        title = "FINSA AAUA | Student Marketplace";
         description = "Buy and sell goods or services within the Finance student community.";
         break;
       case '/lost-and-found':
-        title = "Lost & Found | Helping Reclaim Items";
+        title = "FINSA AAUA | Lost & Found";
         description = "Post and find lost items within the AAUA campus community.";
         break;
       case '/arcade':
-        title = "FINSA Arcade | Educational Games";
+        title = "FINSA Arcade | Finance Games";
         description = "Play trivia and finance timeline games to learn and earn points.";
         break;
       default:
         if (pathname.startsWith('/admin')) {
-          title = "Admin Control Panel | FINSA Portal";
+          title = "FINSA AAUA | Admin Control Panel";
         }
         break;
     }
