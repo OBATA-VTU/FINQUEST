@@ -1,9 +1,7 @@
-
-
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Logo } from './Logo';
 import { AuthContext } from '../contexts/AuthContext';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 
 interface NavItemProps {
     to: string;
@@ -73,12 +71,18 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const auth = useContext(AuthContext);
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
       main: true,
       resources: true,
       department: true
   });
+
+  // Ensure sidebar closes on route change (for mobile)
+  useEffect(() => {
+    onClose();
+  }, [pathname]);
 
   const isAdminUser = ['admin', 'librarian', 'vice_president', 'supplement'].includes(auth?.user?.role || '');
 

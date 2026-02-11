@@ -1,4 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+
+import React, { ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -13,9 +14,9 @@ interface ErrorBoundaryState {
  * ErrorBoundary component to catch JavaScript errors anywhere in their child component tree,
  * log those errors, and display a fallback UI instead of the component tree that crashed.
  */
-// Fix: Explicitly extend Component and use a constructor for reliable property inheritance in TypeScript.
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Fix: Standard constructor initialization ensures that 'props' and 'state' are correctly recognized as inherited properties from React.Component.
+// Fix: Explicitly extend React.Component to ensure that 'props' and 'state' are correctly recognized as inherited properties in TypeScript.
+export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // Fix: Standard constructor initialization with explicit state definition ensures properties are correctly identified on the class instance.
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = {
@@ -35,7 +36,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   public render(): ReactNode {
-    // Fix: Inheritance from Component guarantees this.state availability.
+    // Fix: Access state from 'this', which is guaranteed to exist by extending React.Component.
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
@@ -58,7 +59,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       );
     }
 
-    // Fix: Properly returning children from this.props, which is now correctly recognized via constructor initialization.
+    // Fix: Properly access and return children from this.props, which is now correctly recognized via constructor initialization.
     return this.props.children;
   }
 }

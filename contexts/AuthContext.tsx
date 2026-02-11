@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { User, Level } from '../types';
 import { auth, db } from '../firebase';
@@ -36,7 +35,17 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
-// Helper to translate technical errors into friendly English
+// Random Professional Avatar Pool (Finance/Professional focused)
+const STOCK_AVATARS = [
+    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=facearea&facepad=2&w=256&h=256&q=80",
+    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?fit=facearea&facepad=2&w=256&h=256&q=80",
+    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?fit=facearea&facepad=2&w=256&h=256&q=80",
+    "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?fit=facearea&facepad=2&w=256&h=256&q=80",
+    "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?fit=facearea&facepad=2&w=256&h=256&q=80"
+];
+
+const getRandomAvatar = () => STOCK_AVATARS[Math.floor(Math.random() * STOCK_AVATARS.length)];
+
 const getFriendlyErrorMessage = (code: string) => {
     switch (code) {
         case 'auth/invalid-credential':
@@ -74,11 +83,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           const userData = userDoc.data() as User;
+          
+          // CRITICAL FIX: Ensure user has an avatar. If missing, assign a random professional stock photo.
+          // This applies to existing users who missed the prompt.
+          if (!userData.avatarUrl) {
+              const newAvatar = firebaseUser.photoURL || getRandomAvatar();
+              await updateDoc(userDocRef, { avatarUrl: newAvatar });
+              userData.avatarUrl = newAvatar;
+          }
+
           setUser({ ...userData, id: firebaseUser.uid });
-          await updateDoc(doc(db, 'users', firebaseUser.uid), {
+          await updateDoc(userDocRef, {
             lastActive: new Date().toISOString()
           });
         }
@@ -110,7 +129,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
       
-      const result = await signInPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
       const userDoc = await getDoc(doc(db, 'users', result.user.uid));
       
       if (!userDoc.exists()) {
@@ -131,7 +150,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       let uid = data.googleUid;
       
-      // If not a Google user completing profile, create new Firebase user
       if (!uid && data.pass) {
           const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, data.email, data.pass);
           uid = firebaseUser.uid;
@@ -139,6 +157,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       if (!uid) throw new Error("Authentication failed during signup.");
+
+      // AUTO-GENERATION: If no avatar provided (Google or Manual), use a random stock photo
+      const finalAvatar = data.avatarUrl || getRandomAvatar();
 
       const userData: User = {
         id: uid,
@@ -148,7 +169,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         matricNumber: data.matricNumber,
         level: data.level,
         role: 'student',
-        avatarUrl: data.avatarUrl || '',
+        avatarUrl: finalAvatar,
         contributionPoints: 0,
         savedQuestions: [],
         createdAt: new Date().toISOString(),
@@ -226,17 +247,3 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     </AuthContext.Provider>
   );
 };
-
-// Wrap the Firebase popup for reliability
-async function signInPopup(auth: any, provider: any) {
-    try {
-        return await signInWithPopup(auth, provider);
-    } catch (e: any) {
-        if (e.code === 'auth/cancelled-popup-request' || e.code === 'auth/popup-closed-by-user') {
-            throw e;
-        }
-        // Attempt redirect if popup is blocked
-        console.warn("Popup blocked, fallback could be implemented here.");
-        throw e;
-    }
-}

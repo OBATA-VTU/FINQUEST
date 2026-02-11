@@ -14,7 +14,7 @@ import { db } from './firebase';
 // Synchronous Import for the Landing Page to ensure "Immediate First Load"
 import { HomePage } from './pages/HomePage';
 
-// Lazy Loaded Pages for performance on navigation
+// Lazy Loaded Pages
 const UserDashboardPage = lazy(() => import('./pages/UserDashboardPage').then(m => ({ default: m.UserDashboardPage })));
 const PastQuestionsPage = lazy(() => import('./pages/PastQuestionsPage').then(m => ({ default: m.PastQuestionsPage })));
 const ExecutivesPage = lazy(() => import('./pages/ExecutivesPage').then(m => ({ default: m.ExecutivesPage })));
@@ -34,10 +34,11 @@ const ArcadePage = lazy(() => import('./pages/ArcadePage').then(m => ({ default:
 const MarketplacePage = lazy(() => import('./pages/MarketplacePage').then(m => ({ default: m.MarketplacePage })));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
 const SessionWrapPage = lazy(() => import('./pages/SessionWrapPage').then(m => ({ default: m.SessionWrapPage })));
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then(m => ({ default: m.LeaderboardPage })));
+const LostFoundPage = lazy(() => import('./pages/LostFoundPage').then(m => ({ default: m.LostFoundPage })));
+const FAQPage = lazy(() => import('./pages/FAQPage').then(m => ({ default: m.FAQPage })));
+const DownloadAppPage = lazy(() => import('./pages/DownloadAppPage').then(m => ({ default: m.DownloadAppPage })));
 
-/**
- * Standard Spinning Loader for Page Transitions
- */
 const PageLoader = () => (
     <div className="h-[60vh] w-full flex flex-col items-center justify-center bg-transparent animate-fade-in">
         <div className="relative w-12 h-12">
@@ -54,7 +55,6 @@ const LAUNCH_DATE = new Date('2026-01-10T12:00:00+01:00');
 
 const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNode, adminOnly?: boolean }) => {
     const auth = useContext(AuthContext);
-    // On auth loading, we still show nothing to keep it fast
     if (auth?.loading) return null; 
     if (!auth?.user) return <Navigate to="/login" replace />;
     if (adminOnly && !['admin', 'librarian', 'vice_president', 'supplement'].includes(auth.user.role)) {
@@ -99,12 +99,14 @@ const AppContent: React.FC = () => {
             <Route path="/login" element={<Suspense fallback={<PageLoader />}><SignInPage /></Suspense>} />
             <Route path="/signup" element={<Suspense fallback={<PageLoader />}><SignUpPage /></Suspense>} />
             <Route element={<Layout />}>
-                {/* HomePage is now immediate */}
                 <Route path="/" element={<HomePage />} />
-                
-                {/* Other pages show the requested loader */}
                 <Route path="/announcements" element={<Suspense fallback={<PageLoader />}><AnnouncementsPage /></Suspense>} />
                 <Route path="/gallery" element={<Suspense fallback={<PageLoader />}><GalleryPage /></Suspense>} />
+                <Route path="/faq" element={<Suspense fallback={<PageLoader />}><FAQPage /></Suspense>} />
+                <Route path="/download-app" element={<Suspense fallback={<PageLoader />}><DownloadAppPage /></Suspense>} />
+                <Route path="/lost-and-found" element={<Suspense fallback={<PageLoader />}><LostFoundPage /></Suspense>} />
+                
+                {/* Authenticated Routes */}
                 <Route path="/dashboard" element={<RequireAuth><Suspense fallback={<PageLoader />}><UserDashboardPage /></Suspense></RequireAuth>} />
                 <Route path="/questions" element={<RequireAuth><Suspense fallback={<PageLoader />}><PastQuestionsPage /></Suspense></RequireAuth>} />
                 <Route path="/community" element={<RequireAuth><Suspense fallback={<PageLoader />}><CommunityPage /></Suspense></RequireAuth>} />
@@ -117,6 +119,7 @@ const AppContent: React.FC = () => {
                 <Route path="/notifications" element={<RequireAuth><Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense></RequireAuth>} />
                 <Route path="/executives" element={<RequireAuth><Suspense fallback={<PageLoader />}><ExecutivesPage /></Suspense></RequireAuth>} />
                 <Route path="/lecturers" element={<RequireAuth><Suspense fallback={<PageLoader />}><LecturersPage /></Suspense></RequireAuth>} />
+                <Route path="/leaderboard" element={<RequireAuth><Suspense fallback={<PageLoader />}><LeaderboardPage /></Suspense></RequireAuth>} />
             </Route>
             <Route path="/admin/*" element={<RequireAuth adminOnly><Suspense fallback={<PageLoader />}><AdminLayout /></Suspense></RequireAuth>}>
                 <Route path="dashboard" element={<AdminPage />} />
