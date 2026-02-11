@@ -1,3 +1,4 @@
+
 import React, { useContext, useEffect, useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
@@ -36,8 +37,9 @@ const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then(m => (
 const LostFoundPage = lazy(() => import('./pages/LostFoundPage').then(m => ({ default: m.LostFoundPage })));
 const FAQPage = lazy(() => import('./pages/FAQPage').then(m => ({ default: m.FAQPage })));
 const DownloadAppPage = lazy(() => import('./pages/DownloadAppPage').then(m => ({ default: m.DownloadAppPage })));
+const AIPage = lazy(() => import('./pages/AIPage').then(m => ({ default: m.AIPage })));
 
-// Admin Pages
+// Lazy Loaded Admin Components
 const AdminLayout = lazy(() => import('./components/AdminLayout').then(m => ({ default: m.AdminLayout })));
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage').then(m => ({ default: m.AdminUsersPage })));
@@ -123,6 +125,7 @@ const AppContent: React.FC = () => {
                 
                 {/* Authenticated Routes */}
                 <Route path="/dashboard" element={<RequireAuth><Suspense fallback={<PageLoader />}><UserDashboardPage /></Suspense></RequireAuth>} />
+                <Route path="/ai" element={<RequireAuth><Suspense fallback={<PageLoader />}><AIPage /></Suspense></RequireAuth>} />
                 <Route path="/questions" element={<RequireAuth><Suspense fallback={<PageLoader />}><PastQuestionsPage /></Suspense></RequireAuth>} />
                 <Route path="/community" element={<RequireAuth><Suspense fallback={<PageLoader />}><CommunityPage /></Suspense></RequireAuth>} />
                 <Route path="/profile" element={<RequireAuth><Suspense fallback={<PageLoader />}><ProfilePage /></Suspense></RequireAuth>} />

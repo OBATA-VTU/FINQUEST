@@ -1,7 +1,7 @@
 
 export type Level = 100 | 200 | 300 | 400 | 'General';
 
-export type Page = 'home' | 'questions' | 'executives' | 'lecturers' | 'announcements' | 'login' | 'admin' | 'profile' | 'community';
+export type Page = 'home' | 'questions' | 'executives' | 'lecturers' | 'announcements' | 'login' | 'admin' | 'profile' | 'community' | 'ai';
 
 export type Role = 'student' | 'executive' | 'lecturer' | 'admin' | 'librarian' | 'vice_president' | 'supplement' | 'alumni';
 
@@ -74,6 +74,9 @@ export interface User {
   lastActive?: string; 
   isVerified?: boolean; // Added for blue tick
   isBanned?: boolean; // Added for suspension
+  banUntil?: string; // ISO string for temporary bans
+  aiImageCount?: number; // Daily tracker
+  lastAiImageDate?: string; // YYYY-MM-DD
   badges?: string[];
   viewedSessionWrapTimestamp?: string;
   infractionCount?: number;

@@ -1,5 +1,5 @@
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -14,9 +14,8 @@ interface ErrorBoundaryState {
  * ErrorBoundary component to catch JavaScript errors anywhere in their child component tree,
  * log those errors, and display a fallback UI instead of the component tree that crashed.
  */
-// Fix: Use Component directly from react to ensure correct inheritance recognition for TypeScript
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Fix: Remove 'override' as inheritance might be misinterpreted by the compiler in this environment
+export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // Fix: Initializing state as a class property ensures it is correctly typed and recognized by TypeScript (Fixes errors on line 21 and 39)
   public state: ErrorBoundaryState = {
     hasError: false,
     error: null,
@@ -28,14 +27,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   // Lifecycle method to log error information.
-  // Fix: Remove 'override' to avoid misinterpretation of base class members
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
   }
 
-  // Fix: Remove 'override'
   public render(): ReactNode {
-    // Accessing state via this.state (Fixes error on line 40)
+    // Fix: Reference this.state correctly to check for captured errors (Fixes error on line 39)
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
@@ -58,7 +55,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       );
     }
 
-    // Fix: Access children directly from this.props now that Component inheritance is correctly recognized
+    // Fix: Explicitly return children from this.props to render the child tree when no error exists (Fixes error on line 62)
     return this.props.children;
   }
 }

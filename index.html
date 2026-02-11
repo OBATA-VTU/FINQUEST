@@ -6,88 +6,42 @@
     <link rel="apple-touch-icon" href="/logo.svg">
     <link rel="canonical" href="https://finsa.vercel.app/" />
     
-    <!-- Primary SEO Meta Tags -->
-    <title>FINSA AAUA | Official Department of Finance Digital Hub</title>
-    <meta name="title" content="FINSA AAUA | Official Department of Finance Digital Hub">
-    <meta name="description" content="The official digital ecosystem for the Finance Students' Association (FINSA) at Adekunle Ajasin University. Access past questions, CBT practice, and connect with the community led by Comr. Sidiku Michael.">
-    <meta name="author" content="OBA (PRO 2025/2026)">
-    <meta name="keywords" content="FINSA, AAUA, Finance, Adekunle Ajasin University, Past Questions, CBT, Sidiku Michael, Obe Bankole Michael, Finance Students Association">
+    <!-- SEO Optimization -->
+    <title>FINSA AAUA | Department of Finance Resources & CBT Portal</title>
+    <meta name="title" content="FINSA AAUA | Department of Finance Resources & CBT Portal">
+    <meta name="description" content="Official academic portal for Finance students at Adekunle Ajasin University. Access verified past questions, AI-powered CBT practice, and departmental news. Stay ahead with the FINSA digital vault.">
+    <meta name="keywords" content="AAUA, Finance, FINSA, Past Questions, CBT, Finance Department, Adekunle Ajasin University, Akungba, Nigeria, Study Materials">
+    <meta name="author" content="OBA (Public Relations Officer)">
+    <meta name="robots" content="index, follow">
     
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#312e81">
-
-    <!-- Schema.org for Google (Enhanced with Leadership details) -->
-    <meta itemprop="name" content="FINSA AAUA - Department of Finance Portal">
-    <meta itemprop="description" content="Official academic and community portal for Finance students at Adekunle Ajasin University. Resources, news, and student leadership information.">
-    <meta itemprop="image" content="https://finsa.vercel.app/logo.svg">
-
-    <!-- Open Graph / Facebook / WhatsApp (Prominent Site Name) -->
+    <!-- Open Graph / Social Media -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://finsa.vercel.app/">
-    <meta property="og:title" content="FINSA AAUA - Department of Finance Hub">
-    <meta property="og:description" content="Access verified academic resources and join the vibrant Finance community at AAUA. Managed by the 2025/2026 Executive Council.">
+    <meta property="og:title" content="FINSA AAUA | Official Departmental Hub">
+    <meta property="og:description" content="Access verified academic resources, news, and AI-powered test practice. Built for the excellence of Finance students.">
     <meta property="og:image" content="https://finsa.vercel.app/logo.svg">
-    <meta property="og:image:secure_url" content="https://finsa.vercel.app/logo.svg">
-    <meta property="og:image:type" content="image/svg+xml">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta property="og:site_name" content="FINSA AAUA Official">
 
-    <!-- Twitter Card (FINSA Branding) -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://finsa.vercel.app/">
-    <meta property="twitter:title" content="FINSA AAUA | Digital Portal">
-    <meta property="twitter:description" content="The official digital hub for Finance students. Resources, CBT, and Community. Excellence in Financial Education.">
-    <meta property="twitter:image" content="https://finsa.vercel.app/logo.svg">
-
-    <!-- Performance: Instant DNS Resolving -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://firestore.googleapis.com">
-    
-    <!-- Structured Data (JSON-LD) - Defining the Real-World Entity and Leadership -->
+    <!-- Structured Data for Search Engines -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "EducationalOrganization",
-      "name": "Finance Students' Association (FINSA), AAUA",
-      "alternateName": "FINSA AAUA",
+      "name": "Finance Students' Association (FINSA) AAUA",
       "url": "https://finsa.vercel.app/",
       "logo": "https://finsa.vercel.app/logo.svg",
-      "description": "The official student body and digital portal for the Department of Finance at Adekunle Ajasin University, Akungba-Akoko.",
-      "parentOrganization": {
-        "@type": "CollegeOrUniversity",
-        "name": "Adekunle Ajasin University, Akungba-Akoko (AAUA)"
-      },
-      "member": [
-        {
-          "@type": "Person",
-          "name": "Comr. Sidiku Michael",
-          "jobTitle": "President"
-        },
-        {
-          "@type": "Person",
-          "name": "Obe Bankole Michael",
-          "jobTitle": "Vice President"
-        },
-        {
-          "@type": "Person",
-          "name": "Adesewa",
-          "jobTitle": "General Secretary"
-        },
-        {
-          "@type": "Person",
-          "name": "OBA",
-          "jobTitle": "Public Relations Officer & Developer"
-        }
-      ],
+      "description": "The official digital ecosystem for the Department of Finance at Adekunle Ajasin University.",
       "sameAs": [
         "https://x.com/FINSA_AAUA",
         "https://facebook.com/groups/8173545352661193/"
       ]
     }
     </script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#312e81">
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -95,8 +49,7 @@
         theme: {
           extend: {
             colors: { indigo: { 950: '#1e1b4b' } },
-            animation: { 'shine': 'shine 3s infinite linear' },
-            keyframes: { shimmer: { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(100%)' } } }
+            animation: { 'shine': 'shine 3s infinite linear', 'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
           }
         }
       }
