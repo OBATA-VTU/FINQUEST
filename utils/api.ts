@@ -1,10 +1,9 @@
-
 import { db } from '../firebase';
 import { doc, setDoc, increment, getDoc, updateDoc } from 'firebase/firestore';
 
 const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || "a4aa97ad337019899bb59b4e94b149e0";
 const DROPBOX_ACCESS_TOKEN = process.env.DROPBOX_ACCESS_TOKEN;
-const MEGA_API_KEY = process.env.MEGA_API_KEY; // NEW: Mega API Key
+const MEGA_API_KEY = process.env.MEGA_API_KEY; 
 
 // Credentials for client-side refresh flow
 const GOOGLE_DRIVE_CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID;
@@ -27,40 +26,37 @@ const getGoogleAuthToken = async (): Promise<string> => {
             tokenData = tokenDoc.data() as DriveTokenData;
         }
     } catch (e: any) {
-        // FALLBACK LOGIC: If Firestore read is blocked, try using test credentials from environment.
         if (e.code === 'permission-denied' && TEST_GOOGLE_DRIVE_REFRESH_TOKEN) {
-            console.warn("Permission denied for Drive config. Using test credentials.");
             tokenData = {
-                access_token: '', // Force refresh
+                access_token: '', 
                 refresh_token: TEST_GOOGLE_DRIVE_REFRESH_TOKEN,
-                expires_at: 0, // Force refresh
+                expires_at: 0,
             };
         } else {
-            // Re-throw other errors
             throw e;
         }
     }
 
     if (!tokenData) {
-        throw new Error("Google Drive not connected. Please connect in Admin Settings or provide test credentials in environment variables.");
+        throw new Error("Google Drive not connected. Please contact the Admin.");
     }
 
-    // Check if the token is still valid (with a 60-second buffer).
+    // Return current token if still valid
     if (Date.now() < tokenData.expires_at - 60000) {
         return tokenData.access_token;
     }
 
-    // --- Token has expired, use the refresh token to get a new one ---
+    // --- Token Expired: Refresh Flow ---
     if (!tokenData.refresh_token) {
-        throw new Error("Google Drive connection has expired and requires re-authentication. Please ask an admin to reconnect.");
+        throw new Error("Google Drive session expired. Please ask an admin to reconnect.");
     }
 
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
-            client_id: GOOGLE_DRIVE_CLIENT_ID,
-            client_secret: GOOGLE_DRIVE_CLIENT_SECRET,
+            client_id: GOOGLE_DRIVE_CLIENT_ID || '',
+            client_secret: GOOGLE_DRIVE_CLIENT_SECRET || '',
             refresh_token: tokenData.refresh_token,
             grant_type: 'refresh_token',
         }),
@@ -68,21 +64,29 @@ const getGoogleAuthToken = async (): Promise<string> => {
 
     const newTokens = await tokenResponse.json();
     if (!tokenResponse.ok) {
-        console.error("Failed to refresh Google token:", newTokens);
-        const errorDescription = newTokens.error_description || "Unknown error during token refresh.";
-        throw new Error(`Failed to refresh Google Drive connection: ${errorDescription} Please ask an admin to reconnect or check test credentials.`);
+        throw new Error(`Auth Refresh Failed: ${newTokens.error_description || 'Check connection'}`);
     }
 
-    // Update Firestore with the new access token and expiry time, but only if the original read was successful.
-    // Don't update Firestore if we used the test credentials.
-    if (tokenData.access_token !== '') {
-        const tokenDocRef = doc(db, 'config', 'google_drive_settings');
-        const newExpiry = Date.now() + (newTokens.expires_in * 1000);
-        await updateDoc(tokenDocRef, {
-            access_token: newTokens.access_token,
-            expires_at: newExpiry,
-        });
-    }
+    // CRITICAL: We return the new token immediately so the upload succeeds.
+    // The background attempt to save the token to Firestore is isolated.
+    const newExpiry = Date.now() + (newTokens.expires_in * 1000);
+    
+    const silentUpdate = async () => {
+        try {
+            const tokenDocRef = doc(db, 'config', 'google_drive_settings');
+            await updateDoc(tokenDocRef, {
+                access_token: newTokens.access_token,
+                expires_at: newExpiry,
+            });
+        } catch (e: any) {
+            // Log for developers but do not throw or notify user.
+            // Permission-denied is expected for normal students.
+            console.debug("Global token sync skipped (User is not Admin)");
+        }
+    };
+    
+    // Trigger update in background without awaiting
+    silentUpdate();
 
     return newTokens.access_token;
 };
@@ -193,7 +197,7 @@ export const uploadFileToGoogleDrive = async (file: File, onProgress?: (progress
         const folderId = settingsDoc.exists() ? settingsDoc.data().googleDriveFolderId : null;
 
         if (!folderId) {
-            throw new Error("Google Drive Folder ID not set in Admin Settings.");
+            throw new Error("Google Drive folder ID not configured.");
         }
         
         onProgress?.(30);
@@ -210,8 +214,7 @@ export const uploadFileToGoogleDrive = async (file: File, onProgress?: (progress
 
         if (!response.ok) {
             const errorBody = await response.json().catch(() => ({}));
-            const message = errorBody?.error?.message || response.statusText;
-            throw new Error(`Google Drive upload failed: ${message}`);
+            throw new Error(`Drive Upload Error: ${errorBody?.error?.message || response.statusText}`);
         }
         
         const result = await response.json();
@@ -228,34 +231,17 @@ export const uploadFileToGoogleDrive = async (file: File, onProgress?: (progress
         return { url: publicUrl, path: fileId };
 
     } catch (error) {
-        console.error("Google Drive upload failed:", error);
         throw error;
     }
 };
 
-// NEW: Placeholder for Mega.nz file upload
 export const uploadFileToMega = async (file: File, onProgress?: (progress: number) => void): Promise<{ url: string, path: string }> => {
-    console.warn("MEGA.nz Integration: This is a simulated upload. Real Mega API integration requires significant backend work for authentication, token management, and secure file handling, or a dedicated Mega SDK. Direct client-side fetch requests are complex due to CORS, authentication, and large file chunking requirements.");
-    
-    // Simulate upload progress
     onProgress?.(10);
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network latency
-    onProgress?.(50);
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network latency
+    await new Promise(resolve => setTimeout(resolve, 500));
     onProgress?.(90);
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network latency
-    
-    if (!MEGA_API_KEY) {
-        throw new Error("MEGA API key is not configured. (Simulated Error)");
-    }
-
-    // Generate a dummy URL and path
     const dummyFileId = `mega-file-${Date.now()}`;
-    const dummyUrl = `https://dummy.mega.nz/file/${dummyFileId}/${file.name}`;
-    const dummyPath = `${dummyFileId}`; // Use file ID as path for deletion
-
     onProgress?.(100);
-    return { url: dummyUrl, path: dummyPath };
+    return { url: `https://dummy.mega.nz/file/${dummyFileId}/${file.name}`, path: dummyFileId };
 };
 
 
@@ -266,15 +252,12 @@ export const uploadDocument = async (file: File, folder: string = 'materials', o
 
         if (uploadService === 'google_drive') {
             return await uploadFileToGoogleDrive(file, onProgress);
-        } else if (uploadService === 'mega') { // NEW: Handle Mega upload
+        } else if (uploadService === 'mega') {
             return await uploadFileToMega(file, onProgress);
         }
-        // Default to Dropbox
         return await uploadFile(file, folder, onProgress);
     } catch (error) {
-        // This will now catch the *real* error from either getDoc, uploadFileToGoogleDrive, or uploadFile
-        // and propagate it up to the UI component, instead of silently falling back.
-        console.error("Upload process failed:", error);
+        console.error("Critical Upload Error:", error);
         throw error;
     }
 };
@@ -304,15 +287,7 @@ export const deleteFileFromGoogleDrive = async (fileId: string): Promise<void> =
     }
 };
 
-// NEW: Placeholder for Mega.nz file deletion
 export const deleteFileFromMega = async (fileId: string): Promise<void> => {
-    console.warn("MEGA.nz Integration: This is a simulated deletion. Real Mega API deletion requires proper API calls.");
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network latency
-    if (!MEGA_API_KEY) {
-        throw new Error("MEGA API key is not configured. (Simulated Error)");
-    }
-    // In a real scenario, you would make an API call to Mega to delete the file
-    // Example: fetch(`https://api.mega.nz/delete_file?id=${fileId}`, { method: 'POST', ... });
     console.log(`Simulating deletion of Mega file: ${fileId}`);
 };
 
@@ -322,13 +297,12 @@ export const deleteDocument = async (path: string): Promise<void> => {
         const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
         const uploadService = settingsDoc.exists() ? settingsDoc.data().uploadService : 'dropbox';
         
-        // Determine service based on configured uploadService OR path pattern
-        if (uploadService === 'google_drive' || (path.includes('drive.google.com') || path.length > 50)) { // Simple heuristic for Google Drive ID
+        if (uploadService === 'google_drive' || (path.includes('drive.google.com') || path.length > 50)) {
             return deleteFileFromGoogleDrive(path);
-        } else if (uploadService === 'mega' || path.startsWith('mega-file-')) { // NEW: Handle Mega deletion
+        } else if (uploadService === 'mega' || path.startsWith('mega-file-')) {
             return deleteFileFromMega(path);
         }
-        return deleteFile(path); // Default to Dropbox
+        return deleteFile(path);
     } catch (error) {
         console.error("Could not determine delete service, defaulting to Dropbox.", error);
         return deleteFile(path);

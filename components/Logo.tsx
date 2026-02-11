@@ -1,14 +1,13 @@
 import React from 'react';
 
-// Hardcode the logo path and remove settings dependency for consistency.
 const LOGO_SRC = '/logo.svg';
 
-export const Logo: React.FC<{ className?: string }> = ({ className = 'h-24 w-24' }) => {
+export const Logo: React.FC<{ className?: string }> = ({ className = 'h-12 w-12' }) => {
   return (
     <img 
       src={LOGO_SRC} 
-      alt="FINSA AAUA Department Logo" 
-      className={`${className} object-contain`} 
+      alt="FINSA AAUA" 
+      className={`${className} object-contain transition-transform hover:scale-105 duration-300`} 
     />
   );
 };

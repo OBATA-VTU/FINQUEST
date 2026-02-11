@@ -13,18 +13,13 @@ interface ErrorBoundaryState {
  * ErrorBoundary component to catch JavaScript errors anywhere in their child component tree,
  * log those errors, and display a fallback UI instead of the component tree that crashed.
  */
-// Fix: Using React.Component explicitly instead of a named import to ensure 'props' and 'state' are correctly inherited and typed in the class context, resolving visibility issues.
+// Fix: Use React.Component to ensure props and state are correctly inherited and recognized by the TypeScript compiler.
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Fix: Explicitly initialize state to match the ErrorBoundaryState interface.
+  // Fix: Explicitly initialized state with the required interface.
   public state: ErrorBoundaryState = {
     hasError: false,
     error: null,
   };
-
-  // Fix: Standard constructor to initialize component with props and call super.
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-  }
 
   // Static method to update state so the next render will show the fallback UI.
   public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -37,7 +32,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   public render(): ReactNode {
-    // Fix: Accessing this.state which is inherited from React.Component.
+    // Fix: Accessing this.state which is correctly inherited from React.Component.
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
@@ -60,7 +55,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       );
     }
 
-    // Fix: Accessing this.props.children which is inherited from React.Component and typed via ErrorBoundaryProps.
+    // Fix: Correctly returning children from props as recognized via React.Component inheritance.
     return this.props.children;
   }
 }
