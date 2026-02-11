@@ -1,4 +1,3 @@
-
 import React, { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +7,7 @@ import { TestResult, Announcement, PastQuestion } from '../types';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { getBadge } from '../utils/badges';
 import { GoogleGenAI } from '@google/genai';
+import { Skeleton } from '../components/Skeleton';
 
 export const UserDashboardPage: React.FC = () => {
   const auth = useContext(AuthContext);
@@ -92,12 +92,11 @@ export const UserDashboardPage: React.FC = () => {
               setRecentNews(news.slice(0, 3));
 
               // 3. Optimized Recommended Questions
-              // Removed orderBy from levelQuery and generalQuery to prevent 'Missing Index' errors.
               const levelQuery = query(
                   collection(db, 'questions'),
                   where('status', '==', 'approved'),
                   where('level', '==', user.level),
-                  limit(10) // Fetch a few more to sort client-side
+                  limit(10)
               );
               const generalQuery = query(
                   collection(db, 'questions'),
@@ -115,7 +114,6 @@ export const UserDashboardPage: React.FC = () => {
               
               const allRecommended = [...levelQuestions, ...generalQuestions];
               const uniqueRecommended = Array.from(new Map(allRecommended.map(q => [q.id, q])).values());
-              // Sort by creation date descending client-side
               uniqueRecommended.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
               setRecommendedQuestions(uniqueRecommended.slice(0, 3));
 
@@ -182,12 +180,12 @@ export const UserDashboardPage: React.FC = () => {
                   
                   <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl flex items-center gap-6">
                       <div className="text-center">
-                          <span className="block text-2xl font-black">{user.contributionPoints || 0}</span>
+                          <span className="block text-2xl font-black">{loading ? '...' : (user.contributionPoints || 0)}</span>
                           <span className="text-[10px] uppercase tracking-wider opacity-70">Points</span>
                       </div>
                       <div className="w-px h-8 bg-white/20"></div>
                       <div className="text-center">
-                          <span className="block text-2xl font-black">{testCount}</span>
+                          <span className="block text-2xl font-black">{loading ? '...' : testCount}</span>
                           <span className="text-[10px] uppercase tracking-wider opacity-70">Tests</span>
                       </div>
                   </div>
@@ -221,7 +219,7 @@ export const UserDashboardPage: React.FC = () => {
                   <h3 className="font-bold text-slate-800 dark:text-white mb-4 text-sm w-full text-left">Performance</h3>
                   <div className="relative w-24 h-24 flex items-center justify-center mb-2">
                       <svg className="w-full h-full transform -rotate-90"><circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100 dark:text-slate-800" /><circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray={251.2} strokeDashoffset={251.2 - (251.2 * avgScore) / 100} className={`text-indigo-600 dark:text-indigo-500 transition-all duration-1000 ease-out`} /></svg>
-                      <span className="absolute text-xl font-black text-slate-800 dark:text-white">{avgScore}%</span>
+                      <span className="absolute text-xl font-black text-slate-800 dark:text-white">{loading ? '...' : `${avgScore}%`}</span>
                   </div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Average Score</p>
               </div>
@@ -229,7 +227,9 @@ export const UserDashboardPage: React.FC = () => {
               <div className="md:col-span-3 lg:col-span-1 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-6 shadow-lg flex flex-col animate-slide-in-up">
                   <h3 className="font-bold text-white mb-4 flex items-center gap-2"><span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>For You</h3>
                   <div className="flex-1 space-y-3">
-                      {recommendedQuestions.length > 0 ? recommendedQuestions.map(q => (
+                      {loading ? (
+                          [1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full bg-white/10" />)
+                      ) : recommendedQuestions.length > 0 ? recommendedQuestions.map(q => (
                           <div key={q.id} onClick={() => navigate('/questions')} className="bg-white/10 p-3 rounded-xl cursor-pointer hover:bg-white/20 transition-colors">
                               <p className="font-bold text-xs line-clamp-1">{q.courseTitle}</p>
                               <p className="text-[10px] text-slate-400">{q.courseCode}</p>
@@ -241,7 +241,11 @@ export const UserDashboardPage: React.FC = () => {
 
               <div className="md:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm min-h-[300px] animate-slide-in-up" style={{animationDelay: '150ms'}}>
                   <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2"><svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Timeline</h3><button onClick={() => navigate('/test')} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">View History</button></div>
-                  {loading ? <div className="text-center text-xs text-slate-400 py-10">Loading...</div> : recentTests.length === 0 ? (
+                  {loading ? (
+                      <div className="space-y-6">
+                          {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                      </div>
+                  ) : recentTests.length === 0 ? (
                       <div className="text-center py-12 text-slate-400 text-sm">No activity recorded yet. Start practicing!</div>
                   ) : (
                       <div className="relative pl-4 space-y-6 before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100 dark:before:bg-slate-800">
@@ -261,7 +265,9 @@ export const UserDashboardPage: React.FC = () => {
               <div className="md:col-span-1 lg:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm animate-slide-in-up" style={{animationDelay: '300ms'}}>
                   <h3 className="font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><svg className="w-5 h-5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>Latest Updates</h3>
                   <div className="space-y-4">
-                      {recentNews.length > 0 ? recentNews.map(news => (
+                      {loading ? (
+                          [1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)
+                      ) : recentNews.length > 0 ? recentNews.map(news => (
                           <div key={news.id} onClick={() => navigate('/announcements')} className="flex gap-4 group cursor-pointer">
                               <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-xl flex flex-col items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400"><span className="text-lg font-bold leading-none">{new Date(news.date).getDate()}</span><span className="text-[9px] uppercase font-bold">{new Date(news.date).toLocaleDateString(undefined, {month:'short'})}</span></div>
                               <div className="flex-1"><h4 className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">{news.title}</h4><p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1">{news.content}</p></div>

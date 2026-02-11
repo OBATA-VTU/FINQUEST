@@ -6,6 +6,7 @@ import { Announcement } from '../types';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../contexts/NotificationContext';
+import { Skeleton } from '../components/Skeleton';
 
 export const AnnouncementsPage: React.FC = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -86,7 +87,26 @@ export const AnnouncementsPage: React.FC = () => {
         </header>
 
         {loading ? (
-            <div className="text-center py-20 text-slate-500 dark:text-slate-400">Loading news...</div>
+            <div className="space-y-12">
+                <Skeleton className="h-96 w-full rounded-2xl" />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                    <div className="lg:col-span-2 space-y-8">
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="flex gap-6 items-center">
+                                <Skeleton className="w-1/4 h-32 rounded-lg" />
+                                <div className="flex-1 space-y-4">
+                                    <Skeleton className="h-4 w-1/4" />
+                                    <Skeleton className="h-6 w-3/4" />
+                                    <Skeleton className="h-4 w-full" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="space-y-8">
+                        <Skeleton className="h-64 w-full rounded-xl" />
+                    </div>
+                </div>
+            </div>
         ) : announcements.length === 0 ? (
             <div className="text-center py-20 text-slate-500 dark:text-slate-400">No announcements yet.</div>
         ) : (

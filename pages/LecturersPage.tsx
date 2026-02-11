@@ -1,9 +1,8 @@
-
-
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { Lecturer } from '../types';
+import { Skeleton } from '../components/Skeleton';
 
 export const LecturersPage: React.FC = () => {
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
@@ -37,7 +36,19 @@ export const LecturersPage: React.FC = () => {
        </div>
 
       <div className="container mx-auto px-4 py-16 -mt-10 relative z-20">
-        {loading ? <div className="text-center py-10 dark:text-slate-400">Loading directory...</div> : lecturers.length === 0 ? (
+        {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {[1, 2, 3, 4, 5, 6].map(i => (
+                    <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl h-80 shadow-sm p-6 flex flex-col items-center space-y-4">
+                         <Skeleton className="h-24 w-full rounded-xl opacity-20" />
+                         <Skeleton variant="circle" className="w-24 h-24 -mt-12" />
+                         <Skeleton variant="text" className="w-3/4" />
+                         <Skeleton variant="text" className="w-1/2" />
+                         <Skeleton className="h-20 w-full" />
+                    </div>
+                ))}
+            </div>
+        ) : lecturers.length === 0 ? (
              <div className="text-center py-10 text-slate-500 dark:text-slate-400">No lecturer profiles found. Admins need to add them.</div>
         ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

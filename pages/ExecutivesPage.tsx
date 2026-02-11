@@ -1,10 +1,9 @@
-
-
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Executive } from '../types';
 import { VerificationBadge } from '../components/VerificationBadge';
+import { Skeleton } from '../components/Skeleton';
 
 export const ExecutivesPage: React.FC = () => {
   const [executives, setExecutives] = useState<Executive[]>([]);
@@ -79,7 +78,19 @@ export const ExecutivesPage: React.FC = () => {
                 <p className="text-slate-500 dark:text-slate-400 max-w-md">The executive council directory for {sessionYear} is currently being updated by the administration. Please check back soon.</p>
             </div>
         ) : loading ? (
-            <div className="text-center py-20 dark:text-slate-400">Loading executives...</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {[1, 2, 3, 4, 5, 6].map(i => (
+                    <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl h-80 shadow-sm p-6 space-y-4">
+                        <Skeleton className="h-24 w-full rounded-xl" />
+                        <div className="flex flex-col items-center gap-4">
+                            <Skeleton variant="circle" className="w-24 h-24 -mt-12" />
+                            <Skeleton variant="text" className="w-1/2" />
+                            <Skeleton variant="text" className="w-1/3" />
+                            <Skeleton variant="text" className="w-full" />
+                        </div>
+                    </div>
+                ))}
+            </div>
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {executives.map((exec) => (
