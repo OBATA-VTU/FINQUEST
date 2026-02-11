@@ -30,11 +30,11 @@ export const LecturersPage: React.FC = () => {
          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
          <div className="relative z-10 container mx-auto px-4">
             <span className="inline-block py-1.5 px-4 border border-indigo-400/30 rounded-full bg-indigo-950/40 backdrop-blur-md text-indigo-300 text-[10px] font-black tracking-[0.4em] uppercase mb-8 shadow-lg">
-                Faculty of Social Sciences
+                Faculty of Administration and Management Science (FAMASSA)
             </span>
-            <h1 className="text-5xl md:text-8xl font-black font-serif mb-6 tracking-tighter">Academic <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-white">Distinguished Faculty</span></h1>
+            <h1 className="text-5xl md:text-8xl font-black font-serif mb-6 tracking-tighter">Finance <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-white">Academic Faculty</span></h1>
             <p className="text-indigo-200 text-lg md:text-2xl max-w-3xl mx-auto font-light leading-relaxed px-6">
-                Meet the visionary scholars and industry veterans directing the future of financial excellence at AAUA.
+                Meet the distinguished finance scholars and specialists dedicated to academic excellence within our department.
             </p>
          </div>
        </div>
@@ -53,16 +53,21 @@ export const LecturersPage: React.FC = () => {
             </div>
         ) : lecturers.length === 0 ? (
              <div className="text-center py-32 bg-slate-50 dark:bg-slate-900/50 rounded-[4rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
-                <div className="text-7xl mb-8 opacity-40">🎓</div>
+                <div className="flex justify-center mb-8 opacity-40">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M12 14l9-5-9-5-9 5 9 5z" />
+                        <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
+                    </svg>
+                </div>
                 <h2 className="text-3xl font-black text-slate-800 dark:text-white">Directory Sync Pending</h2>
-                <p className="text-slate-500 mt-3 text-lg">Our academic directory is currently being updated for the current session.</p>
+                <p className="text-slate-500 mt-3 text-lg">Our departmental academic directory is currently being updated for the current session.</p>
              </div>
         ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
           {lecturers.map(lecturer => (
             <article key={lecturer.id} className="group bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[3.5rem] overflow-hidden hover:shadow-[0_30px_60px_rgba(79,70,229,0.15)] transition-all duration-700 flex flex-col relative shadow-xl hover:-translate-y-4">
               <div className="p-10 pb-6 flex flex-col items-center flex-1">
-                  {/* Fixed Shadow/Crop Issues with a centered profile container */}
                   <div className="relative mb-10">
                       <div className="w-48 h-48 rounded-[3rem] overflow-hidden p-1.5 bg-gradient-to-tr from-indigo-600 via-indigo-400 to-purple-500 shadow-2xl transition-all duration-700 group-hover:rotate-6 group-hover:scale-105">
                          <div className="w-full h-full rounded-[2.75rem] overflow-hidden bg-slate-200 dark:bg-slate-800 relative">
@@ -73,7 +78,7 @@ export const LecturersPage: React.FC = () => {
                             )}
                          </div>
                       </div>
-                      <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-6 py-2 bg-indigo-600 text-white rounded-full text-[10px] font-black uppercase tracking-[0.25em] shadow-2xl z-10 whitespace-nowrap">Faculty Member</div>
+                      <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-6 py-2 bg-indigo-600 text-white rounded-full text-[10px] font-black uppercase tracking-[0.25em] shadow-2xl z-10 whitespace-nowrap">Finance Lecturer</div>
                   </div>
                   
                   <div className="text-center w-full mb-10">
@@ -89,7 +94,7 @@ export const LecturersPage: React.FC = () => {
                         <div className="flex flex-wrap justify-center gap-3">
                             {lecturer.specialization ? lecturer.specialization.split(', ').map((tag, idx) => (
                                 <span key={idx} className="px-4 py-2 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 text-[10px] font-black rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm uppercase tracking-tighter">{tag}</span>
-                            )) : <span className="text-[10px] font-black text-slate-400 uppercase">Core Financial Theory</span>}
+                            )) : <span className="text-[10px] font-black text-slate-400 uppercase">Financial Analysis</span>}
                         </div>
                       </div>
                   </div>
