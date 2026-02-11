@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -13,16 +13,13 @@ interface ErrorBoundaryState {
  * ErrorBoundary component to catch JavaScript errors anywhere in their child component tree,
  * log those errors, and display a fallback UI instead of the component tree that crashed.
  */
-// Fix: Use Component from named imports and ensure standard inheritance for props and state.
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Fix: Explicitly initialized state with the required interface via constructor for better TS resolution.
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: null,
-    };
-  }
+// Fix: Explicitly use React.Component to ensure that the class correctly inherits props and state from the base component.
+export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // Fix: Initializing state as a class property ensures it is recognized as part of the class instance by the TypeScript compiler.
+  public state: ErrorBoundaryState = {
+    hasError: false,
+    error: null,
+  };
 
   // Static method to update state so the next render will show the fallback UI.
   public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -35,7 +32,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   public render(): ReactNode {
-    // Fix: Accessing this.state which is correctly inherited from Component.
+    // Fix: Accessing this.state which is now correctly recognized as an inherited property from React.Component.
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
@@ -58,7 +55,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       );
     }
 
-    // Fix: Correctly returning children from props as recognized via standard Component inheritance.
+    // Fix: Correctly returning children from this.props, which is now recognized via standard class inheritance.
     return this.props.children;
   }
 }

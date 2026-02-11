@@ -11,7 +11,7 @@ import { SEOMetadataUpdater } from './components/SEOMetadataUpdater';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
-// Lazy Loaded Pages for performance
+// Lazy Loaded Pages
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
 const UserDashboardPage = lazy(() => import('./pages/UserDashboardPage').then(m => ({ default: m.UserDashboardPage })));
 const PastQuestionsPage = lazy(() => import('./pages/PastQuestionsPage').then(m => ({ default: m.PastQuestionsPage })));
@@ -33,18 +33,12 @@ const MarketplacePage = lazy(() => import('./pages/MarketplacePage').then(m => (
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
 const SessionWrapPage = lazy(() => import('./pages/SessionWrapPage').then(m => ({ default: m.SessionWrapPage })));
 
-const PageLoader = () => (
-    <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-900">
-        <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <div className="text-emerald-400 font-bold tracking-widest text-xs uppercase animate-pulse">Initializing Portal...</div>
-    </div>
-);
-
 const LAUNCH_DATE = new Date('2026-01-10T12:00:00+01:00');
 
 const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNode, adminOnly?: boolean }) => {
     const auth = useContext(AuthContext);
-    if (auth?.loading) return <PageLoader />; 
+    // If loading, we render nothing (null) to allow the app to feel faster once code arrives
+    if (auth?.loading) return null; 
     if (!auth?.user) return <Navigate to="/login" replace />;
     if (adminOnly && !['admin', 'librarian', 'vice_president', 'supplement'].includes(auth.user.role)) {
         return <Navigate to="/dashboard" replace />;
@@ -77,10 +71,10 @@ const AppContent: React.FC = () => {
     checkSession();
   }, [auth?.user?.id]);
 
-  if (sessionWrapInfo) return <Suspense fallback={<PageLoader />}><SessionWrapPage info={sessionWrapInfo} onFinish={() => setSessionWrapInfo(null)} /></Suspense>;
+  if (sessionWrapInfo) return <Suspense fallback={null}><SessionWrapPage info={sessionWrapInfo} onFinish={() => setSessionWrapInfo(null)} /></Suspense>;
   
   return (
-    <Suspense fallback={<PageLoader />}>
+    <Suspense fallback={null}>
         <ScrollToTop />
         <NotificationHandler />
         <SEOMetadataUpdater />
