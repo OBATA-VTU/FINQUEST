@@ -14,7 +14,7 @@ import { db } from './firebase';
 // Synchronous Import for the Landing Page to ensure "Immediate First Load"
 import { HomePage } from './pages/HomePage';
 
-// Lazy Loaded Pages
+// Lazy Loaded Public/Student Pages
 const UserDashboardPage = lazy(() => import('./pages/UserDashboardPage').then(m => ({ default: m.UserDashboardPage })));
 const PastQuestionsPage = lazy(() => import('./pages/PastQuestionsPage').then(m => ({ default: m.PastQuestionsPage })));
 const ExecutivesPage = lazy(() => import('./pages/ExecutivesPage').then(m => ({ default: m.ExecutivesPage })));
@@ -22,8 +22,6 @@ const LecturersPage = lazy(() => import('./pages/LecturersPage').then(m => ({ de
 const AnnouncementsPage = lazy(() => import('./pages/AnnouncementsPage').then(m => ({ default: m.AnnouncementsPage })));
 const SignInPage = lazy(() => import('./pages/SignInPage').then(m => ({ default: m.SignInPage })));
 const SignUpPage = lazy(() => import('./pages/SignUpPage').then(m => ({ default: m.SignUpPage })));
-const AdminLayout = lazy(() => import('./components/AdminLayout').then(m => ({ default: m.AdminLayout })));
-const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const CommunityPage = lazy(() => import('./pages/CommunityPage').then(m => ({ default: m.CommunityPage })));
 const GalleryPage = lazy(() => import('./pages/GalleryPage').then(m => ({ default: m.GalleryPage })));
@@ -38,6 +36,20 @@ const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then(m => (
 const LostFoundPage = lazy(() => import('./pages/LostFoundPage').then(m => ({ default: m.LostFoundPage })));
 const FAQPage = lazy(() => import('./pages/FAQPage').then(m => ({ default: m.FAQPage })));
 const DownloadAppPage = lazy(() => import('./pages/DownloadAppPage').then(m => ({ default: m.DownloadAppPage })));
+
+// Admin Pages
+const AdminLayout = lazy(() => import('./components/AdminLayout').then(m => ({ default: m.AdminLayout })));
+const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
+const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage').then(m => ({ default: m.AdminUsersPage })));
+const AdminActiveUsersPage = lazy(() => import('./pages/AdminActiveUsersPage').then(m => ({ default: m.AdminActiveUsersPage })));
+const AdminMaterialsPage = lazy(() => import('./pages/AdminMaterialsPage').then(m => ({ default: m.AdminMaterialsPage })));
+const AdminNewsPage = lazy(() => import('./pages/AdminNewsPage').then(m => ({ default: m.AdminNewsPage })));
+const AdminExecutivesPage = lazy(() => import('./pages/AdminExecutivesPage').then(m => ({ default: m.AdminExecutivesPage })));
+const AdminLecturersPage = lazy(() => import('./pages/AdminLecturersPage').then(m => ({ default: m.AdminLecturersPage })));
+const AdminCommunityPage = lazy(() => import('./pages/AdminCommunityPage').then(m => ({ default: m.AdminCommunityPage })));
+const AdminGalleryPage = lazy(() => import('./pages/AdminGalleryPage').then(m => ({ default: m.AdminGalleryPage })));
+const AdminApprovalsPage = lazy(() => import('./pages/AdminApprovalsPage').then(m => ({ default: m.AdminApprovalsPage })));
+const AdminSettingsPage = lazy(() => import('./pages/AdminSettingsPage').then(m => ({ default: m.AdminSettingsPage })));
 
 /**
  * Standard Spinning Loader for Page Transitions
@@ -124,10 +136,24 @@ const AppContent: React.FC = () => {
                 <Route path="/lecturers" element={<RequireAuth><Suspense fallback={<PageLoader />}><LecturersPage /></Suspense></RequireAuth>} />
                 <Route path="/leaderboard" element={<RequireAuth><Suspense fallback={<PageLoader />}><LeaderboardPage /></Suspense></RequireAuth>} />
             </Route>
-            <Route path="/admin/*" element={<RequireAuth adminOnly><Suspense fallback={<PageLoader />}><AdminLayout /></Suspense></RequireAuth>}>
+
+            {/* FIXED ADMIN ROUTING */}
+            <Route path="/admin" element={<RequireAuth adminOnly><Suspense fallback={<PageLoader />}><AdminLayout /></Suspense></RequireAuth>}>
+                <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<AdminPage />} />
+                <Route path="users" element={<AdminUsersPage />} />
+                <Route path="active-users" element={<AdminActiveUsersPage />} />
+                <Route path="materials" element={<AdminMaterialsPage />} />
+                <Route path="news" element={<AdminNewsPage />} />
+                <Route path="executives" element={<AdminExecutivesPage />} />
+                <Route path="lecturers" element={<AdminLecturersPage />} />
+                <Route path="community" element={<AdminCommunityPage />} />
+                <Route path="gallery" element={<AdminGalleryPage />} />
+                <Route path="approvals" element={<AdminApprovalsPage />} />
+                <Route path="settings" element={<AdminSettingsPage />} />
                 <Route path="*" element={<Navigate to="dashboard" replace />} />
             </Route>
+
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     </>

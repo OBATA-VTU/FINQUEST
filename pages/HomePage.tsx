@@ -64,8 +64,10 @@ export const HomePage: React.FC = () => {
 
   const handleCtaClick = () => {
       if (auth?.user) {
+          // If user is already logged in, take them to their dashboard
           navigate('/dashboard');
       } else {
+          // Otherwise take them to signup
           navigate('/signup');
       }
   };
@@ -107,7 +109,7 @@ export const HomePage: React.FC = () => {
                         onClick={handleCtaClick}
                         className="group w-full sm:w-auto inline-flex items-center justify-center gap-3 px-10 py-5 bg-white text-indigo-950 font-bold rounded-full shadow-2xl hover:shadow-white/20 transition-all duration-300 transform hover:scale-[1.05]"
                     >
-                        <span className="text-xs uppercase tracking-widest">{auth?.user ? 'Go to Dashboard' : 'Get Started'}</span>
+                        <span className="text-xs uppercase tracking-widest">{auth?.user ? 'Enter Portal' : 'Get Started'}</span>
                         <svg className="w-4 h-4 transition-transform group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                     </button>
                     <button

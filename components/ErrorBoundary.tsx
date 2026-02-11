@@ -1,7 +1,7 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React from 'react';
 
 interface ErrorBoundaryProps {
-  children?: ReactNode;
+  children?: React.ReactNode;
 }
 
 interface ErrorBoundaryState {
@@ -13,9 +13,9 @@ interface ErrorBoundaryState {
  * ErrorBoundary component to catch JavaScript errors anywhere in their child component tree,
  * log those errors, and display a fallback UI instead of the component tree that crashed.
  */
-// Fix: Use standard Component import and class property initialization for state to resolve TypeScript property access errors.
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Fix: Initializing state as a class property ensures 'state' is correctly identified on the class instance by the compiler.
+// Fix: Explicitly extending React.Component with type parameters ensures that 'props' and 'state' are correctly recognized and typed by the TypeScript compiler on the class instance.
+export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // Fix: Initializing state as a class property ensures it is correctly identified on the class instance.
   public state: ErrorBoundaryState = {
     hasError: false,
     error: null,
@@ -27,12 +27,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   // Lifecycle method to log error information.
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  public componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
   }
 
-  public render(): ReactNode {
-    // Fix: Access state from 'this', which is now properly typed via class property definition.
+  public render(): React.ReactNode {
+    // Fix: Access state from 'this.state', which is inherited from React.Component.
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
@@ -55,7 +55,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       );
     }
 
-    // Fix: Properly access children from this.props.
+    // Fix: Correctly access 'children' from 'this.props', which is now properly recognized by the TypeScript compiler after ensuring explicit component extension.
     return this.props.children;
   }
 }
