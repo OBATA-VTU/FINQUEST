@@ -48,14 +48,14 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { SessionWrapPage } from './pages/SessionWrapPage';
 import { DownloadAppPage } from './pages/DownloadAppPage';
 import { InputPage } from './pages/InputPage';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
 const LAUNCH_DATE = new Date('2026-01-10T12:00:00+01:00');
 
 const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNode, adminOnly?: boolean }) => {
     const auth = useContext(AuthContext);
-    if (auth?.loading) return null; 
+    if (auth?.loading) return <div className="h-screen w-screen bg-slate-50 dark:bg-slate-950"></div>; 
     if (!auth?.user) return <Navigate to="/login" replace />;
 
     if (adminOnly && !['admin', 'librarian', 'vice_president', 'supplement'].includes(auth.user.role)) {
@@ -71,7 +71,10 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     const checkSession = async () => {
-      if (!auth?.user) { setCheckingSession(false); return; }
+      if (!auth?.user) { 
+          setCheckingSession(false); 
+          return; 
+      }
       try {
         const settingsDoc = await getDoc(doc(db, 'content', 'site_settings'));
         if (settingsDoc.exists()) {
@@ -89,12 +92,16 @@ const AppContent: React.FC = () => {
             }
           }
         }
-      } catch (e) { console.error(e); } finally { setCheckingSession(false); }
+      } catch (e) { 
+          console.error("Session check error:", e); 
+      } finally { 
+          setCheckingSession(false); 
+      }
     };
     checkSession();
-  }, [auth?.user]);
+  }, [auth?.user?.id]); // Only re-run if the user ID changes
 
-  if (checkingSession) return <div className="h-screen w-screen bg-slate-950"></div>;
+  if (checkingSession && auth?.user) return <div className="h-screen w-screen bg-slate-50 dark:bg-slate-950"></div>;
   if (sessionWrapInfo) return <SessionWrapPage info={sessionWrapInfo} onFinish={() => setSessionWrapInfo(null)} />;
   
   return (
@@ -158,10 +165,9 @@ const App: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (location.pathname.includes('/cdq')) {
+    if (location.pathname === '/cdq') {
       sessionStorage.setItem('FINSA_LAUNCH_BYPASS', 'true');
-      const newPath = location.pathname.replace(/\/cdq/g, '') || '/';
-      navigate(newPath, { replace: true });
+      navigate('/', { replace: true });
     }
   }, [location.pathname, navigate]);
 

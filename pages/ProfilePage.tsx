@@ -1,4 +1,3 @@
-
 import React, { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { QuestionGrid } from '../components/QuestionGrid';
@@ -8,16 +7,18 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import { PastQuestion, TestResult } from '../types';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { getBadge } from '../utils/badges';
-import { AddPasswordModal } from '../components/AddPasswordModal'; // Import AddPasswordModal
+import { AddPasswordModal } from '../components/AddPasswordModal';
+import { useNavigate } from 'react-router-dom';
 
 export const ProfilePage: React.FC = () => {
   const auth = useContext(AuthContext);
+  const navigate = useNavigate();
   const user = auth?.user;
   const [savedQuestions, setSavedQuestions] = useState<PastQuestion[]>([]);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isAddPasswordModalOpen, setIsAddPasswordModalOpen] = useState(false); // State for AddPasswordModal
+  const [isAddPasswordModalOpen, setIsAddPasswordModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -39,7 +40,8 @@ export const ProfilePage: React.FC = () => {
         // Fetch test results
         const testQuery = query(collection(db, 'test_results'), where('userId', '==', user.id));
         const testSnapshot = await getDocs(testQuery);
-        setTestResults(testSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestResult)));
+        const results = testSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestResult));
+        setTestResults(results);
 
       } catch (error) {
         console.error("Error fetching profile data:", error);
@@ -49,18 +51,36 @@ export const ProfilePage: React.FC = () => {
     };
 
     fetchUserData();
-  }, [user]);
+  }, [user?.id]); // Use user.id specifically for the dependency
+
+  const handleLogout = async () => {
+      if (auth) {
+          await auth.logout();
+          navigate('/login', { replace: true });
+      }
+  };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center dark:bg-slate-950">Loading profile...</div>;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center dark:bg-slate-950">
+        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-slate-500 font-bold">Loading your profile...</p>
+      </div>
+    );
   }
 
   if (!user) {
     return <div className="min-h-screen flex items-center justify-center dark:bg-slate-950">Please log in to view your profile.</div>;
   }
   
-  const sortedTestResults = [...testResults].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const latestTest = sortedTestResults[0];
+  // Robust sorting: ensure latest test is correctly identified even if date is malformed
+  const sortedTestResults = [...testResults].sort((a, b) => {
+    const dateA = a.date ? new Date(a.date).getTime() : 0;
+    const dateB = b.date ? new Date(b.date).getTime() : 0;
+    return dateB - dateA;
+  });
+
+  const latestTest = sortedTestResults.length > 0 ? sortedTestResults[0] : null;
 
   const topBadge = (user.badges || [])
       .map(getBadge)
@@ -92,7 +112,7 @@ export const ProfilePage: React.FC = () => {
             <p className="text-slate-500 dark:text-slate-400 text-sm">@{user.username || 'N/A'} • {user.matricNumber?.toUpperCase() || 'NO ID'}</p>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{user.email}</p>
 
-            <div className="flex gap-4 mt-6">
+            <div className="flex flex-wrap justify-center gap-3 mt-6">
                 <button 
                     onClick={() => setIsEditModalOpen(true)}
                     className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-full hover:bg-indigo-700 transition-transform hover:-translate-y-1 shadow-md flex items-center gap-2 text-sm"
@@ -100,6 +120,7 @@ export const ProfilePage: React.FC = () => {
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                     Edit Profile
                 </button>
+                
                 {!auth?.isPasswordAccount && (
                     <button 
                         onClick={() => setIsAddPasswordModalOpen(true)} 
@@ -109,6 +130,14 @@ export const ProfilePage: React.FC = () => {
                         Add Password
                     </button>
                 )}
+
+                <button 
+                    onClick={handleLogout}
+                    className="px-6 py-2 bg-rose-600 text-white font-bold rounded-full hover:bg-rose-700 transition-transform hover:-translate-y-1 shadow-md flex items-center gap-2 text-sm"
+                >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                    Sign Out
+                </button>
             </div>
           </div>
         </div>
@@ -125,7 +154,9 @@ export const ProfilePage: React.FC = () => {
             </div>
             <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm text-center">
                 <p className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">Latest Test Score</p>
-                <p className={`text-4xl font-black ${latestTest?.score >= 50 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{latestTest ? `${latestTest.score}%` : 'N/A'}</p>
+                <p className={`text-4xl font-black ${latestTest && latestTest.score >= 50 ? 'text-emerald-600 dark:text-emerald-400' : latestTest ? 'text-rose-600 dark:text-rose-400' : 'text-slate-300 dark:text-slate-700'}`}>
+                    {latestTest ? `${latestTest.score}%` : 'N/A'}
+                </p>
             </div>
         </div>
 
