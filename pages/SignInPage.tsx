@@ -18,7 +18,7 @@ export const SignInPage: React.FC = () => {
             await auth?.login(email, password);
             navigate('/dashboard');
         } catch (err) {
-            // Error handled by notification context
+            // Error handled by notification context via friendly logic
         } finally {
             setLoading(false);
         }
@@ -27,14 +27,15 @@ export const SignInPage: React.FC = () => {
     const handleGoogleLogin = async () => {
         setLoading(true);
         try {
-            const { needsProfileCompletion } = await auth!.loginWithGoogle();
+            const { needsProfileCompletion, googleUser } = await auth!.loginWithGoogle();
             if (needsProfileCompletion) {
-                navigate('/signup', { state: { googleUser: auth?.user } });
+                // Pass the google user object directly to prefill the setup
+                navigate('/signup', { state: { googleUser } });
             } else {
                 navigate('/dashboard');
             }
         } catch (err) {
-            // Error handled by notification context
+            // Error handled by notification context via friendly logic
         } finally {
             setLoading(false);
         }
@@ -75,9 +76,9 @@ export const SignInPage: React.FC = () => {
                         </div>
                         <button 
                             disabled={loading}
-                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50"
+                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 active:scale-95"
                         >
-                            {loading ? "Authenticating..." : "Sign In"}
+                            {loading ? "Signing in..." : "Sign In"}
                         </button>
                     </form>
 
@@ -89,7 +90,7 @@ export const SignInPage: React.FC = () => {
                     <button 
                         onClick={handleGoogleLogin}
                         disabled={loading}
-                        className="w-full py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-white flex items-center justify-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                        className="w-full py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-white flex items-center justify-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm active:scale-95"
                     >
                         <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
                         Google Account

@@ -16,15 +16,15 @@ import {
   linkWithPopup,
   EmailAuthProvider
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useNotification } from './NotificationContext';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, pass: string) => Promise<void>;
-  loginWithGoogle: () => Promise<{ needsProfileCompletion: boolean }>;
-  signup: (data: { name: string; email: string; pass: string; level: Level; username: string; matricNumber: string; avatarUrl?: string }) => Promise<void>;
+  loginWithGoogle: () => Promise<{ needsProfileCompletion: boolean; googleUser?: any }>;
+  signup: (data: { name: string; email: string; pass?: string; level: Level; username: string; matricNumber: string; avatarUrl?: string; googleUid?: string }) => Promise<void>;
   logout: () => Promise<void>;
   toggleBookmark: (questionId: string) => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
@@ -36,11 +36,37 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
+// Helper to translate technical errors into friendly English
+const getFriendlyErrorMessage = (code: string) => {
+    switch (code) {
+        case 'auth/invalid-credential':
+        case 'auth/wrong-password':
+        case 'auth/user-not-found':
+            return "The email or password you entered is incorrect.";
+        case 'auth/email-already-in-use':
+            return "An account with this email already exists.";
+        case 'auth/popup-closed-by-user':
+            return "Sign-in was cancelled. Please try again.";
+        case 'auth/network-request-failed':
+            return "Connection error. Please check your internet.";
+        case 'auth/weak-password':
+            return "Your password is too weak. Try at least 6 characters.";
+        case 'auth/too-many-requests':
+            return "Too many attempts. Please try again later.";
+        case 'auth/user-disabled':
+            return "This account has been suspended. Please contact the PRO.";
+        case 'auth/operation-not-allowed':
+            return "This sign-in method is currently disabled.";
+        default:
+            return "Something went wrong. Please try again later.";
+    }
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { showNotification } = useNotification();
-  const isSigningIn = useRef(false); // Guard against concurrent auth calls
+  const isSigningIn = useRef(false);
 
   const isPasswordAccount = auth.currentUser?.providerData.some(p => p.providerId === 'password') || false;
   const isGoogleAccount = auth.currentUser?.providerData.some(p => p.providerId === 'google.com') || false;
@@ -52,7 +78,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (userDoc.exists()) {
           const userData = userDoc.data() as User;
           setUser({ ...userData, id: firebaseUser.uid });
-          // Update last active
           await updateDoc(doc(db, 'users', firebaseUser.uid), {
             lastActive: new Date().toISOString()
           });
@@ -71,57 +96,52 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await signInWithEmailAndPassword(auth, email, pass);
       showNotification("Welcome back!", "success");
     } catch (error: any) {
-      showNotification(error.message || "Login failed", "error");
+      showNotification(getFriendlyErrorMessage(error.code), "error");
       throw error;
     }
   };
 
   const loginWithGoogle = async () => {
-    if (isSigningIn.current) {
-        throw new Error("Authentication already in progress.");
-    }
+    if (isSigningIn.current) throw new Error("Auth in progress");
 
     try {
       isSigningIn.current = true;
-      // Fix for "Missing Initial State": Ensure persistence is locked in
       await setPersistence(auth, browserLocalPersistence);
-      
       const provider = new GoogleAuthProvider();
-      // Forces the account selection screen and ensures a clean state
       provider.setCustomParameters({ prompt: 'select_account' });
       
-      const result = await signInWithPopup(auth, provider);
+      const result = await signInPopup(auth, provider);
       const userDoc = await getDoc(doc(db, 'users', result.user.uid));
       
       if (!userDoc.exists()) {
-        return { needsProfileCompletion: true };
+        return { needsProfileCompletion: true, googleUser: result.user };
       }
       
-      showNotification("Signed in with Google", "success");
+      showNotification("Signed in successfully with Google", "success");
       return { needsProfileCompletion: false };
     } catch (error: any) {
-      console.error("Google Auth Error:", error);
-      
-      if (error.code === 'auth/popup-closed-by-user') {
-          showNotification("Login cancelled.", "info");
-      } else if (error.code === 'auth/internal-error' || error.message.includes('sessionStorage')) {
-          showNotification("Browser storage issue detected. Please refresh or check cookie settings.", "error");
-      } else {
-          showNotification(error.message || "Google Sign-In failed", "error");
-      }
+      showNotification(getFriendlyErrorMessage(error.code), "error");
       throw error;
     } finally {
       isSigningIn.current = false;
     }
   };
 
-  const signup = async (data: { name: string; email: string; pass: string; level: Level; username: string; matricNumber: string; avatarUrl?: string }) => {
+  const signup = async (data: { name: string; email: string; pass?: string; level: Level; username: string; matricNumber: string; avatarUrl?: string; googleUid?: string }) => {
     try {
-      const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, data.email, data.pass);
-      await updateProfile(firebaseUser, { displayName: data.name, photoURL: data.avatarUrl });
+      let uid = data.googleUid;
       
+      // If not a Google user completing profile, create new Firebase user
+      if (!uid && data.pass) {
+          const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, data.email, data.pass);
+          uid = firebaseUser.uid;
+          await updateProfile(firebaseUser, { displayName: data.name, photoURL: data.avatarUrl });
+      }
+
+      if (!uid) throw new Error("Authentication failed during signup.");
+
       const userData: User = {
-        id: firebaseUser.uid,
+        id: uid,
         name: data.name,
         email: data.email,
         username: data.username,
@@ -136,11 +156,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         badges: []
       };
       
-      await setDoc(doc(db, 'users', firebaseUser.uid), userData);
+      await setDoc(doc(db, 'users', uid), userData);
       setUser(userData);
-      showNotification("Account created successfully!", "success");
+      showNotification("Your account has been created!", "success");
     } catch (error: any) {
-      showNotification(error.message || "Registration failed", "error");
+      showNotification(getFriendlyErrorMessage(error.code), "error");
       throw error;
     }
   };
@@ -156,9 +176,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const credential = EmailAuthProvider.credential(auth.currentUser.email!, password);
       await linkWithCredential(auth.currentUser, credential);
-      showNotification("Password added successfully! You can now login with email/password.", "success");
+      showNotification("Password added! You can now sign in with email/password.", "success");
     } catch (error: any) {
-      showNotification(error.message || "Failed to add password", "error");
+      showNotification(getFriendlyErrorMessage(error.code), "error");
       throw error;
     }
   };
@@ -170,7 +190,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await linkWithPopup(auth.currentUser, provider);
       showNotification("Google account linked successfully!", "success");
     } catch (error: any) {
-      showNotification(error.message || "Failed to link Google account", "error");
+      showNotification(getFriendlyErrorMessage(error.code), "error");
       throw error;
     }
   };
@@ -179,7 +199,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!user) return;
     const isBookmarked = user.savedQuestions?.includes(questionId);
     const userRef = doc(db, 'users', user.id);
-    
     try {
       if (isBookmarked) {
         await updateDoc(userRef, { savedQuestions: arrayRemove(questionId) });
@@ -189,7 +208,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser({ ...user, savedQuestions: [...(user.savedQuestions || []), questionId] });
       }
     } catch (e) {
-      showNotification("Failed to update bookmarks", "error");
+      showNotification("Couldn't update bookmarks.", "error");
     }
   };
 
@@ -207,3 +226,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     </AuthContext.Provider>
   );
 };
+
+// Wrap the Firebase popup for reliability
+async function signInPopup(auth: any, provider: any) {
+    try {
+        return await signInWithPopup(auth, provider);
+    } catch (e: any) {
+        if (e.code === 'auth/cancelled-popup-request' || e.code === 'auth/popup-closed-by-user') {
+            throw e;
+        }
+        // Attempt redirect if popup is blocked
+        console.warn("Popup blocked, fallback could be implemented here.");
+        throw e;
+    }
+}
