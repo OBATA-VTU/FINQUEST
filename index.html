@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en" class="bg-slate-900">
   <head>
@@ -49,6 +50,7 @@
         theme: {
           extend: {
             colors: { indigo: { 950: '#1e1b4b' } },
+            spacing: { 'safe': 'env(safe-area-inset-bottom)' },
             animation: { 'shine': 'shine 3s infinite linear', 'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
           }
         }
@@ -58,7 +60,8 @@
     <style>
       body { font-family: 'Inter', sans-serif; background-color: #0f172a; overscroll-behavior-y: none; }
       .font-serif { font-family: 'Playfair Display', serif; }
-      #root { min-height: 100vh; display: flex; flex-direction: column; }
+      #root { min-height: 100vh; height: 100%; display: flex; flex-direction: column; }
+      .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
     </style>
 <script type="importmap">
 {

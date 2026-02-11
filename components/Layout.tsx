@@ -21,6 +21,9 @@ export const Layout: React.FC = () => {
     const currentPath = pathname.endsWith('/') && pathname.length > 1 ? pathname.slice(0, -1) : pathname;
     const showFooter = showFooterPages.includes(currentPath);
 
+    // AI and Community pages handle their own scrolling to keep input bars anchored
+    const isFixedLayout = ['/community', '/ai'].includes(pathname);
+
     return (
         <div className="h-screen bg-slate-50 text-slate-800 flex font-sans overflow-hidden">
             {/* Sidebar for Desktop & Mobile */}
@@ -34,13 +37,11 @@ export const Layout: React.FC = () => {
                 <Header onOpenSidebar={() => setIsSidebarOpen(true)} />
                 
                 {/* Main Content with Fade Animation */}
-                {/* We use h-full and overflow-y-auto here so normal pages scroll, 
-                    but pages like Chat (Community) can opt to hide overflow and manage scrolling internally */}
                 <main 
                     id="main-content"
-                    className={`flex-1 relative z-0 animate-fade-in ${pathname === '/community' ? 'overflow-hidden' : 'overflow-y-auto'}`}
+                    className={`flex-1 relative z-0 animate-fade-in ${isFixedLayout ? 'overflow-hidden' : 'overflow-y-auto'}`}
                 >
-                    <div className={pathname === '/community' ? 'h-full' : 'min-h-full flex flex-col'}>
+                    <div className={isFixedLayout ? 'h-full' : 'min-h-full flex flex-col'}>
                         <Outlet />
                         {showFooter && <Footer />}
                     </div>
