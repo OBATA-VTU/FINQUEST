@@ -62,6 +62,14 @@ export const HomePage: React.FC = () => {
     fetchContent();
   }, []);
 
+  const handleCtaClick = () => {
+      if (auth?.user) {
+          navigate('/dashboard');
+      } else {
+          navigate('/signup');
+      }
+  };
+
   return (
     <div className="font-sans bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 overflow-x-hidden transition-colors duration-300">
       
@@ -96,10 +104,10 @@ export const HomePage: React.FC = () => {
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <button
-                        onClick={() => navigate('/signup')}
+                        onClick={handleCtaClick}
                         className="group w-full sm:w-auto inline-flex items-center justify-center gap-3 px-10 py-5 bg-white text-indigo-950 font-bold rounded-full shadow-2xl hover:shadow-white/20 transition-all duration-300 transform hover:scale-[1.05]"
                     >
-                        <span className="text-xs uppercase tracking-widest">Get Started</span>
+                        <span className="text-xs uppercase tracking-widest">{auth?.user ? 'Go to Dashboard' : 'Get Started'}</span>
                         <svg className="w-4 h-4 transition-transform group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                     </button>
                     <button
@@ -133,7 +141,7 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* NEW: Pillars of Excellence Section */}
+      {/* Pillars of Excellence Section */}
       <section className="py-24 bg-white dark:bg-slate-950 transition-colors reveal">
           <div className="container mx-auto px-4">
               <div className="text-center max-w-3xl mx-auto mb-16">
@@ -158,7 +166,7 @@ export const HomePage: React.FC = () => {
                   </div>
                   <div className="p-10 rounded-[2.5rem] bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 group hover:bg-rose-600 transition-all duration-500 hover:-translate-y-2">
                       <div className="w-14 h-14 bg-rose-100 dark:bg-rose-950 rounded-2xl flex items-center justify-center mb-8 text-rose-600 dark:text-rose-400 group-hover:bg-white/20 group-hover:text-white transition-colors">
-                        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+                        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-18 0 9 9 0 0118 0z" /></svg>
                       </div>
                       <h3 className="text-2xl font-bold mb-4 font-serif text-slate-900 dark:text-white group-hover:text-white transition-colors">Global Connectivity</h3>
                       <p className="text-slate-500 dark:text-slate-400 group-hover:text-rose-50 transition-colors leading-relaxed">Bridging local financial theory with global market dynamics and international standards.</p>
@@ -198,7 +206,7 @@ export const HomePage: React.FC = () => {
           </div>
       </section>
 
-      {/* NEW: Professional Path Guidance */}
+      {/* Professional Path Guidance */}
       <section className="py-24 bg-white dark:bg-slate-950 reveal">
           <div className="container mx-auto px-4">
               <div className="bg-slate-900 rounded-[3rem] p-12 md:p-20 text-white relative overflow-hidden shadow-2xl">
@@ -230,63 +238,40 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Featured News Grid */}
-      {auth?.user && (
-        <section className="py-24 bg-slate-50 dark:bg-slate-900 transition-colors reveal">
-            <div className="container mx-auto px-4">
-                <div className="flex flex-col lg:flex-row gap-16 items-center">
-                    <div className="lg:w-2/5 animate-slide-in-up">
-                        <h2 className="text-4xl md:text-5xl font-serif font-black text-slate-900 dark:text-white mb-8">Departmental Intelligence</h2>
-                        <p className="text-slate-600 dark:text-slate-400 text-lg mb-10 leading-relaxed">Stay updated with official bulletins, exam schedules, and strategic scholarship opportunities.</p>
-                        <button onClick={() => navigate('/announcements')} className="group inline-flex items-center justify-center gap-4 px-10 py-5 bg-indigo-950 text-white font-bold rounded-full shadow-2xl hover:bg-indigo-900 transition uppercase tracking-widest text-[10px]">
-                            <span>View All Intelligence</span>
-                            <svg className="w-4 h-4 transition-transform group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                        </button>
-                    </div>
-                    <div className="lg:w-3/5 w-full">
-                        <div className="space-y-6">
-                            {announcements.length > 0 ? (
-                                announcements.map((news, i) => (
-                                    <div key={news.id} className="group flex items-center gap-6 p-6 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/50 hover:shadow-2xl transition-all bg-white dark:bg-slate-900/50 backdrop-blur-sm cursor-pointer rounded-[2rem]" onClick={() => navigate('/announcements')} style={{animationDelay: `${150 * (i+1)}ms`}}>
-                                        <div className="w-20 shrink-0 flex flex-col items-center text-center">
-                                            <span className="block text-5xl font-serif font-black text-indigo-600/20 dark:text-indigo-500/10 group-hover:text-indigo-600 transition-colors">{new Date(news.date).getDate()}</span>
-                                            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">{new Date(news.date).toLocaleDateString(undefined, {month: 'short'})}</span>
-                                        </div>
-                                        <div className="border-l-2 border-slate-100 dark:border-slate-800 pl-8">
-                                            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-indigo-600 transition-colors font-serif">{news.title}</h3>
-                                            <p className="text-slate-500 dark:text-slate-400 line-clamp-2 text-sm leading-relaxed">{news.content}</p>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="text-slate-400 italic p-12 border border-dashed border-slate-200 dark:border-slate-800 text-center rounded-3xl">No recent intelligence reports found.</div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-      )}
-
-      {/* Campus Moments Ticker */}
-      {auth?.user && galleryImages.length > 0 && (
-          <section className="py-24 bg-white dark:bg-slate-950 reveal">
-              <div className="container mx-auto px-4">
-                  <div className="text-center max-w-3xl mx-auto mb-16">
-                      <h2 className="text-3xl md:text-5xl font-serif font-black text-slate-900 dark:text-white mb-6">Visual Archives</h2>
-                      <p className="text-slate-600 dark:text-slate-400 text-lg">Milestones and shared moments of the FINSA community.</p>
+      <section className="py-24 bg-slate-50 dark:bg-slate-900 transition-colors reveal">
+          <div className="container mx-auto px-4">
+              <div className="flex flex-col lg:flex-row gap-16 items-center">
+                  <div className="lg:w-2/5 animate-slide-in-up">
+                      <h2 className="text-4xl md:text-5xl font-serif font-black text-slate-900 dark:text-white mb-8">Departmental Intelligence</h2>
+                      <p className="text-slate-600 dark:text-slate-400 text-lg mb-10 leading-relaxed">Stay updated with official bulletins, exam schedules, and strategic scholarship opportunities.</p>
+                      <button onClick={() => navigate('/announcements')} className="group inline-flex items-center justify-center gap-4 px-10 py-5 bg-indigo-950 text-white font-bold rounded-full shadow-2xl hover:bg-indigo-900 transition uppercase tracking-widest text-[10px]">
+                          <span>View All Intelligence</span>
+                          <svg className="w-4 h-4 transition-transform group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                      </button>
                   </div>
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                      {galleryImages.map((img, i) => (
-                          <div key={img.id} className="group relative rounded-[2rem] overflow-hidden shadow-2xl aspect-[3/4] cursor-pointer" onClick={() => navigate('/gallery')} style={{ animationDelay: `${i * 100}ms` }}>
-                              <img src={img.imageUrl} alt={img.caption} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent"></div>
-                              <p className="absolute bottom-6 left-6 right-6 text-white font-bold text-sm leading-snug drop-shadow-lg">{img.caption}</p>
-                          </div>
-                      ))}
+                  <div className="lg:w-3/5 w-full">
+                      <div className="space-y-6">
+                          {announcements.length > 0 ? (
+                              announcements.map((news, i) => (
+                                  <div key={news.id} className="group flex items-center gap-6 p-6 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/50 hover:shadow-2xl transition-all bg-white dark:bg-slate-900/50 backdrop-blur-sm cursor-pointer rounded-[2rem]" onClick={() => navigate('/announcements')} style={{animationDelay: `${150 * (i+1)}ms`}}>
+                                      <div className="w-20 shrink-0 flex flex-col items-center text-center">
+                                          <span className="block text-5xl font-serif font-black text-indigo-600/20 dark:text-indigo-500/10 group-hover:text-indigo-600 transition-colors">{new Date(news.date).getDate()}</span>
+                                          <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">{new Date(news.date).toLocaleDateString(undefined, {month: 'short'})}</span>
+                                      </div>
+                                      <div className="border-l-2 border-slate-100 dark:border-slate-800 pl-8">
+                                          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-indigo-600 transition-colors font-serif">{news.title}</h3>
+                                          <p className="text-slate-500 dark:text-slate-400 line-clamp-2 text-sm leading-relaxed">{news.content}</p>
+                                      </div>
+                                  </div>
+                              ))
+                          ) : (
+                              <div className="text-slate-400 italic p-12 border border-dashed border-slate-200 dark:border-slate-800 text-center rounded-3xl">No recent intelligence reports found.</div>
+                          )}
+                      </div>
                   </div>
               </div>
-          </section>
-      )}
+          </div>
+      </section>
 
       {/* Final Call to Action */}
       <section className="py-32 bg-gradient-to-br from-indigo-950 via-slate-950 to-indigo-950 text-white text-center reveal transition-colors relative overflow-hidden">
@@ -295,8 +280,8 @@ export const HomePage: React.FC = () => {
         <div className="container mx-auto px-4 max-w-4xl relative">
               <h2 className="text-5xl md:text-7xl font-serif font-black mb-8 leading-tight">Master Your <br/><span className="text-indigo-400">Financial Destiny</span></h2>
               <p className="text-slate-400 text-xl mb-14 font-light max-w-2xl mx-auto">Access the intelligence, tools, and community required to become a world-class financial expert.</p>
-              <button onClick={() => navigate('/signup')} className="group relative inline-flex items-center justify-center gap-4 px-12 py-6 bg-indigo-600 text-white font-black rounded-full shadow-2xl hover:bg-indigo-500 transition-all uppercase tracking-[0.2em] text-xs transform hover:scale-105 duration-300">
-                <span className="relative z-10">Enter Student Portal</span>
+              <button onClick={handleCtaClick} className="group relative inline-flex items-center justify-center gap-4 px-12 py-6 bg-indigo-600 text-white font-black rounded-full shadow-2xl hover:bg-indigo-500 transition-all uppercase tracking-[0.2em] text-xs transform hover:scale-105 duration-300">
+                <span className="relative z-10">{auth?.user ? 'Enter Portal' : 'Join Now'}</span>
                 <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
               </button>
           </div>

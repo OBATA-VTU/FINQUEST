@@ -39,6 +39,9 @@ const LostFoundPage = lazy(() => import('./pages/LostFoundPage').then(m => ({ de
 const FAQPage = lazy(() => import('./pages/FAQPage').then(m => ({ default: m.FAQPage })));
 const DownloadAppPage = lazy(() => import('./pages/DownloadAppPage').then(m => ({ default: m.DownloadAppPage })));
 
+/**
+ * Standard Spinning Loader for Page Transitions
+ */
 const PageLoader = () => (
     <div className="h-[60vh] w-full flex flex-col items-center justify-center bg-transparent animate-fade-in">
         <div className="relative w-12 h-12">

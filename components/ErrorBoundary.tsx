@@ -1,5 +1,4 @@
-
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -14,16 +13,13 @@ interface ErrorBoundaryState {
  * ErrorBoundary component to catch JavaScript errors anywhere in their child component tree,
  * log those errors, and display a fallback UI instead of the component tree that crashed.
  */
-// Fix: Explicitly extend React.Component to ensure that 'props' and 'state' are correctly recognized as inherited properties in TypeScript.
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Fix: Standard constructor initialization with explicit state definition ensures properties are correctly identified on the class instance.
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: null,
-    };
-  }
+// Fix: Use standard Component import and class property initialization for state to resolve TypeScript property access errors.
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // Fix: Initializing state as a class property ensures 'state' is correctly identified on the class instance by the compiler.
+  public state: ErrorBoundaryState = {
+    hasError: false,
+    error: null,
+  };
 
   // Static method to update state so the next render will show the fallback UI.
   public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -36,7 +32,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   public render(): ReactNode {
-    // Fix: Access state from 'this', which is guaranteed to exist by extending React.Component.
+    // Fix: Access state from 'this', which is now properly typed via class property definition.
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
@@ -59,7 +55,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       );
     }
 
-    // Fix: Properly access and return children from this.props, which is now correctly recognized via constructor initialization.
+    // Fix: Properly access children from this.props.
     return this.props.children;
   }
 }

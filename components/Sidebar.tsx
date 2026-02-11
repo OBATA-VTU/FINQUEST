@@ -79,7 +79,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       department: true
   });
 
-  // Ensure sidebar closes on route change (for mobile)
+  // Ensure sidebar always closes on route change for a seamless flow
   useEffect(() => {
     onClose();
   }, [pathname]);
@@ -263,7 +263,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   <div className="p-3 bg-white/5 rounded-xl border border-white/10">
                       <div className="flex items-center gap-3 mb-4">
                           <div className="relative">
-                              <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden shadow-inner">
+                              <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden shadow-inner border border-white/20">
                                   {auth.user.avatarUrl ? (
                                       <img src={auth.user.avatarUrl} alt={auth.user.name} className="w-full h-full object-cover" />
                                   ) : (

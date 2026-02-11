@@ -35,13 +35,14 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
-// Random Professional Avatar Pool (Finance/Professional focused)
+// Random Professional Avatar Pool (Finance/Professional focused Unsplash photos)
 const STOCK_AVATARS = [
     "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=facearea&facepad=2&w=256&h=256&q=80",
     "https://images.unsplash.com/photo-1494790108377-be9c29b29330?fit=facearea&facepad=2&w=256&h=256&q=80",
     "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?fit=facearea&facepad=2&w=256&h=256&q=80",
     "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?fit=facearea&facepad=2&w=256&h=256&q=80",
-    "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?fit=facearea&facepad=2&w=256&h=256&q=80"
+    "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?fit=facearea&facepad=2&w=256&h=256&q=80",
+    "https://images.unsplash.com/photo-1544005313-94ddf0286df2?fit=facearea&facepad=2&w=256&h=256&q=80"
 ];
 
 const getRandomAvatar = () => STOCK_AVATARS[Math.floor(Math.random() * STOCK_AVATARS.length)];
@@ -88,8 +89,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (userDoc.exists()) {
           const userData = userDoc.data() as User;
           
-          // CRITICAL FIX: Ensure user has an avatar. If missing, assign a random professional stock photo.
-          // This applies to existing users who missed the prompt.
+          // Ensure user has a real avatar. If missing, assign a random professional stock photo.
           if (!userData.avatarUrl) {
               const newAvatar = firebaseUser.photoURL || getRandomAvatar();
               await updateDoc(userDocRef, { avatarUrl: newAvatar });
@@ -158,7 +158,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (!uid) throw new Error("Authentication failed during signup.");
 
-      // AUTO-GENERATION: If no avatar provided (Google or Manual), use a random stock photo
+      // If no avatar provided from Google, assign a professional random headshot
       const finalAvatar = data.avatarUrl || getRandomAvatar();
 
       const userData: User = {
