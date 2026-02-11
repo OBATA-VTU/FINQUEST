@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -13,11 +13,11 @@ interface ErrorBoundaryState {
  * ErrorBoundary component to catch JavaScript errors anywhere in their child component tree,
  * log those errors, and display a fallback UI instead of the component tree that crashed.
  */
-// FIX: Using named 'Component' import and ensuring correct inheritance so 'props' and 'state' are correctly typed.
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // FIX: Moving state initialization to constructor for more robust type adherence and base class initialization.
+// Fix: Explicitly extending React.Component and passing props/state types to ensure 'this.props' and 'this.state' are correctly recognized by the TypeScript compiler.
+export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
+    // Fix: Initializing state within the constructor is the most reliable way for the compiler to track state property existence in class components.
     this.state = {
       hasError: false,
       error: null,
@@ -35,7 +35,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   public render(): ReactNode {
-    // Render fallback UI if an error has occurred
+    // Fix: accessing state through this.state which is now correctly inherited and typed.
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
@@ -59,7 +59,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       );
     }
 
-    // FIX: Correctly access 'children' from 'this.props' as inherited from React Component base class.
+    // Fix: Accessing children through this.props, which is now correctly inherited from React.Component base class.
     return this.props.children;
   }
 }

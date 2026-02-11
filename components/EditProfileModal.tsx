@@ -29,7 +29,6 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
     }
   }, [isOpen, auth?.user]);
 
-  // FIX: Implement robust "click outside" logic to prevent modal from closing on inner clicks.
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
         if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
@@ -81,7 +80,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
   };
   
   const inputStyles = "w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-white";
-  const disabledInputStyles = "w-full px-4 py-2 border rounded-lg outline-none bg-slate-100 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 cursor-not-allowed";
+  const disabledInputStyles = "w-full px-4 py-2 border rounded-lg outline-none bg-slate-100 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 cursor-not-allowed font-bold";
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
@@ -117,11 +116,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                         <input type="text" value={`${auth.user.level} Level`} className={disabledInputStyles} disabled />
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Matric No.</label>
-                        <input type="text" value={auth.user.matricNumber} className={disabledInputStyles} disabled />
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">ID (Matric/JAMB)</label>
+                        <input type="text" value={auth.user.matricNumber?.toUpperCase()} className={disabledInputStyles} disabled />
                     </div>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 -mt-2 px-1">To update your level or matric number, please contact an administrator.</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 -mt-2 px-1">To update your academic level or identification number, please contact an administrator.</p>
 
                 <div className="pt-4 flex gap-3">
                     <button type="button" onClick={onClose} className="flex-1 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-bold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700">Cancel</button>

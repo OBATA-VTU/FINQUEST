@@ -1,5 +1,4 @@
 
-
 import React, { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { QuestionGrid } from '../components/QuestionGrid';
@@ -90,7 +89,7 @@ export const ProfilePage: React.FC = () => {
                 {topBadge && <span className="text-3xl" title={topBadge.name}>{topBadge.icon}</span>}
             </div>
             <p className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-sm mb-2">{user.level} Level Student</p>
-            <p className="text-slate-500 dark:text-slate-400 text-sm">@{user.username || 'N/A'} • {user.matricNumber || 'No Matric. No.'}</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">@{user.username || 'N/A'} • {user.matricNumber?.toUpperCase() || 'NO ID'}</p>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{user.email}</p>
 
             <div className="flex gap-4 mt-6">
