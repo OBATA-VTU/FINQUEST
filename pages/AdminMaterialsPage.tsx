@@ -7,6 +7,8 @@ import { uploadDocument, deleteDocument } from '../utils/api';
 import { LEVELS } from '../constants';
 import { GoogleGenAI, Type } from "@google/genai";
 
+const CATEGORIES = ["Past Question", "Test Question", "Lecture Note", "Handout", "Textbook", "Other"];
+
 export const AdminMaterialsPage: React.FC = () => {
   const [contentItems, setContentItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,7 +52,7 @@ export const AdminMaterialsPage: React.FC = () => {
 
   const openModal = (item: any = null) => {
       setEditingItem(item);
-      setFormData(item || { level: 100, year: new Date().getFullYear(), semester: 'N/A' });
+      setFormData(item || { level: 100, year: new Date().getFullYear(), semester: 'N/A', category: 'Past Question' });
       setFormFile(null);
       setIsModalOpen(true);
       setIsAiMode(false);
@@ -116,7 +118,8 @@ export const AdminMaterialsPage: React.FC = () => {
                     <div key={item.id} className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col relative group hover:border-indigo-200 dark:hover:border-indigo-600 transition-colors">
                         {item.textContent && <div className="absolute top-4 right-4 bg-emerald-100 text-emerald-600 text-[10px] font-bold px-2 py-1 rounded">AI</div>}
                         <h4 className="font-bold text-slate-800 dark:text-white line-clamp-1 mb-1">{item.courseTitle}</h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 flex-1">{item.courseCode} • {item.level}L • {item.year}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{item.courseCode} • {item.level}L • {item.year}</p>
+                        <p className="text-[10px] font-black uppercase text-indigo-500 dark:text-indigo-400 mb-4">{item.category}</p>
                         <div className="mt-auto flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
                             <button onClick={() => openModal(item)} className="flex-1 py-2 text-xs font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50">Edit</button>
                             <button onClick={() => handleDeleteContent(item)} className="px-3 py-2 text-xs font-bold text-rose-600 bg-rose-50 dark:bg-rose-900/30 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-900/50"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
@@ -135,12 +138,13 @@ export const AdminMaterialsPage: React.FC = () => {
                         <div><label className="dark:text-slate-300">{isAiMode ? 'Topic' : 'Course Title'}</label><input className={modalInputStyles} value={formData.courseTitle || ''} onChange={e => setFormData({...formData, courseTitle: e.target.value})} required /></div>
                         <div className="grid grid-cols-2 gap-4">
                             <div><label className="dark:text-slate-300">Course Code</label><input className={modalInputStyles} value={formData.courseCode || ''} onChange={e => setFormData({...formData, courseCode: e.target.value})} required={!isAiMode} /></div>
-                            <div><label className="dark:text-slate-300">Level</label><select className={`${modalInputStyles} bg-white`} value={formData.level || '100'} onChange={e => setFormData({...formData, level: e.target.value})}>{LEVELS.map(l => <option key={l} value={l}>{l === 'General' ? l : `${l} Level`}</option>)}</select></div>
+                            <div><label className="dark:text-slate-300">Category</label><select className={`${modalInputStyles} bg-white`} value={formData.category || 'Past Question'} onChange={e => setFormData({...formData, category: e.target.value})}>{CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
+                            <div><label className="dark:text-slate-300">Level</label><select className={`${modalInputStyles} bg-white`} value={formData.level || '100'} onChange={e => setFormData({...formData, level: e.target.value})}>{LEVELS.map(l => <option key={l} value={l}>{l === 'General' ? l : `${l} Level`}</option>)}</select></div>
                             <div><label className="dark:text-slate-300">Semester</label><select className={`${modalInputStyles} bg-white`} value={formData.semester || 'N/A'} onChange={e => setFormData({...formData, semester: e.target.value})}><option value="N/A">Not Specified</option><option value="1">1st</option><option value="2">2nd</option></select></div>
-                            {!isAiMode && (<div><label className="dark:text-slate-300">Year</label><input type="number" className={modalInputStyles} value={formData.year || ''} onChange={e => setFormData({...formData, year: e.target.value})} required /></div>)}
                         </div>
+                        {!isAiMode && (<div><label className="dark:text-slate-300">Year</label><input type="number" className={modalInputStyles} value={formData.year || ''} onChange={e => setFormData({...formData, year: e.target.value})} required /></div>)}
                         {!isAiMode && <div><label className="dark:text-slate-300">File</label><input type="file" className={`${modalInputStyles} file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100`} onChange={e => e.target.files && setFormFile(e.target.files[0])} accept=".pdf,.doc,.docx" /></div>}
                         <button type="submit" disabled={isSubmitting} className={`w-full py-3 text-white font-bold rounded-lg ${isAiMode ? 'bg-emerald-600' : 'bg-indigo-600'}`}>{isSubmitting ? (isAiMode ? 'Generating...' : 'Saving...') : (isAiMode ? 'Generate with AI' : 'Save Changes')}</button>
                     </form>

@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom';
 
 type UploadType = 'select' | 'document' | 'images' | 'text' | 'ai';
 
-const CATEGORIES = ["Past Question", "Lecture Note", "Handout", "Textbook", "Other"];
+const CATEGORIES = ["Past Question", "Test Question", "Lecture Note", "Handout", "Textbook", "Other"];
 
 export const UploadPage: React.FC = () => {
     const auth = useContext(AuthContext);
@@ -44,6 +44,9 @@ export const UploadPage: React.FC = () => {
 
     const canUseAi = (auth?.user?.contributionPoints || 0) >= 500;
     const isAdmin = ['admin', 'librarian', 'vice_president', 'supplement'].includes(auth?.user?.role || '');
+
+    // Fix: Define isAiMode to determine if the current upload flow is AI-driven
+    const isAiMode = uploadType === 'ai';
 
     const resetForm = () => {
         setFile(null);
@@ -224,9 +227,8 @@ export const UploadPage: React.FC = () => {
                 <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-700">
                     {uploadType === 'select' ? (
                         <div className="space-y-4 animate-fade-in">
-                            {/* NEW: Removed the old "send to PRO" message for documents */}
                             {renderChoice('document', <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>, "Upload Document", "PDF, Word, etc. (Direct Upload)")}
-                            {renderChoice('images', <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>, "Upload Images", "Photos of exam papers")}
+                            {renderChoice('images', <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>, "Upload Images", "Photos of exam papers or test questions")}
                             {renderChoice('text', <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>, "Type Out Material", "Manually type notes or questions")}
                             {renderChoice('ai', <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>, "Generate with AI", "Create notes on any topic", canUseAi, true)}
                         </div>
@@ -245,16 +247,23 @@ export const UploadPage: React.FC = () => {
                                 <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Title</label><input type="text" value={courseTitle} onChange={e => setCourseTitle(e.target.value)} required className="w-full p-3 border rounded-xl" placeholder="e.g. Intro to Finance" /></div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Level</label><select value={level} onChange={e => setLevel(e.target.value)} className="w-full p-3 border rounded-xl bg-white">{LEVELS.map(l => <option key={l} value={l}>{typeof l === 'number' ? `${l}L` : l}</option>)}</select></div>
+                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Category</label><select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-3 border rounded-xl bg-white">{CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}</select></div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
                                 <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Semester</label><select value={semester} onChange={e => setSemester(e.target.value as any)} className="w-full p-3 border rounded-xl bg-white"><option value="N/A">Not Specified</option><option value="1">1st Semester</option><option value="2">2nd Semester</option></select></div>
+                                {!isAiMode && (<div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Year</label><input type="number" className="w-full p-3 border rounded-xl" value={year} onChange={e => setYear(Number(e.target.value))} required /></div>)}
                             </div>
 
                             <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Lecturer (Optional)</label><input type="text" value={lecturer} onChange={e => setLecturer(e.target.value)} className="w-full p-3 border rounded-xl" placeholder="e.g. Dr. A. Adebayo" /></div>
                             
                             {isSubmitting && <div className="space-y-1"><div className="flex justify-between text-xs font-bold text-indigo-600"><span>{uploadStatus}</span><span>{Math.round(uploadProgress)}%</span></div><div className="w-full bg-slate-200 rounded-full h-2"><div className="bg-indigo-600 h-full rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div></div></div>}
 
-                            <button type="submit" disabled={isSubmitting} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50">{isSubmitting ? 'Submitting...' : 'Submit Contribution'}</button>
+                            <button type="submit" disabled={isSubmitting} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 mt-2">
+                                {isSubmitting ? 'Submitting...' : 'Submit Contribution'}
+                            </button>
                         </form>
                     )}
                 </div>

@@ -1,5 +1,5 @@
 
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -14,9 +14,10 @@ interface ErrorBoundaryState {
  * ErrorBoundary component to catch JavaScript errors anywhere in their child component tree,
  * log those errors, and display a fallback UI instead of the component tree that crashed.
  */
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Use property initializer for state to ensure it's correctly typed and accessible, resolving errors on lines 22 and 40
-  public override state: ErrorBoundaryState = {
+// Fix: Use Component directly from react to ensure correct inheritance recognition for TypeScript
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // Fix: Remove 'override' as inheritance might be misinterpreted by the compiler in this environment
+  public state: ErrorBoundaryState = {
     hasError: false,
     error: null,
   };
@@ -27,11 +28,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   // Lifecycle method to log error information.
-  public override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  // Fix: Remove 'override' to avoid misinterpretation of base class members
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
   }
 
-  public override render(): ReactNode {
+  // Fix: Remove 'override'
+  public render(): ReactNode {
     // Accessing state via this.state (Fixes error on line 40)
     if (this.state.hasError) {
       return (
@@ -55,7 +58,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       );
     }
 
-    // Access children directly from this.props to resolve inheritance error (Fixes error on line 63)
+    // Fix: Access children directly from this.props now that Component inheritance is correctly recognized
     return this.props.children;
   }
 }
