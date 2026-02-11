@@ -1,11 +1,10 @@
 
-
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Logo } from './Logo';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { collection, query, where, limit, onSnapshot, doc, writeBatch, updateDoc, orderBy } from 'firebase/firestore';
+import { collection, query, where, limit, onSnapshot, doc, writeBatch, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Notification as FirestoreNotification } from '../types';
 
@@ -34,16 +33,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
 
   useEffect(() => {
       if (!auth?.user) return;
+      // Removed orderBy to prevent 'Missing Index' error. Sorting is now handled client-side.
       const q = query(
           collection(db, 'notifications'), 
           where('userId', 'in', [auth.user.id, 'all']),
-          where('read', '==', false), // Only fetch unread notifications for the badge count
-          orderBy('createdAt', 'desc'),
+          where('read', '==', false),
           limit(20) 
       );
       const unsubscribe = onSnapshot(q, (snapshot) => {
           const notes = snapshot.docs
             .map(d => ({ id: d.id, ...d.data() } as FirestoreNotification))
+            // Sort by creation date descending client-side
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           setDbNotifications(notes);
       });
@@ -51,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
   }, [auth?.user]);
 
   const handleClearAll = async () => {
-      if (dbNotifications.length === 0) return; // Use dbNotifications.length as unread count
+      if (dbNotifications.length === 0) return;
       const batch = writeBatch(db);
       dbNotifications.forEach(note => {
           const noteRef = doc(db, 'notifications', note.id);
@@ -60,7 +60,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
       
       try {
         await batch.commit();
-        setDbNotifications([]); // Optimistically clear notifications from UI
+        setDbNotifications([]); // Optimistic UI clear
       } catch (error) {
         console.error("Failed to mark notifications as read:", error);
       }
@@ -68,8 +68,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
   
   const handleNotificationClick = (notification: FirestoreNotification) => {
       setShowNotifications(false);
-      // Mark as read immediately on click
-      updateDoc(doc(db, 'notifications', notification.id), { read: true }).catch(e => console.error("Failed to mark notification as read", e));
+      updateDoc(doc(db, 'notifications', notification.id), { read: true })
+        .catch(e => console.error("Failed to mark notification as read", e));
       navigate('/notifications', { state: { highlightId: notification.id } });
   };
 

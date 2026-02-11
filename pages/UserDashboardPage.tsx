@@ -3,7 +3,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { TestResult, Announcement, PastQuestion } from '../types';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { getBadge } from '../utils/badges';
@@ -25,13 +25,11 @@ export const UserDashboardPage: React.FC = () => {
   const [showLinkBanner, setShowLinkBanner] = useState(true);
 
   useEffect(() => {
-    // Set Greeting
     const hour = new Date().getHours();
     if (hour < 12) setGreeting('Good Morning');
     else if (hour < 18) setGreeting('Good Afternoon');
     else setGreeting('Good Evening');
 
-    // Fetch Daily AI Quote
     const fetchDailyQuote = async () => {
         const today = new Date().toISOString().split('T')[0];
         try {
@@ -51,7 +49,7 @@ export const UserDashboardPage: React.FC = () => {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const prompt = "Generate a single, unique, and insightful quote about finance, investing, or wealth. The quote should be inspiring, concise (under 25 words), and suitable for a university students' dashboard. Do not include author attribution.";
             const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
-            const newQuote = result.text.trim().replace(/^"|"$/g, ''); // Remove quotes if AI adds them
+            const newQuote = result.text.trim().replace(/^"|"$/g, '');
 
             if (newQuote) {
                 setQuote(newQuote);
@@ -94,19 +92,18 @@ export const UserDashboardPage: React.FC = () => {
               setRecentNews(news.slice(0, 3));
 
               // 3. Optimized Recommended Questions
+              // Removed orderBy from levelQuery and generalQuery to prevent 'Missing Index' errors.
               const levelQuery = query(
                   collection(db, 'questions'),
                   where('status', '==', 'approved'),
                   where('level', '==', user.level),
-                  orderBy('createdAt', 'desc'),
-                  limit(3)
+                  limit(10) // Fetch a few more to sort client-side
               );
               const generalQuery = query(
                   collection(db, 'questions'),
                   where('status', '==', 'approved'),
                   where('level', '==', 'General'),
-                  orderBy('createdAt', 'desc'),
-                  limit(3)
+                  limit(10)
               );
               const [levelSnap, generalSnap] = await Promise.all([
                   getDocs(levelQuery),
@@ -118,6 +115,7 @@ export const UserDashboardPage: React.FC = () => {
               
               const allRecommended = [...levelQuestions, ...generalQuestions];
               const uniqueRecommended = Array.from(new Map(allRecommended.map(q => [q.id, q])).values());
+              // Sort by creation date descending client-side
               uniqueRecommended.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
               setRecommendedQuestions(uniqueRecommended.slice(0, 3));
 
@@ -197,7 +195,6 @@ export const UserDashboardPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              
               <div className="md:col-span-2 lg:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col animate-slide-in-up">
                   <h3 className="font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><span className="w-2 h-2 bg-indigo-500 rounded-full"></span>Quick Access</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 h-full">
@@ -272,7 +269,6 @@ export const UserDashboardPage: React.FC = () => {
                       )) : <p className="text-xs text-slate-400 italic">No news updates available.</p>}
                   </div>
               </div>
-
           </div>
       </div>
     </div>
