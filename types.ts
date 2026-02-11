@@ -1,4 +1,5 @@
 
+
 export type Level = 100 | 200 | 300 | 400 | 'General';
 
 export type Page = 'home' | 'questions' | 'executives' | 'lecturers' | 'announcements' | 'login' | 'admin' | 'profile' | 'community' | 'ai';
@@ -12,10 +13,10 @@ export interface PastQuestion {
   courseTitle: string;
   year: number;
   semester?: 1 | 2 | 'N/A';
-  lecturer?: string; // Added for smart finder
+  lecturer?: string; 
   fileUrl?: string; 
-  storagePath?: string; // Path in Dropbox/Storage for deletion
-  pages?: string[]; // Array of image URLs if uploaded as multiple images
+  storagePath?: string; 
+  pages?: string[]; 
   textContent?: string;
   uploadedBy?: string;
   uploadedByEmail?: string;
@@ -25,30 +26,46 @@ export interface PastQuestion {
   category?: "Past Question" | "Lecture Note" | "Handout" | "Textbook" | "Test Question" | "Other";
 }
 
-export interface PendingQuestion extends PastQuestion {
-  submittedBy: string;
-  submittedByEmail?: string;
-  submittedAt: string;
-}
-
+// Added Missing Exported Member: Executive
 export interface Executive {
   id: string;
   name: string;
   position: string;
-  imageUrl: string;
-  level: Level;
+  level: number;
+  imageUrl?: string;
+  quote?: string;
   whatsapp?: string;
   email?: string;
-  quote?: string;
 }
 
+// Added Missing Exported Member: Lecturer
 export interface Lecturer {
   id: string;
   name: string;
   title: string;
+  imageUrl?: string;
+  specialization?: string;
+}
+
+// Added Missing Exported Member: GalleryItem
+export interface GalleryItem {
+  id: string;
   imageUrl: string;
-  specialization: string;
-  }
+  caption: string;
+  date: string;
+}
+
+// Added Missing Exported Member: CommunityGroup
+export interface CommunityGroup {
+  id: string;
+  name: string;
+  platform: string;
+  link: string;
+  description: string;
+}
+
+// Added Missing Exported Member: PendingQuestion
+export type PendingQuestion = PastQuestion;
 
 export interface Announcement {
   id:string;
@@ -72,31 +89,17 @@ export interface User {
   savedQuestions?: string[]; 
   createdAt?: string;
   lastActive?: string; 
-  isVerified?: boolean; // Added for blue tick
-  isBanned?: boolean; // Added for suspension
-  banUntil?: string; // ISO string for temporary bans
-  aiImageCount?: number; // Daily tracker
-  lastAiImageDate?: string; // YYYY-MM-DD
+  isVerified?: boolean;
+  isBanned?: boolean;
+  banUntil?: string;
+  aiCredits?: number; // Added: Daily pool (1000)
+  lastCreditRefreshDate?: string; // Added: YYYY-MM-DD
+  aiImageCount?: number; 
+  lastAiImageDate?: string; 
   badges?: string[];
   viewedSessionWrapTimestamp?: string;
   infractionCount?: number;
   chatBanUntil?: string;
-}
-
-export interface CommunityGroup {
-  id: string;
-  name: string;
-  platform: 'WhatsApp' | 'Telegram' | 'Discord';
-  link: string;
-  description: string;
-  members: number;
-}
-
-export interface GalleryItem {
-  id: string;
-  imageUrl: string;
-  caption: string;
-  date: string;
 }
 
 export interface TestResult {

@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { User, Level } from '../types';
 import { auth, db } from '../firebase';
@@ -35,7 +36,6 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
-// Random Professional Avatar Pool (Finance/Professional focused Unsplash photos)
 const STOCK_AVATARS = [
     "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=facearea&facepad=2&w=256&h=256&q=80",
     "https://images.unsplash.com/photo-1494790108377-be9c29b29330?fit=facearea&facepad=2&w=256&h=256&q=80",
@@ -46,31 +46,6 @@ const STOCK_AVATARS = [
 ];
 
 const getRandomAvatar = () => STOCK_AVATARS[Math.floor(Math.random() * STOCK_AVATARS.length)];
-
-const getFriendlyErrorMessage = (code: string) => {
-    switch (code) {
-        case 'auth/invalid-credential':
-        case 'auth/wrong-password':
-        case 'auth/user-not-found':
-            return "The email or password you entered is incorrect.";
-        case 'auth/email-already-in-use':
-            return "An account with this email already exists.";
-        case 'auth/popup-closed-by-user':
-            return "Sign-in was cancelled. Please try again.";
-        case 'auth/network-request-failed':
-            return "Connection error. Please check your internet.";
-        case 'auth/weak-password':
-            return "Your password is too weak. Try at least 6 characters.";
-        case 'auth/too-many-requests':
-            return "Too many attempts. Please try again later.";
-        case 'auth/user-disabled':
-            return "This account has been suspended. Please contact the PRO.";
-        case 'auth/operation-not-allowed':
-            return "This sign-in method is currently disabled.";
-        default:
-            return "Something went wrong. Please try again later.";
-    }
-};
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -88,18 +63,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           const userData = userDoc.data() as User;
-          
-          // Ensure user has a real avatar. If missing, assign a random professional stock photo.
           if (!userData.avatarUrl) {
               const newAvatar = firebaseUser.photoURL || getRandomAvatar();
               await updateDoc(userDocRef, { avatarUrl: newAvatar });
               userData.avatarUrl = newAvatar;
           }
-
           setUser({ ...userData, id: firebaseUser.uid });
-          await updateDoc(userDocRef, {
-            lastActive: new Date().toISOString()
-          });
+          await updateDoc(userDocRef, { lastActive: new Date().toISOString() });
         }
       } else {
         setUser(null);
@@ -110,131 +80,80 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const login = async (email: string, pass: string) => {
-    try {
-      await setPersistence(auth, browserLocalPersistence);
-      await signInWithEmailAndPassword(auth, email, pass);
-      showNotification("Welcome back!", "success");
-    } catch (error: any) {
-      showNotification(getFriendlyErrorMessage(error.code), "error");
-      throw error;
-    }
+    await signInWithEmailAndPassword(auth, email, pass);
   };
 
   const loginWithGoogle = async () => {
     if (isSigningIn.current) throw new Error("Auth in progress");
-
+    isSigningIn.current = true;
     try {
-      isSigningIn.current = true;
-      await setPersistence(auth, browserLocalPersistence);
       const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
-      
       const result = await signInWithPopup(auth, provider);
       const userDoc = await getDoc(doc(db, 'users', result.user.uid));
-      
-      if (!userDoc.exists()) {
-        return { needsProfileCompletion: true, googleUser: result.user };
-      }
-      
-      showNotification("Signed in successfully with Google", "success");
-      return { needsProfileCompletion: false };
-    } catch (error: any) {
-      showNotification(getFriendlyErrorMessage(error.code), "error");
-      throw error;
+      return { needsProfileCompletion: !userDoc.exists(), googleUser: result.user };
     } finally {
       isSigningIn.current = false;
     }
   };
 
   const signup = async (data: { name: string; email: string; pass?: string; level: Level; username: string; matricNumber: string; avatarUrl?: string; googleUid?: string }) => {
-    try {
-      let uid = data.googleUid;
-      
-      if (!uid && data.pass) {
-          const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, data.email, data.pass);
-          uid = firebaseUser.uid;
-          await updateProfile(firebaseUser, { displayName: data.name, photoURL: data.avatarUrl });
-      }
-
-      if (!uid) throw new Error("Authentication failed during signup.");
-
-      // If no avatar provided from Google, assign a professional random headshot
-      const finalAvatar = data.avatarUrl || getRandomAvatar();
-
-      const userData: User = {
-        id: uid,
-        name: data.name,
-        email: data.email,
-        username: data.username,
-        matricNumber: data.matricNumber,
-        level: data.level,
-        role: 'student',
-        avatarUrl: finalAvatar,
-        contributionPoints: 0,
-        savedQuestions: [],
-        createdAt: new Date().toISOString(),
-        lastActive: new Date().toISOString(),
-        badges: []
-      };
-      
-      await setDoc(doc(db, 'users', uid), userData);
-      setUser(userData);
-      showNotification("Your account has been created!", "success");
-    } catch (error: any) {
-      showNotification(getFriendlyErrorMessage(error.code), "error");
-      throw error;
+    let uid = data.googleUid;
+    if (!uid && data.pass) {
+        const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, data.email, data.pass);
+        uid = firebaseUser.uid;
     }
+    if (!uid) throw new Error("Authentication failed.");
+
+    const userData: User = {
+      id: uid,
+      name: data.name,
+      email: data.email,
+      username: data.username,
+      matricNumber: data.matricNumber,
+      level: data.level,
+      role: 'student',
+      avatarUrl: data.avatarUrl || getRandomAvatar(),
+      contributionPoints: 0,
+      aiCredits: 1000, // Initial credits
+      lastCreditRefreshDate: new Date().toISOString().split('T')[0],
+      savedQuestions: [],
+      createdAt: new Date().toISOString(),
+      lastActive: new Date().toISOString(),
+      badges: []
+    };
+    await setDoc(doc(db, 'users', uid), userData);
+    setUser(userData);
   };
 
-  const logout = async () => {
-    await signOut(auth);
-    setUser(null);
-    showNotification("Logged out successfully", "info");
-  };
+  const logout = async () => { await signOut(auth); setUser(null); };
 
   const addPassword = async (password: string) => {
     if (!auth.currentUser) return;
-    try {
-      const credential = EmailAuthProvider.credential(auth.currentUser.email!, password);
-      await linkWithCredential(auth.currentUser, credential);
-      showNotification("Password added! You can now sign in with email/password.", "success");
-    } catch (error: any) {
-      showNotification(getFriendlyErrorMessage(error.code), "error");
-      throw error;
-    }
+    const credential = EmailAuthProvider.credential(auth.currentUser.email!, password);
+    await linkWithCredential(auth.currentUser, credential);
   };
 
   const linkGoogleAccount = async () => {
     if (!auth.currentUser) return;
-    try {
-      const provider = new GoogleAuthProvider();
-      await linkWithPopup(auth.currentUser, provider);
-      showNotification("Google account linked successfully!", "success");
-    } catch (error: any) {
-      showNotification(getFriendlyErrorMessage(error.code), "error");
-      throw error;
-    }
+    const provider = new GoogleAuthProvider();
+    await linkWithPopup(auth.currentUser, provider);
   };
 
   const toggleBookmark = async (questionId: string) => {
     if (!user) return;
     const isBookmarked = user.savedQuestions?.includes(questionId);
     const userRef = doc(db, 'users', user.id);
-    try {
-      if (isBookmarked) {
-        await updateDoc(userRef, { savedQuestions: arrayRemove(questionId) });
-        setUser({ ...user, savedQuestions: user.savedQuestions?.filter(id => id !== questionId) });
-      } else {
-        await updateDoc(userRef, { savedQuestions: arrayUnion(questionId) });
-        setUser({ ...user, savedQuestions: [...(user.savedQuestions || []), questionId] });
-      }
-    } catch (e) {
-      showNotification("Couldn't update bookmarks.", "error");
+    if (isBookmarked) {
+      await updateDoc(userRef, { savedQuestions: arrayRemove(questionId) });
+      setUser({ ...user, savedQuestions: user.savedQuestions?.filter(id => id !== questionId) });
+    } else {
+      await updateDoc(userRef, { savedQuestions: arrayUnion(questionId) });
+      setUser({ ...user, savedQuestions: [...(user.savedQuestions || []), questionId] });
     }
   };
 
   const updateUser = (updates: Partial<User>) => {
-    if (user) setUser({ ...user, ...updates });
+    setUser(prev => prev ? { ...prev, ...updates } : null);
   };
 
   return (
