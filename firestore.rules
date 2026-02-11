@@ -22,9 +22,9 @@ service cloud.firestore {
     
     // --- SECURE CONFIGURATION ---
     match /config/{docId} {
-      // Secure rule: Only admins can read credentials.
-      // The test upload page will use a client-side fallback.
-      allow read: if isAdmin();
+      // FIX: Allow all authenticated users to read configuration (tokens)
+      // This is necessary so they can upload files using the departmental shared account.
+      allow read: if isAuthenticated();
       allow write: if docId == 'google_drive_settings' && isAdmin(); 
     }
 

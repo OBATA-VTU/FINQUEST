@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { User, Level } from '../types';
 import { auth, db } from '../firebase';
 import { 
@@ -40,6 +40,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { showNotification } = useNotification();
+  const isSigningIn = useRef(false); // Guard against concurrent auth calls
 
   const isPasswordAccount = auth.currentUser?.providerData.some(p => p.providerId === 'password') || false;
   const isGoogleAccount = auth.currentUser?.providerData.some(p => p.providerId === 'google.com') || false;
@@ -76,7 +77,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const loginWithGoogle = async () => {
+    if (isSigningIn.current) {
+        throw new Error("Authentication already in progress.");
+    }
+
     try {
+      isSigningIn.current = true;
       // Fix for "Missing Initial State": Ensure persistence is locked in
       await setPersistence(auth, browserLocalPersistence);
       
@@ -95,12 +101,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return { needsProfileCompletion: false };
     } catch (error: any) {
       console.error("Google Auth Error:", error);
-      if (error.code === 'auth/internal-error' || error.message.includes('sessionStorage')) {
-        showNotification("Browser storage issue detected. Please refresh or check cookie settings.", "error");
+      
+      if (error.code === 'auth/popup-closed-by-user') {
+          showNotification("Login cancelled.", "info");
+      } else if (error.code === 'auth/internal-error' || error.message.includes('sessionStorage')) {
+          showNotification("Browser storage issue detected. Please refresh or check cookie settings.", "error");
       } else {
-        showNotification(error.message || "Google Sign-In failed", "error");
+          showNotification(error.message || "Google Sign-In failed", "error");
       }
       throw error;
+    } finally {
+      isSigningIn.current = false;
     }
   };
 
