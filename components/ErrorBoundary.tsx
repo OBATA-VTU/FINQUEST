@@ -1,4 +1,4 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -13,13 +13,16 @@ interface ErrorBoundaryState {
  * ErrorBoundary component to catch JavaScript errors anywhere in their child component tree,
  * log those errors, and display a fallback UI instead of the component tree that crashed.
  */
-// Fix: Use React.Component to ensure props and state are correctly inherited and recognized by the TypeScript compiler.
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Fix: Explicitly initialized state with the required interface.
-  public state: ErrorBoundaryState = {
-    hasError: false,
-    error: null,
-  };
+// Fix: Use Component from named imports and ensure standard inheritance for props and state.
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // Fix: Explicitly initialized state with the required interface via constructor for better TS resolution.
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+    };
+  }
 
   // Static method to update state so the next render will show the fallback UI.
   public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -32,7 +35,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   public render(): ReactNode {
-    // Fix: Accessing this.state which is correctly inherited from React.Component.
+    // Fix: Accessing this.state which is correctly inherited from Component.
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
@@ -55,7 +58,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       );
     }
 
-    // Fix: Correctly returning children from props as recognized via React.Component inheritance.
+    // Fix: Correctly returning children from props as recognized via standard Component inheritance.
     return this.props.children;
   }
 }

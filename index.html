@@ -3,49 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/logo.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/logo.svg">
     <link rel="canonical" href="https://finsa.vercel.app/" />
     
-    <!-- Performance Optimization: Preconnect to critical domains -->
+    <!-- Ultra Performance: Instant DNS Resolving -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://apis.google.com">
     <link rel="preconnect" href="https://firestore.googleapis.com">
+    <link rel="preconnect" href="https://apis.google.com">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     
-    <title>FINSA AAUA Portal | Master Your Finance Degree</title>
-    <meta name="description" content="The official academic portal for Finance students at Adekunle Ajasin University. Access verified past questions, AI-powered CBT, and student community resources.">
-    <meta name="theme-color" content="#064e3b">
+    <title>FINSA AAUA Portal | Department of Finance</title>
+    <meta name="description" content="Official academic portal for Finance students at AAUA. Access past questions, CBT practice, and community news.">
+    <meta name="theme-color" content="#10b981">
 
-    <!-- SEO & Verification -->
-    <meta name="google-site-verification" content="lGaMPt92YnG-2J2S9WmH048pDs773Wyg9Kf09LIYT1M" />
-    
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://finsa.vercel.app/">
-    <meta property="og:title" content="FINSA AAUA Portal | Academic Ecosystem">
-    <meta property="og:description" content="Empowering Finance students with centralized resources and AI-driven practice.">
+    <!-- Social Branding (OG) -->
+    <meta property="og:title" content="FINSA AAUA Portal">
+    <meta property="og:description" content="Excellence in Financial Education and Student Resources.">
     <meta property="og:image" content="https://finsa.vercel.app/logo.svg">
-
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:title" content="FINSA AAUA Portal">
-    <meta property="twitter:image" content="https://finsa.vercel.app/logo.svg">
-
-    <!-- Theme Script -->
-    <script>
-      (function() {
-        try {
-          var storedTheme = localStorage.getItem('theme');
-          var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          if (storedTheme === 'dark' || (!storedTheme && systemDark)) {
-            document.documentElement.classList.add('dark');
-          } else {
-            document.documentElement.classList.remove('dark');
-          }
-        } catch (e) {}
-      })();
-    </script>
+    <meta property="og:url" content="https://finsa.vercel.app/">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="https://finsa.vercel.app/logo.svg">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -53,49 +32,37 @@
         darkMode: 'class',
         theme: {
           extend: {
-            colors: {
-              emerald: {
-                950: '#022c22',
-              }
-            },
+            colors: { emerald: { 950: '#022c22' } },
             animation: {
-              'kenburns': 'kenburns 20s ease-out infinite alternate',
-              'float': 'float 6s ease-in-out infinite',
-              'marquee': 'marquee 25s linear infinite',
-              'shine': 'shine 5s linear infinite',
-              'pop-in': 'pop-in 0.4s cubic-bezier(0.26, 0.53, 0.74, 1.48)',
+              'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'shimmer': 'shimmer 2s infinite linear',
             },
             keyframes: {
-              kenburns: { '0%': { transform: 'scale(1)' }, '100%': { transform: 'scale(1.1)' } },
-              float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } },
-              marquee: { '0%': { transform: 'translateX(0%)' }, '100%': { transform: 'translateX(-50%)' } },
-              shine: { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(100%)' } },
-              'pop-in': { '0%': { transform: 'scale(0.8)', opacity: '0' }, '100%': { transform: 'scale(1)', opacity: '1' } },
+              shimmer: { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(100%)' } }
             }
-          },
-        },
+          }
+        }
       }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
     <style>
-      body { font-family: 'Inter', sans-serif; background-color: #0f172a; }
-      h1, h2, h3, .font-serif { font-family: 'Playfair Display', serif; }
-      .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
-      @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-      .scrollbar-hide::-webkit-scrollbar { display: none; }
+      body { font-family: 'Inter', sans-serif; background-color: #0f172a; overscroll-behavior-y: none; }
+      .font-serif { font-family: 'Playfair Display', serif; }
+      .loading-gradient { background: linear-gradient(90deg, #10b981 0%, #fbbf24 100%); }
     </style>
 <script type="importmap">
 {
   "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "vite": "https://esm.sh/vite@^7.3.1",
-    "firebase/": "https://esm.sh/firebase@^12.7.0/",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "react-dom": "https://esm.sh/react-dom@^19.2.3",
     "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
+    "firebase/": "https://esm.sh/firebase@^12.7.0/",
     "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
-    "jspdf": "https://esm.sh/jspdf@^2.5.1"
+    "jspdf": "https://esm.sh/jspdf@^2.5.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.4",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "vite": "https://esm.sh/vite@^7.3.1"
   }
 }
 </script>
