@@ -99,7 +99,7 @@ export const HomePage: React.FC = () => {
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <button
-                        onClick={() => navigate('/signup')} {/* Changed to /signup */}
+                        onClick={() => navigate('/signup')}
                         className="group w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 bg-white text-indigo-950 font-bold rounded-full shadow-lg shadow-white/10 hover:shadow-xl hover:shadow-white/20 transition-all duration-300 transform hover:scale-[1.03]"
                     >
                         <span className="text-sm uppercase tracking-wider">Student Portal</span>
@@ -120,7 +120,6 @@ export const HomePage: React.FC = () => {
       <section className="bg-slate-900 py-4 border-y border-indigo-900/50 overflow-hidden">
         <div className="flex animate-marquee whitespace-nowrap">
             {[0, 1, 2, 3].map((_, i) => (
-                // Using explicit React.Fragment with key as the direct return of map
                 <React.Fragment key={i}> 
                     <span className="text-lg font-bold text-indigo-300 mx-8">Verified Past Questions</span><span className="text-lg font-bold text-slate-600 mx-8"> • </span>
                     <span className="text-lg font-bold text-indigo-300 mx-8">AI-Powered CBT Practice</span><span className="text-lg font-bold text-slate-600 mx-8"> • </span>
