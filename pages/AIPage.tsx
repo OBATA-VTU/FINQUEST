@@ -42,6 +42,14 @@ const BeeIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
+const TypingDots = () => (
+    <div className="flex gap-1 items-center px-1">
+        <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+        <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+    </div>
+);
+
 export const AIPage: React.FC = () => {
     const auth = useContext(AuthContext);
     const { showNotification } = useNotification();
@@ -66,7 +74,7 @@ export const AIPage: React.FC = () => {
             try {
                 const newsSnap = await getDocs(query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(5)));
                 const news = newsSnap.docs.map(d => (d.data() as Announcement).title).join(', ');
-                setSiteContext(`FEATURES: Dashboard, CBT, Archives, Lounge. NEWS: ${news || 'Regular updates.'} DEPT: Finance AAUA.`);
+                setSiteContext(`NEWS: ${news || 'Standard updates.'} DEPT: Finance AAUA.`);
             } catch (e) {}
         };
         fetchContext();
@@ -80,7 +88,7 @@ export const AIPage: React.FC = () => {
         const currentCredits = user.aiCredits ?? 0;
 
         if (currentCredits < creditCost) {
-            showNotification(`Insufficient Credits (${creditCost} required).`, "warning");
+            showNotification(`Insufficient Credits.`, "warning");
             return;
         }
 
@@ -104,31 +112,27 @@ export const AIPage: React.FC = () => {
                 });
             }
 
-            // DEDUCT CREDITS IMMEDIATELY FOR THE OPERATION
             const newCredits = Math.max(0, currentCredits - creditCost);
             await updateDoc(doc(db, 'users', user.id), { aiCredits: newCredits });
             auth?.updateUser({ aiCredits: newCredits });
 
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            
-            // USE STREAMING FOR "EXTREMELY FAST" FEEL
             const result = await ai.models.generateContentStream({
                 model: 'gemini-3-flash-preview',
                 contents: [{
                     parts: [
-                        { text: `IDENTITY: Bee, Mascot/Expert for Dept of Finance, AAUA.
-                                 RULES: 
-                                 1. ACADEMIC: Serious, formal professor mode for definitions/theories. No play.
-                                 2. CASUAL: Interactive/witty only for fun talk.
-                                 3. MARKDOWN: Always use ##Header and **Bold**.
-                                 USER: ${user.username} (Lvl ${user.level})
-                                 MSG: ${userMsgText}` },
+                        { text: `IDENTITY: Bee, official Academic Mascot for Finance Dept, AAUA.
+                                 STRICT ACCURACY:
+                                 1. If asked about specific students, class governors, or people (e.g., "Aliu"), DO NOT GUESS. Say "I don't have personal records for students or class leadership in my database." Never claim someone is a governor if you don't know.
+                                 2. DO NOT mention the user's level (e.g. "300 level") unless it is strictly relevant to a course question. Stop saying "As a 300L student...". 
+                                 3. FOCUS: Be a precise academic assistant. For casual talk, be witty but brief.
+                                 4. MARKDOWN: Always use ##Header for structure.
+                                 USER: ${user.username}` },
                         ...(base64Image ? [{ inlineData: { data: base64Image, mimeType: currentImage!.type } }] : [])
                     ]
-                }]
+                }, { role: 'user', parts: [{ text: userMsgText }] }]
             });
 
-            // Create placeholder for the AI response
             const beeMsg: ChatMessage = { role: 'bee', text: '', timestamp: Date.now(), isStreaming: true };
             setMessages(prev => [...prev, beeMsg]);
 
@@ -148,7 +152,6 @@ export const AIPage: React.FC = () => {
                 }
             }
 
-            // Finalize message
             setMessages(prev => {
                 const newMsgs = [...prev];
                 const last = newMsgs[newMsgs.length - 1];
@@ -159,7 +162,7 @@ export const AIPage: React.FC = () => {
             });
 
         } catch (error: any) {
-            showNotification("Processing failed.", "error");
+            showNotification("Bee is resting. Try again.", "error");
         } finally {
             setIsLoading(false);
         }
@@ -167,6 +170,7 @@ export const AIPage: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 transition-colors overflow-hidden relative">
+            {/* Header */}
             <div className="p-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 shadow-sm shrink-0 z-20">
                 <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg shrink-0">
                     <BeeIcon className="w-6 h-6" />
@@ -175,43 +179,60 @@ export const AIPage: React.FC = () => {
                     <h1 className="font-black text-slate-900 dark:text-white truncate text-sm">Bee (FINSA AI)</h1>
                     <div className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Flash Engine Active</span>
+                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Ultra Flash Engine</span>
                     </div>
                 </div>
-                <div className="bg-indigo-50 dark:bg-indigo-900/50 px-3 py-1.5 rounded-full border border-indigo-100 dark:border-indigo-800">
-                    <span className="text-[10px] font-black text-indigo-700 dark:text-indigo-300">{user?.aiCredits ?? 0} PTS</span>
+                <div className="bg-indigo-50 dark:bg-indigo-900/50 px-3 py-1.5 rounded-full border border-indigo-100 dark:border-indigo-800 flex items-center gap-1.5">
+                    <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    <span className="text-[10px] font-black text-indigo-700 dark:text-indigo-300">{user?.aiCredits ?? 0}</span>
                 </div>
             </div>
 
+            {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth z-10 custom-scrollbar bg-white dark:bg-slate-950">
                 {messages.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full text-center opacity-30 px-10">
                         <BeeIcon className="w-12 h-12 text-slate-400 mb-4" />
-                        <p className="font-bold text-slate-500 uppercase tracking-[0.2em] text-[10px]">Intelligence Ready. Speed mode enabled.</p>
+                        <p className="font-bold text-slate-500 uppercase tracking-[0.2em] text-[10px]">Intelligence Ready. Hyper-speed enabled.</p>
                     </div>
                 )}
                 {messages.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                         <div className={`max-w-[88%] md:max-w-[75%] rounded-2xl p-4 shadow-sm relative ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-200 dark:border-slate-700'}`}>
                             {msg.image && <img src={msg.image} alt="Upload" className="rounded-xl mb-3 max-h-56 w-auto object-contain mx-auto border border-black/5" />}
-                            <MarkdownRenderer text={msg.text || (msg.isStreaming ? '...' : '')} />
+                            
+                            {/* Text or Typing Dots */}
+                            {msg.role === 'bee' && msg.text === '' ? (
+                                <TypingDots />
+                            ) : (
+                                <MarkdownRenderer text={msg.text} />
+                            )}
+
                             <div className="mt-2 text-[8px] font-black uppercase opacity-40 text-right">
                                 {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </div>
                         </div>
                     </div>
                 ))}
+                {isLoading && messages[messages.length - 1]?.role === 'user' && (
+                    <div className="flex justify-start">
+                        <div className="bg-slate-100 dark:bg-slate-800 p-3 px-5 rounded-2xl rounded-tl-none flex gap-2 items-center shadow-sm">
+                            <TypingDots />
+                        </div>
+                    </div>
+                )}
             </div>
 
+            {/* Input Bar */}
             <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0 z-20 shadow-2xl pb-safe md:pb-4">
                 <div className="max-w-5xl mx-auto">
                     {imageFile && (
                         <div className="mb-2 p-2 bg-indigo-50 dark:bg-indigo-900/40 rounded-xl flex items-center justify-between border border-indigo-100 dark:border-indigo-800 animate-pop-in">
                             <div className="flex items-center gap-2">
                                 <img src={URL.createObjectURL(imageFile)} className="w-8 h-8 object-cover rounded-lg" alt="Preview" />
-                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Image Scan (400 PTS)</span>
+                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Image Upload</span>
                             </div>
-                            <button onClick={() => setImageFile(null)} className="p-1 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-full"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M6 18L18 6M6 6l12 12" /></svg></button>
+                            <button onClick={() => setImageFile(null)} className="p-1 text-rose-500 hover:bg-rose-100 rounded-full"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M6 18L18 6M6 6l12 12" /></svg></button>
                         </div>
                     )}
                     <form onSubmit={handleSend} className="flex items-end gap-2">
@@ -219,16 +240,18 @@ export const AIPage: React.FC = () => {
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         </button>
                         <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && setImageFile(e.target.files[0])} />
+                        
                         <textarea 
                             value={input}
                             onChange={e => setInput(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                            placeholder="Ask Bee..."
+                            placeholder="Ask Bee... (10 pts)"
                             className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-2xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none max-h-32 text-sm dark:text-white transition-all shadow-inner border border-transparent"
                             rows={1}
                         />
-                        <button type="submit" disabled={isLoading || (!input.trim() && !imageFile)} className="p-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:opacity-30 transition-all shadow-lg shrink-0">
-                            {isLoading ? <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin"></div> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>}
+                        
+                        <button type="submit" disabled={isLoading || (!input.trim() && !imageFile)} className="p-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:opacity-30 transition-all shadow-lg shrink-0 active:scale-95">
+                            {isLoading ? <div className="w-6 h-6 border-2 border-white/50 border-t-white rounded-full animate-spin"></div> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>}
                         </button>
                     </form>
                 </div>
