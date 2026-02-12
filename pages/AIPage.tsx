@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { GoogleGenAI } from "@google/genai";
@@ -21,6 +20,9 @@ const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
             .replace(/</g, "&lt;").replace(/>/g, "&gt;")
             .replace(/\*\*(.*?)\*\*/g, '<strong class="font-black text-indigo-900 dark:text-white">$1</strong>')
             .replace(/_(.*?)_/g, '<em class="italic">$1</em>')
+            .replace(/^###\s*(.*$)/gim, '<h3 class="text-base font-black text-indigo-800 dark:text-indigo-400 mt-3 mb-1 uppercase tracking-wider">$1</h3>')
+            .replace(/^##\s*(.*$)/gim, '<h2 class="text-lg font-black text-indigo-900 dark:text-white mt-4 mb-2 border-b border-indigo-100 dark:border-slate-700 pb-1">$1</h2>')
+            .replace(/^#\s*(.*$)/gim, '<h1 class="text-xl font-black text-indigo-950 dark:text-white mt-6 mb-3">$1</h1>')
             .replace(/^- (.*$)/gim, '<li class="ml-4 list-disc mb-1">$1</li>')
             .replace(/^\d\. (.*$)/gim, '<li class="ml-4 list-decimal mb-1">$1</li>')
             .replace(/\n/g, '<br />');
@@ -113,15 +115,22 @@ export const AIPage: React.FC = () => {
                 model: 'gemini-3-flash-preview',
                 contents: [{
                     parts: [
-                        { text: `IDENTITY: You are Bee, the mascot and expert AI for the Finance Department at AAUA.
-                                 PERSONA: Be interactive, conversational, and concise. Stop repeated standard greetings about user level. Be witty like a departmental colleague.
+                        { text: `IDENTITY: You are Bee, the official AI Expert for the Department of Finance at Adekunle Ajasin University (AAUA).
+                                 
+                                 TASK PRIORITY:
+                                 1. ACADEMIC QUERIES: If the message is a request for definitions, explanations of academic concepts (e.g., "research process", "capital budgeting"), or exam preparation, you MUST provide a detailed, professional, and accurate academic response. Use headers (#, ##) and bold text to structure the info clearly.
+                                 2. CASUAL/ENTERTAINMENT: If the message is about movies, games, or general chat, you can be witty and more informal.
+                                 
+                                 PERSONA: Be interactive and conversational, but never compromise on academic depth for study questions. Avoid repeated greetings about the user's level.
+                                 
                                  STRICT RULES: 
-                                 - Do NOT start every reply with "As a [Level] student...".
-                                 - Only mention the administration or creators IF asked explicitly about origins.
-                                 - Use professional Markdown for formatting (**bold**, lists, etc.).
+                                 - Do NOT start every reply with "As a student...".
+                                 - For academic queries, focus on clarity and education. 
+                                 - Use Markdown for formatting (# Header, ## Subheader, **bold**, lists).
+                                 - If asked about research or finance topics, be a precise educator.
                                  
                                  CONTEXT: ${siteContext}
-                                 USER: ${user.username}
+                                 USER: ${user.username} (Level: ${user.level})
                                  MESSAGE: ${userMsgText}` },
                         ...(base64Image ? [{ inlineData: { data: base64Image, mimeType: currentImage!.type } }] : [])
                     ]

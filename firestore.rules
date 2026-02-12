@@ -4,17 +4,14 @@ service cloud.firestore {
 
     // --- HELPER FUNCTIONS ---
     
-    // Check if user is logged in
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Check if the user accessing the data is the owner of the document
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
-    // Check if the user has an administrative role.
     function isAdmin() {
       return isAuthenticated() &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'librarian', 'vice_president', 'supplement'];
@@ -22,8 +19,7 @@ service cloud.firestore {
     
     // --- SECURE CONFIGURATION ---
     match /config/{docId} {
-      // Allow all authenticated users to read configuration (tokens)
-      // This is necessary so they can upload files using the departmental shared account via api.ts
+      // Required for regular users to retrieve shared tokens for departmental uploads
       allow read: if isAuthenticated();
       allow write: if isAdmin(); 
     }
