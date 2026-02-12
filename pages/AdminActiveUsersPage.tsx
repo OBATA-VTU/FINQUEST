@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { User } from '../types';
 
-const INACTIVITY_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
+const INACTIVITY_THRESHOLD_MS = 24 * 60 * 60 * 1000; // Strictly 24 hours
 
 export const AdminActiveUsersPage: React.FC = () => {
     const [activeUsers, setActiveUsers] = useState<User[]>([]);
@@ -37,8 +36,8 @@ export const AdminActiveUsersPage: React.FC = () => {
         };
 
         fetchAndFilterUsers();
-        // Set up a poller to refresh active users every 30 seconds
-        const interval = setInterval(fetchAndFilterUsers, 30000);
+        // Set up a poller to refresh active users every 60 seconds
+        const interval = setInterval(fetchAndFilterUsers, 60000);
 
         return () => clearInterval(interval);
     }, []);
@@ -46,17 +45,20 @@ export const AdminActiveUsersPage: React.FC = () => {
     return (
         <div className="animate-fade-in max-w-4xl mx-auto">
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Active Users</h1>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Active Users (Last 24 Hours)</h1>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Showing users active in the last 10 minutes. This list auto-refreshes.
+                    A list of users who have interacted with the portal within the last day.
                 </p>
             </div>
             
             {loading ? (
-                <div className="text-center py-20 text-slate-500 dark:text-slate-400">Loading active user list...</div>
+                <div className="text-center py-20 text-slate-500 dark:text-slate-400">
+                    <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    Loading recent activity...
+                </div>
             ) : activeUsers.length === 0 ? (
                 <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700">
-                    <p className="text-slate-500 dark:text-slate-400 font-medium">No users are currently active.</p>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium">No users were active in the last 24 hours.</p>
                 </div>
             ) : (
                 <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
@@ -79,11 +81,11 @@ export const AdminActiveUsersPage: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <span className="text-xs font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-300 px-2 py-1 rounded-full">
-                                        Online
+                                    <span className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-300 px-2 py-1 rounded-md">
+                                        Recently Active
                                     </span>
-                                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
-                                        Last seen: {new Date(user.lastActive!).toLocaleTimeString()}
+                                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-bold">
+                                        Last seen: {new Date(user.lastActive!).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                     </p>
                                 </div>
                             </li>

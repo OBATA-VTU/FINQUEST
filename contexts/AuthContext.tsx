@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { User, Level } from '../types';
 import { auth, db } from '../firebase';
@@ -56,6 +55,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const isPasswordAccount = auth.currentUser?.providerData.some(p => p.providerId === 'password') || false;
   const isGoogleAccount = auth.currentUser?.providerData.some(p => p.providerId === 'google.com') || false;
 
+  // Credit Refresh Logic: Runs whenever user or date changes
+  const checkAndRefreshCredits = async (currentUser: User) => {
+    // We use Local Date string to ensure refresh happens at user's local midnight
+    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+    if (currentUser.lastCreditRefreshDate !== today) {
+      try {
+        const updates = { aiCredits: 1000, lastCreditRefreshDate: today };
+        const userRef = doc(db, 'users', currentUser.id);
+        await updateDoc(userRef, updates);
+        setUser(prev => prev && prev.id === currentUser.id ? { ...prev, ...updates } : prev);
+        console.log(`[System] AI credits replenished for ${today} at 00:00 boundary.`);
+      } catch (e) {
+        console.error("Failed to refresh credits:", e);
+      }
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -68,7 +84,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               await updateDoc(userDocRef, { avatarUrl: newAvatar });
               userData.avatarUrl = newAvatar;
           }
-          setUser({ ...userData, id: firebaseUser.uid });
+          const fullUser = { ...userData, id: firebaseUser.uid };
+          setUser(fullUser);
+          
+          // Initial credit check on login
+          await checkAndRefreshCredits(fullUser);
+          
           await updateDoc(userDocRef, { lastActive: new Date().toISOString() });
         }
       } else {
@@ -78,6 +99,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
     return () => unsubscribe();
   }, []);
+
+  // Periodic background check for midnight boundary
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      checkAndRefreshCredits(user);
+    }, 30000); // Check every 30 seconds for maximum responsiveness at 00:00
+
+    return () => clearInterval(interval);
+  }, [user?.id, user?.lastCreditRefreshDate]);
 
   const login = async (email: string, pass: string) => {
     await signInWithEmailAndPassword(auth, email, pass);
@@ -114,8 +146,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       role: 'student',
       avatarUrl: data.avatarUrl || getRandomAvatar(),
       contributionPoints: 0,
-      aiCredits: 1000, // Initial credits
-      lastCreditRefreshDate: new Date().toISOString().split('T')[0],
+      aiCredits: 1000, 
+      lastCreditRefreshDate: new Date().toLocaleDateString('en-CA'),
       savedQuestions: [],
       createdAt: new Date().toISOString(),
       lastActive: new Date().toISOString(),
