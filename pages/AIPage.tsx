@@ -4,8 +4,8 @@ import { AuthContext } from '../contexts/AuthContext';
 import { GoogleGenAI } from "@google/genai";
 import { useNotification } from '../contexts/NotificationContext';
 import { db } from '../firebase';
-import { doc, updateDoc, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { Announcement } from '../types';
+import { doc, updateDoc, collection, query, orderBy, limit, getDocs, where, or } from 'firebase/firestore';
+import { Announcement, Executive, Lecturer, User } from '../types';
 
 interface ChatMessage {
     role: 'user' | 'bee';
@@ -57,7 +57,6 @@ export const AIPage: React.FC = () => {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [imageFile, setImageFile] = useState<File | null>(null);
-    const [siteContext, setSiteContext] = useState<string>('');
     const scrollRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -69,26 +68,72 @@ export const AIPage: React.FC = () => {
         }
     }, [messages, isLoading]);
 
-    useEffect(() => {
-        const fetchContext = async () => {
-            try {
-                const newsSnap = await getDocs(query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(5)));
-                const news = newsSnap.docs.map(d => (d.data() as Announcement).title).join(', ');
-                setSiteContext(`NEWS: ${news || 'Standard updates.'} DEPT: Finance AAUA.`);
-            } catch (e) {}
-        };
-        fetchContext();
-    }, []);
+    // Internal Database Lookup Tool for "Who is" queries
+    const performDeepSearch = async (queryText: string) => {
+        const lowerQuery = queryText.toLowerCase();
+        // Extract potential names: looking for keywords like "who is", "know", "about"
+        const nameMatch = queryText.match(/(?:who is|about|know|search for)\s+([a-zA-Z\s]+)/i);
+        const searchName = nameMatch ? nameMatch[1].trim() : queryText.trim();
+        
+        if (searchName.length < 2) return null;
+
+        try {
+            let contextString = "DATABASE SEARCH RESULTS:\n";
+            let foundCount = 0;
+
+            // 1. Search Users
+            const userSnap = await getDocs(query(collection(db, 'users'), limit(10)));
+            const matchingUsers = userSnap.docs
+                .map(d => ({ id: d.id, ...d.data() } as User))
+                .filter(u => 
+                    (u.name && u.name.toLowerCase().includes(searchName.toLowerCase())) || 
+                    (u.username && u.username.toLowerCase().includes(searchName.toLowerCase()))
+                );
+            
+            matchingUsers.forEach(u => {
+                const maskedMatric = u.matricNumber ? u.matricNumber.slice(0, -3) + '***' : 'N/A';
+                contextString += `- USER: Name: ${u.name}, Level: ${u.level}, Username: @${u.username}, ID: ${maskedMatric}\n`;
+                foundCount++;
+            });
+
+            // 2. Search Executives
+            const execSnap = await getDocs(collection(db, 'executives'));
+            const matchingExecs = execSnap.docs
+                .map(d => ({ id: d.id, ...d.data() } as Executive))
+                .filter(e => e.name && e.name.toLowerCase().includes(searchName.toLowerCase()));
+            
+            matchingExecs.forEach(e => {
+                contextString += `- EXECUTIVE: Name: ${e.name}, Position: ${e.position}, Level: ${e.level}\n`;
+                foundCount++;
+            });
+
+            // 3. Search Lecturers
+            const lectSnap = await getDocs(collection(db, 'lecturers'));
+            const matchingLect = lectSnap.docs
+                .map(d => ({ id: d.id, ...d.data() } as Lecturer))
+                .filter(l => l.name && l.name.toLowerCase().includes(searchName.toLowerCase()));
+            
+            matchingLect.forEach(l => {
+                contextString += `- LECTURER: Name: ${l.name}, Title: ${l.title}, Specialization/Courses: ${l.specialization || 'Finance'}\n`;
+                foundCount++;
+            });
+
+            return foundCount > 0 ? contextString : "No records found for this name in the departmental database.";
+        } catch (e) {
+            return "Search error occurred.";
+        }
+    };
 
     const handleSend = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!user || (!input.trim() && !imageFile) || isLoading) return;
 
-        const creditCost = imageFile ? 400 : 10;
+        // FIXED: Inquiry cost updated to 30 credits as per request
+        const creditCost = imageFile ? 400 : 30;
         const currentCredits = user.aiCredits ?? 0;
 
         if (currentCredits < creditCost) {
-            showNotification(`Insufficient Credits.`, "warning");
+            showNotification(`Insufficient Credits. You need ${creditCost} pts.`, "warning");
             return;
         }
 
@@ -103,6 +148,9 @@ export const AIPage: React.FC = () => {
         setMessages(prev => [...prev, userMsg]);
 
         try {
+            // STEP 1: Perform Database Lookup for People Inquiries
+            const dbContext = await performDeepSearch(userMsgText);
+
             let base64Image = '';
             if (currentImage) {
                 const reader = new FileReader();
@@ -121,12 +169,17 @@ export const AIPage: React.FC = () => {
                 model: 'gemini-3-flash-preview',
                 contents: [{
                     parts: [
-                        { text: `IDENTITY: Bee, official Academic Mascot for Finance Dept, AAUA.
-                                 STRICT ACCURACY:
-                                 1. If asked about specific students, class governors, or people (e.g., "Aliu"), DO NOT GUESS. Say "I don't have personal records for students or class leadership in my database." Never claim someone is a governor if you don't know.
-                                 2. DO NOT mention the user's level (e.g. "300 level") unless it is strictly relevant to a course question. Stop saying "As a 300L student...". 
-                                 3. FOCUS: Be a precise academic assistant. For casual talk, be witty but brief.
-                                 4. MARKDOWN: Always use ##Header for structure.
+                        { text: `IDENTITY: Bee, official mascot and expert for the Dept of Finance, AAUA.
+                                 STRICT RULES:
+                                 1. PEOPLE INQUIRIES: If the user asks "Who is [Name]", use the provided DATABASE SEARCH RESULTS below. 
+                                    - If a match is found: State their Full Name, Level, and Role (Student/Exec/Lecturer). Mention their office if Exec, or specialization if Lecturer. 
+                                    - NEVER reveal full Matric Numbers. Use the masked version provided.
+                                    - IF NO MATCH: Strictly say "The person you requested is not known or registered in our departmental records." DO NOT HALLUCINATE OR GUESS.
+                                 2. TONE: Be professional, accurate, and extremely fast. 
+                                 3. REPETITION: Do not constantly mention the user's level or say "As an AI...".
+                                 4. FORMAT: Use ##Header for structured data.
+                                 
+                                 ${dbContext ? `DATA CONTEXT: ${dbContext}` : ''}
                                  USER: ${user.username}` },
                         ...(base64Image ? [{ inlineData: { data: base64Image, mimeType: currentImage!.type } }] : [])
                     ]
@@ -162,7 +215,7 @@ export const AIPage: React.FC = () => {
             });
 
         } catch (error: any) {
-            showNotification("Bee is resting. Try again.", "error");
+            showNotification("Bee engine is recalibrating.", "error");
         } finally {
             setIsLoading(false);
         }
@@ -170,7 +223,6 @@ export const AIPage: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 transition-colors overflow-hidden relative">
-            {/* Header */}
             <div className="p-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 shadow-sm shrink-0 z-20">
                 <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg shrink-0">
                     <BeeIcon className="w-6 h-6" />
@@ -179,7 +231,7 @@ export const AIPage: React.FC = () => {
                     <h1 className="font-black text-slate-900 dark:text-white truncate text-sm">Bee (FINSA AI)</h1>
                     <div className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Ultra Flash Engine</span>
+                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Database Linked</span>
                     </div>
                 </div>
                 <div className="bg-indigo-50 dark:bg-indigo-900/50 px-3 py-1.5 rounded-full border border-indigo-100 dark:border-indigo-800 flex items-center gap-1.5">
@@ -188,12 +240,11 @@ export const AIPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth z-10 custom-scrollbar bg-white dark:bg-slate-950">
                 {messages.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full text-center opacity-30 px-10">
                         <BeeIcon className="w-12 h-12 text-slate-400 mb-4" />
-                        <p className="font-bold text-slate-500 uppercase tracking-[0.2em] text-[10px]">Intelligence Ready. Hyper-speed enabled.</p>
+                        <p className="font-bold text-slate-500 uppercase tracking-[0.2em] text-[10px]">Portal Intel Ready. Ask about people, courses or theories.</p>
                     </div>
                 )}
                 {messages.map((msg, i) => (
@@ -201,7 +252,6 @@ export const AIPage: React.FC = () => {
                         <div className={`max-w-[88%] md:max-w-[75%] rounded-2xl p-4 shadow-sm relative ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-200 dark:border-slate-700'}`}>
                             {msg.image && <img src={msg.image} alt="Upload" className="rounded-xl mb-3 max-h-56 w-auto object-contain mx-auto border border-black/5" />}
                             
-                            {/* Text or Typing Dots */}
                             {msg.role === 'bee' && msg.text === '' ? (
                                 <TypingDots />
                             ) : (
@@ -214,23 +264,15 @@ export const AIPage: React.FC = () => {
                         </div>
                     </div>
                 ))}
-                {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                    <div className="flex justify-start">
-                        <div className="bg-slate-100 dark:bg-slate-800 p-3 px-5 rounded-2xl rounded-tl-none flex gap-2 items-center shadow-sm">
-                            <TypingDots />
-                        </div>
-                    </div>
-                )}
             </div>
 
-            {/* Input Bar */}
             <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0 z-20 shadow-2xl pb-safe md:pb-4">
                 <div className="max-w-5xl mx-auto">
                     {imageFile && (
                         <div className="mb-2 p-2 bg-indigo-50 dark:bg-indigo-900/40 rounded-xl flex items-center justify-between border border-indigo-100 dark:border-indigo-800 animate-pop-in">
                             <div className="flex items-center gap-2">
                                 <img src={URL.createObjectURL(imageFile)} className="w-8 h-8 object-cover rounded-lg" alt="Preview" />
-                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Image Upload</span>
+                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Context Image</span>
                             </div>
                             <button onClick={() => setImageFile(null)} className="p-1 text-rose-500 hover:bg-rose-100 rounded-full"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M6 18L18 6M6 6l12 12" /></svg></button>
                         </div>
@@ -245,7 +287,7 @@ export const AIPage: React.FC = () => {
                             value={input}
                             onChange={e => setInput(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                            placeholder="Ask Bee... (10 pts)"
+                            placeholder="Enquire... (30 pts)"
                             className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-2xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none max-h-32 text-sm dark:text-white transition-all shadow-inner border border-transparent"
                             rows={1}
                         />
