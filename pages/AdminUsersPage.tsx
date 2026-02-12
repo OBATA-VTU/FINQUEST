@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
-import { collection, getDocs, updateDoc, doc, deleteDoc, addDoc } from 'firebase/firestore';
+import { collection, getDocs, updateDoc, doc, addDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
 import { AuthContext } from '../contexts/AuthContext';
 import { VerificationBadge } from '../components/VerificationBadge';
@@ -13,8 +13,6 @@ export const AdminUsersPage: React.FC = () => {
   const role = auth?.user?.role || 'student';
   const isSuperAdmin = role === 'admin';
   const isSupplement = role === 'supplement';
-  
-  // VP and Librarian are Read-Only here
   const hasWriteAccess = isSuperAdmin || isSupplement;
 
   const [users, setUsers] = useState<any[]>([]);
@@ -23,29 +21,20 @@ export const AdminUsersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const { showNotification } = useNotification();
   
-  // Promotion Modal
   const [promoUser, setPromoUser] = useState<any>(null);
   const [promoRole, setPromoRole] = useState('');
   const [promoDetails, setPromoDetails] = useState({ title: '', level: '100' });
 
-  // Notification Modal
-  const [notifyUser, setNotifyUser] = useState<any>(null);
-  const [notificationMsg, setNotificationMsg] = useState('');
-
   useEffect(() => { fetchUsers(); }, []);
 
   useEffect(() => {
-      if (!searchTerm) {
-          setFilteredUsers(users);
-      } else {
-          const lower = searchTerm.toLowerCase();
-          setFilteredUsers(users.filter(u => 
-              (u.name && u.name.toLowerCase().includes(lower)) ||
-              (u.email && u.email.toLowerCase().includes(lower)) ||
-              (u.username && u.username.toLowerCase().includes(lower)) ||
-              (u.matricNumber && u.matricNumber.includes(lower))
-          ));
-      }
+      const lower = searchTerm.toLowerCase();
+      setFilteredUsers(users.filter(u => 
+          (u.name?.toLowerCase().includes(lower)) ||
+          (u.email?.toLowerCase().includes(lower)) ||
+          (u.username?.toLowerCase().includes(lower)) ||
+          (u.matricNumber?.includes(lower))
+      ));
   }, [searchTerm, users]);
 
   const fetchUsers = async () => {
@@ -53,209 +42,108 @@ export const AdminUsersPage: React.FC = () => {
       try {
           const snap = await getDocs(collection(db, 'users'));
           const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          data.sort((a, b) => b.contributionPoints - a.contributionPoints);
           setUsers(data);
           setFilteredUsers(data);
       } finally { setLoading(false); }
   };
 
   const handleRoleChange = (user: any, newRole: string) => {
-      // Supplement cannot change roles (can only manage normal users, not promote)
-      if (!isSuperAdmin) {
-          showNotification("Only Main Admin can change roles.", "error");
-          return;
-      }
-      
+      if (!isSuperAdmin) { showNotification("Unauthorized", "error"); return; }
       if (newRole === 'executive' || newRole === 'lecturer') {
           setPromoUser(user);
           setPromoRole(newRole);
-      } else {
-          updateUserRole(user.id, newRole);
-      }
+      } else updateUserRole(user.id, newRole);
   };
 
   const confirmPromotion = async () => {
       if (!promoDetails.title) return;
       try {
-          // 1. Update User Role
           await updateUserRole(promoUser.id, promoRole);
-          
-          // 2. Create Public Profile
           const col = promoRole === 'executive' ? 'executives' : 'lecturers';
-          const payload: any = {
-              name: promoUser.name,
-              imageUrl: promoUser.avatarUrl || '',
-          };
-          
-          if (promoRole === 'executive') {
-              payload.position = promoDetails.title;
-              payload.level = Number(promoDetails.level);
-          } else {
-              payload.title = promoDetails.title;
-              payload.specialization = 'General';
-          }
-
+          const payload: any = { name: promoUser.name, imageUrl: promoUser.avatarUrl || '' };
+          if (promoRole === 'executive') { payload.position = promoDetails.title; payload.level = Number(promoDetails.level); }
+          else { payload.title = promoDetails.title; payload.specialization = 'Finance Scholar'; }
           await addDoc(collection(db, col), payload);
-          showNotification(`User promoted to ${promoRole} and profile created.`, "success");
+          showNotification(`${promoUser.name} Promoted to ${promoRole}.`, "success");
           setPromoUser(null);
       } catch (e) { showNotification("Promotion failed", "error"); }
   };
 
-  const updateUserRole = async (uid: string, role: string) => {
+  const updateUserRole = async (uid: string, newRole: string) => {
       try {
-          await updateDoc(doc(db, 'users', uid), { role });
-          setUsers(prev => prev.map(u => u.id === uid ? { ...u, role } : u));
-          showNotification("Role updated", "success");
-      } catch (e) { showNotification("Update failed", "error"); }
+          await updateDoc(doc(db, 'users', uid), { role: newRole });
+          setUsers(prev => prev.map(u => u.id === uid ? { ...u, role: newRole } : u));
+          showNotification("Permissions updated.", "success");
+      } catch (e) { showNotification("Action failed", "error"); }
   };
 
   const handleVerifyToggle = async (user: any) => {
       if (!hasWriteAccess) return;
-      
-      // Supplement check: Can only verify students
-      if (isSupplement && user.role !== 'student') {
-          showNotification("You can only verify students.", "error");
-          return;
-      }
-
       const newValue = !user.isVerified;
       try {
           await updateDoc(doc(db, 'users', user.id), { isVerified: newValue });
           setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isVerified: newValue } : u));
-          showNotification(newValue ? "User verified (Blue Badge awarded)" : "User unverified", "success");
-      } catch (e) { showNotification("Verification update failed", "error"); }
-  };
-
-  const handleBan = async (user: any) => {
-      if (!hasWriteAccess) return;
-      if (isSupplement && user.role !== 'student') {
-          showNotification("You can only suspend students.", "error");
-          return;
-      }
-      
-      const isBanned = user.isBanned || false;
-      if (!window.confirm(isBanned ? "Un-suspend this user? They will be able to log in again." : "Suspend this user? They will be logged out immediately.")) return;
-
-      try {
-          await updateDoc(doc(db, 'users', user.id), { isBanned: !isBanned });
-          setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isBanned: !isBanned } : u));
-          showNotification(isBanned ? "User account activated" : "User suspended successfully", "success");
-      } catch(e) {
-          showNotification("Failed to update suspension status", "error");
-      }
-  };
-
-  const handleDelete = async (user: any) => {
-      if (!hasWriteAccess) return;
-      if (isSupplement && user.role !== 'student') {
-          showNotification("You can only delete students.", "error");
-          return;
-      }
-      if (!window.confirm("Permanently delete this user's data from the portal? NOTE: This removes their profile data. To remove login access completely, they must also be suspended.")) return;
-      try {
-          await deleteDoc(doc(db, 'users', user.id));
-          setUsers(prev => prev.filter(u => u.id !== user.id));
-          showNotification("User profile deleted. If they login again, a new profile will be created unless suspended.", "success");
-      } catch (e) { showNotification("Delete failed", "error"); }
-  };
-
-  const handleSendNotification = async () => {
-      if (!notifyUser || !notificationMsg.trim()) return;
-      try {
-          await addDoc(collection(db, 'notifications'), {
-              userId: notifyUser.id,
-              message: notificationMsg,
-              type: 'info',
-              read: false,
-              createdAt: new Date().toISOString()
-          });
-          showNotification("Notification sent successfully!", "success");
-          setNotifyUser(null);
-          setNotificationMsg('');
-      } catch (e: any) {
-          console.error(e);
-          const msg = e.message || "Unknown error";
-          showNotification(`Failed: ${msg}`, "error");
-      }
+          showNotification(newValue ? "Verified" : "Unverified", "success");
+      } catch (e) { showNotification("Failed", "error"); }
   };
 
   return (
-    <div className="animate-fade-in max-w-5xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">User Management {hasWriteAccess ? '' : '(Read Only)'}</h1>
-            <div className="relative w-full md:w-64">
-                <input 
-                    type="text" 
-                    placeholder="Search users..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800 dark:border-slate-600 dark:text-white"
-                />
-                <svg className="w-5 h-5 text-slate-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+    <div className="animate-fade-in space-y-10 pb-20">
+        <header className="bg-slate-900 rounded-[3rem] p-10 md:p-14 text-white relative overflow-hidden shadow-2xl">
+            <div className="absolute top-0 right-0 p-10 opacity-5 group"><svg className="w-64 h-64 group-hover:rotate-12 transition-transform duration-1000" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg></div>
+            <div className="relative z-10">
+                <h1 className="text-4xl md:text-5xl font-black font-serif tracking-tighter mb-4">Student Directory</h1>
+                <p className="text-slate-400 max-w-xl font-medium">Manage permissions, verify identities, and monitor the departmental ecosystem.</p>
             </div>
+        </header>
+
+        <div className="relative max-w-2xl mx-auto">
+            <input 
+                type="text" 
+                placeholder="Search by name, username or ID..." 
+                className="w-full pl-14 pr-6 py-6 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white font-bold"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+            />
+            <svg className="w-6 h-6 text-slate-300 absolute left-5 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </div>
-        
-        {loading ? <div className="text-center py-20 text-slate-500 dark:text-slate-400">Loading...</div> : (
-            <div className="grid gap-4">
-                {filteredUsers.length === 0 ? <div className="text-center py-10 text-slate-500 dark:text-slate-400">No users found matching "{searchTerm}"</div> : filteredUsers.map(u => (
-                    <div key={u.id} className={`bg-white dark:bg-slate-800 p-4 rounded-xl border ${u.isBanned ? 'border-rose-300 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-700' : 'border-slate-200 dark:border-slate-700'} shadow-sm flex flex-col md:flex-row items-center justify-between gap-4`}>
-                        <div className="flex items-center gap-3 w-full md:w-auto">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center font-bold text-slate-500 dark:text-slate-300 overflow-hidden">
-                                {u.avatarUrl ? <img src={u.avatarUrl} className="w-full h-full object-cover" /> : u.name?.[0]}
-                            </div>
-                            <div>
-                                <p className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                    {u.name}
-                                    {u.isBanned && <span className="text-[10px] bg-rose-600 text-white px-2 py-0.5 rounded uppercase font-bold">Suspended</span>}
-                                </p>
-                                <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
-                                    <span>@{u.username || '---'}</span>
-                                    <VerificationBadge role={u.role} isVerified={u.isVerified} className="w-3 h-3" />
+
+        {loading ? <div className="text-center py-20 font-black uppercase text-slate-400 tracking-widest">Loading Intel...</div> : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredUsers.map(u => (
+                    <div key={u.id} className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all duration-500 group relative">
+                        <div className="flex items-center gap-6 mb-6">
+                            <div className="relative shrink-0">
+                                <div className="w-20 h-20 rounded-[1.5rem] overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-indigo-50 dark:border-indigo-900 shadow-inner">
+                                    {u.avatarUrl ? <img src={u.avatarUrl} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full font-black text-2xl text-slate-400">{u.name?.charAt(0)}</div>}
                                 </div>
-                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{u.email} • <span className="font-mono bg-slate-100 dark:bg-slate-700 px-1 rounded">{u.matricNumber || 'No Matric'}</span></p>
+                                <div className="absolute -bottom-2 -right-2 bg-white dark:bg-slate-900 rounded-full p-1 shadow-lg">
+                                    <VerificationBadge role={u.role} isVerified={u.isVerified} className="w-6 h-6" />
+                                </div>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <h4 className="font-black text-lg text-slate-900 dark:text-white truncate leading-tight mb-1">{u.name}</h4>
+                                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest truncate mb-2">@{u.username || 'unknown'} • {u.level}L</p>
+                                <div className="flex items-center gap-2">
+                                    <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-[10px] font-black rounded-lg uppercase tracking-tighter border border-indigo-100/50 dark:border-indigo-900/50">{u.role.replace('_', ' ')}</span>
+                                    <span className="text-[10px] font-black text-slate-300 uppercase">{u.matricNumber}</span>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                            {hasWriteAccess ? (
-                                <>
-                                    <button 
-                                        onClick={() => handleVerifyToggle(u)}
-                                        className={`p-2 rounded transition-colors ${u.isVerified ? 'text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30' : 'text-slate-300 dark:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-blue-400'}`}
-                                        title={u.isVerified ? "Revoke Verification" : "Verify User (Blue Badge)"}
-                                        disabled={isSupplement && u.role !== 'student'}
-                                    >
-                                        <svg className="w-5 h-5" fill={u.isVerified ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </button>
 
-                                    {/* Only Super Admin can see role dropdown */}
-                                    {isSuperAdmin ? (
-                                        <select 
-                                            value={u.role} 
-                                            onChange={(e) => handleRoleChange(u, e.target.value)} 
-                                            className="p-2 text-sm border rounded-lg bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300 font-medium"
-                                        >
-                                            {ALLOWED_ROLES.map(r => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
-                                        </select>
-                                    ) : (
-                                        // Supplement or other: Just show badge
-                                        <span className="px-3 py-1 bg-slate-100 dark:bg-slate-700 rounded-full text-xs font-bold uppercase text-slate-500 dark:text-slate-300">{u.role}</span>
-                                    )}
-                                    
-                                    <button onClick={() => setNotifyUser(u)} className="p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded" title="Send Notification">
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                                    </button>
-
-                                    <button onClick={() => handleBan(u)} className={`p-2 rounded ${u.isBanned ? 'text-white bg-amber-500 hover:bg-amber-600' : 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30'}`} title={u.isBanned ? "Activate Account" : "Suspend Account"} disabled={isSupplement && u.role !== 'student'}>
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                                    </button>
-                                    <button onClick={() => handleDelete(u)} className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded" title="Delete Profile Data" disabled={isSupplement && u.role !== 'student'}>
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
-                                </>
-                            ) : (
-                                <span className="px-3 py-1 bg-slate-100 dark:bg-slate-700 rounded-full text-xs font-bold uppercase text-slate-500 dark:text-slate-300">{u.role}</span>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button onClick={() => handleVerifyToggle(u)} className={`py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${u.isVerified ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' : 'bg-slate-900 text-white hover:bg-slate-800'}`}>
+                                {u.isVerified ? 'Revoke Seal' : 'Verify Identity'}
+                            </button>
+                            {isSuperAdmin && (
+                                <select 
+                                    className="py-3 px-3 bg-slate-50 dark:bg-slate-800 rounded-2xl font-black text-[10px] uppercase tracking-widest outline-none border border-transparent focus:border-indigo-500 dark:text-slate-200"
+                                    value={u.role}
+                                    onChange={e => handleRoleChange(u, e.target.value)}
+                                >
+                                    {ALLOWED_ROLES.map(r => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
+                                </select>
                             )}
                         </div>
                     </div>
@@ -263,46 +151,26 @@ export const AdminUsersPage: React.FC = () => {
             </div>
         )}
 
-        {/* Promotion Modal - Only for Super Admin */}
-        {promoUser && isSuperAdmin && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl w-full max-w-sm shadow-2xl">
-                    <h3 className="font-bold text-lg mb-4 dark:text-white">Promote to {promoRole}</h3>
-                    <div className="space-y-3">
-                        <input className="w-full border p-2 rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" placeholder="Position / Title (e.g. President)" value={promoDetails.title} onChange={e => setPromoDetails({...promoDetails, title: e.target.value})} />
+        {promoUser && (
+            <div className="fixed inset-0 bg-slate-950/90 z-[100] flex items-center justify-center p-6 backdrop-blur-md">
+                <div className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] w-full max-w-md shadow-2xl border border-white/5">
+                    <h3 className="text-2xl font-black dark:text-white mb-2">Assign Authority</h3>
+                    <p className="text-slate-500 text-sm mb-8">Elevate <span className="font-black text-indigo-600">{promoUser.name}</span> to the {promoRole} council.</p>
+                    <div className="space-y-4 mb-8">
+                        <div>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-2">Designation / Title</label>
+                            <input className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white font-bold" placeholder={promoRole === 'executive' ? 'e.g. Financial Secretary' : 'e.g. Senior Lecturer'} value={promoDetails.title} onChange={e => setPromoDetails({...promoDetails, title: e.target.value})} />
+                        </div>
                         {promoRole === 'executive' && (
-                            <select className="w-full border p-2 rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={promoDetails.level} onChange={e => setPromoDetails({...promoDetails, level: e.target.value})}>
-                                <option value="100">100 Level</option>
-                                <option value="200">200 Level</option>
-                                <option value="300">300 Level</option>
-                                <option value="400">400 Level</option>
-                            </select>
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-2">Tenure Level</label>
+                                <select className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl font-bold dark:text-white" value={promoDetails.level} onChange={e => setPromoDetails({...promoDetails, level: e.target.value})}><option value="100">100L</option><option value="200">200L</option><option value="300">300L</option><option value="400">400L</option></select>
+                            </div>
                         )}
                     </div>
-                    <div className="flex gap-2 mt-4">
-                        <button onClick={() => setPromoUser(null)} className="flex-1 py-2 border rounded dark:border-slate-600 dark:text-slate-300">Cancel</button>
-                        <button onClick={confirmPromotion} className="flex-1 py-2 bg-indigo-600 text-white rounded font-bold">Confirm</button>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {/* Notification Modal */}
-        {notifyUser && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl w-full max-w-sm shadow-2xl animate-fade-in-down">
-                    <h3 className="font-bold text-lg mb-2 dark:text-white">Message to {notifyUser.name}</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">This will appear in their dashboard notifications.</p>
-                    <textarea 
-                        className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none mb-4 dark:bg-slate-700 dark:border-slate-600 dark:text-white" 
-                        rows={4} 
-                        placeholder="Type your message here..."
-                        value={notificationMsg}
-                        onChange={(e) => setNotificationMsg(e.target.value)}
-                    ></textarea>
-                    <div className="flex gap-2">
-                        <button onClick={() => setNotifyUser(null)} className="flex-1 py-2 border rounded-lg font-bold text-slate-600 dark:border-slate-600 dark:text-slate-300">Cancel</button>
-                        <button onClick={handleSendNotification} className="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700">Send</button>
+                    <div className="flex gap-4">
+                        <button onClick={() => setPromoUser(null)} className="flex-1 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px]">Abort</button>
+                        <button onClick={confirmPromotion} className="flex-1 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-500/20 uppercase tracking-widest text-[10px]">Confirm Elevation</button>
                     </div>
                 </div>
             </div>

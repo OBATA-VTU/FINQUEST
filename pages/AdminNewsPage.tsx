@@ -19,9 +19,7 @@ export const AdminNewsPage: React.FC = () => {
   const [hodData, setHodData] = useState({ name: '', title: '', message: '', imageUrl: '' });
   const [hodImageFile, setHodImageFile] = useState<File | null>(null);
 
-  useEffect(() => {
-    fetchContent();
-  }, []);
+  useEffect(() => { fetchContent(); }, []);
 
   const fetchContent = async () => {
       setLoading(true);
@@ -41,22 +39,22 @@ export const AdminNewsPage: React.FC = () => {
           let url = hodData.imageUrl;
           if (hodImageFile) url = await uploadToImgBB(hodImageFile);
           await setDoc(doc(db, 'content', 'hod_message'), { ...hodData, imageUrl: url });
-          showNotification("HOD Content updated", "success");
+          showNotification("HOD Broadcast Updated", "success");
       } catch (e) { showNotification("Update failed", "error"); }
   };
 
   const handleDeleteContent = async (id: string) => {
-      if (!window.confirm("Permanently delete this item?")) return;
+      if (!window.confirm("Purge this report?")) return;
       try {
           await deleteDoc(doc(db, 'announcements', id));
-          showNotification("Deleted", "info");
+          showNotification("Announcement Removed", "info");
           fetchContent();
-      } catch (e) { showNotification("Delete failed", "error"); }
+      } catch (e) { showNotification("Purge failed", "error"); }
   };
 
   const openModal = (item: any = null) => {
       setEditingItem(item);
-      setFormData(item || {});
+      setFormData(item || { author: 'Department Admin' });
       setFormFile(null);
       setIsModalOpen(true);
   };
@@ -66,65 +64,76 @@ export const AdminNewsPage: React.FC = () => {
       setIsSubmitting(true);
       try {
           const payload = { ...formData };
-          if (formFile) {
-              payload.imageUrl = await uploadToImgBB(formFile);
-          }
+          if (formFile) payload.imageUrl = await uploadToImgBB(formFile);
           if (!editingItem) payload.date = new Date().toISOString();
 
-          if (editingItem) {
-              await updateDoc(doc(db, 'announcements', editingItem.id), payload);
-          } else {
-              await addDoc(collection(db, 'announcements'), payload);
-          }
+          if (editingItem) await updateDoc(doc(db, 'announcements', editingItem.id), payload);
+          else await addDoc(collection(db, 'announcements'), payload);
+          
           setIsModalOpen(false);
           fetchContent();
-          showNotification("Saved successfully", "success");
-      } catch (e: any) { showNotification(e.message || "Error saving item", "error"); }
+          showNotification("Report Published.", "success");
+      } catch (e: any) { showNotification("Intel upload failed.", "error"); }
       finally { setIsSubmitting(false); }
   };
 
-  const inputStyles = "w-full border-0 rounded-xl p-3 shadow-sm dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none";
-  const modalInputStyles = "w-full border p-3 rounded-xl dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none";
-
-
   return (
-    <div className="animate-fade-in pb-20 max-w-6xl mx-auto">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">News & Announcements</h1>
+    <div className="animate-fade-in space-y-10 pb-20 max-w-6xl mx-auto">
+        <header>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white">Departmental Bulletins</h1>
+            <p className="text-slate-500 dark:text-slate-400 font-medium">Manage public announcements and faculty messages.</p>
+        </header>
         
-        <div className="bg-indigo-50 dark:bg-slate-800 p-6 rounded-2xl border border-indigo-100 dark:border-slate-700 mb-8">
-            <h3 className="font-bold text-indigo-900 dark:text-indigo-200 mb-4">Homepage HOD Message</h3>
-            <div className="space-y-3">
-                <input className={inputStyles} placeholder="HOD Name" value={hodData.name} onChange={e => setHodData({...hodData, name: e.target.value})} />
-                <input className={inputStyles} placeholder="Title" value={hodData.title} onChange={e => setHodData({...hodData, title: e.target.value})} />
-                <textarea className={inputStyles} rows={3} placeholder="Message" value={hodData.message} onChange={e => setHodData({...hodData, message: e.target.value})} />
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                    <label className="flex-1 bg-white dark:bg-slate-600 border border-dashed border-indigo-300 dark:border-indigo-600 rounded-xl p-3 text-center cursor-pointer text-xs font-bold text-indigo-500 dark:text-indigo-300">
-                        {hodImageFile ? 'Image Selected' : 'Upload HOD Photo'}
+        <section className="bg-indigo-950 rounded-[3rem] p-10 md:p-14 text-white relative overflow-hidden shadow-2xl border border-white/5">
+            <div className="absolute top-0 right-0 p-10 opacity-10"><svg className="w-48 h-48" fill="currentColor" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z" /></svg></div>
+            <div className="relative z-10">
+                <h3 className="text-xl font-black mb-8 flex items-center gap-2 uppercase tracking-widest text-indigo-300">
+                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></span>
+                    Faculty Representative Broadcast
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                        <input className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold placeholder:text-slate-500" placeholder="Faculty Name (e.g. Dr. Adebayo)" value={hodData.name} onChange={e => setHodData({...hodData, name: e.target.value})} />
+                        <input className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold placeholder:text-slate-500" placeholder="Title (e.g. Head of Department)" value={hodData.title} onChange={e => setHodData({...hodData, title: e.target.value})} />
+                    </div>
+                    <textarea className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold placeholder:text-slate-500 resize-none h-full" rows={3} placeholder="The message from the Desk of the H.O.D..." value={hodData.message} onChange={e => setHodData({...hodData, message: e.target.value})} />
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4 mt-6">
+                    <label className="flex-1 px-6 py-4 bg-white/10 border-2 border-dashed border-white/20 rounded-2xl text-center cursor-pointer text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all flex items-center justify-center">
+                        {hodImageFile ? 'Profile Photo Locked' : 'Update Profile Photo'}
                         <input type="file" className="hidden" onChange={e => e.target.files && setHodImageFile(e.target.files[0])} />
                     </label>
-                    <button onClick={handleSaveHOD} className="flex-1 bg-indigo-600 text-white px-4 py-3 rounded-xl font-bold text-sm shadow hover:bg-indigo-700">Update HOD Info</button>
+                    <button onClick={handleSaveHOD} className="flex-1 py-4 bg-white text-indigo-950 font-black rounded-2xl shadow-xl hover:bg-indigo-50 transition-all uppercase tracking-widest text-[10px]">Sync Faculty Message</button>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-bold text-slate-700 dark:text-slate-300">All Announcements</h2>
-            <button onClick={() => openModal()} className="bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-indigo-700 shadow-md flex items-center gap-2 text-sm">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                Add New
+        <div className="flex justify-between items-end border-b border-slate-100 dark:border-slate-800 pb-6">
+            <div>
+                <h2 className="text-xl font-black text-slate-800 dark:text-white">Active Feed</h2>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Live announcements appearing on student dashboard</p>
+            </div>
+            <button onClick={() => openModal()} className="px-8 py-3.5 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 shadow-xl shadow-indigo-500/20 transition-all active:scale-95 uppercase tracking-widest text-[10px] flex items-center gap-3">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 4v16m8-8H4" /></svg>
+                Draft Intel
             </button>
         </div>
 
-        {loading ? <div className="text-center py-12 dark:text-slate-400">Loading...</div> : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {loading ? <div className="text-center py-20 text-slate-400 uppercase tracking-widest font-black">Syncing archives...</div> : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {contentItems.map(item => (
-                    <div key={item.id} className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col group hover:border-indigo-200 dark:hover:border-indigo-600 transition-colors">
-                        {item.imageUrl && <div className="w-full h-32 rounded-xl bg-slate-100 dark:bg-slate-700 overflow-hidden mb-3"><img src={item.imageUrl} className="w-full h-full object-cover" alt="preview" /></div>}
-                        <h4 className="font-bold text-slate-800 dark:text-white line-clamp-1 mb-1">{item.title}</h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-4 flex-1">{item.content}</p>
-                        <div className="mt-auto flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
-                            <button onClick={() => openModal(item)} className="flex-1 py-2 text-xs font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50">Edit</button>
-                            <button onClick={() => handleDeleteContent(item.id)} className="px-3 py-2 text-xs font-bold text-rose-600 bg-rose-50 dark:bg-rose-900/30 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-900/50"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                    <div key={item.id} className="bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden">
+                        <div className="h-48 bg-slate-50 dark:bg-slate-800 relative overflow-hidden">
+                            {item.imageUrl ? <img src={item.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="intel" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg></div>}
+                            <div className="absolute top-4 right-4 bg-white/90 backdrop-blur dark:bg-slate-900/90 px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest text-slate-500 border border-black/5">{new Date(item.date).toLocaleDateString()}</div>
+                        </div>
+                        <div className="p-8 flex-1 flex flex-col">
+                            <h4 className="font-black text-xl text-slate-900 dark:text-white leading-tight mb-3 font-serif group-hover:text-indigo-600 transition-colors">{item.title}</h4>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3 mb-8 leading-relaxed">{item.content}</p>
+                            <div className="mt-auto flex gap-3 pt-6 border-t border-slate-50 dark:border-slate-800">
+                                <button onClick={() => openModal(item)} className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl hover:bg-indigo-100 transition-all">Edit</button>
+                                <button onClick={() => handleDeleteContent(item.id)} className="px-4 py-3 text-rose-500 bg-rose-50 dark:bg-rose-900/30 rounded-xl hover:bg-rose-500 hover:text-white transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                            </div>
                         </div>
                     </div>
                 ))}
@@ -132,15 +141,37 @@ export const AdminNewsPage: React.FC = () => {
         )}
 
         {isModalOpen && (
-            <div className="fixed inset-0 bg-slate-900/90 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}>
-                <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-                    <div className="p-4 border-b dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50"><h3 className="font-bold text-lg dark:text-white">Manage Announcement</h3><button onClick={() => setIsModalOpen(false)} className="p-2 bg-white dark:bg-slate-700 rounded-full text-slate-500 shadow-sm">✕</button></div>
-                    <form onSubmit={handleFormSubmit} className="p-6 space-y-4 overflow-y-auto">
-                        <div><label className="block text-xs font-bold uppercase mb-1 dark:text-slate-400">Title</label><input className={modalInputStyles} value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} required /></div>
-                        <div><label className="block text-xs font-bold uppercase mb-1 dark:text-slate-400">Author</label><input className={modalInputStyles} value={formData.author || ''} onChange={e => setFormData({...formData, author: e.target.value})} required /></div>
-                        <div><label className="block text-xs font-bold uppercase mb-1 dark:text-slate-400">Content</label><textarea className={modalInputStyles} rows={5} value={formData.content || ''} onChange={e => setFormData({...formData, content: e.target.value})} required /></div>
-                        <div><label className="block text-xs font-bold uppercase mb-1 dark:text-slate-400">Image (Optional)</label><input type="file" className={`${modalInputStyles} file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100`} onChange={e => e.target.files && setFormFile(e.target.files[0])} accept="image/*" /></div>
-                        <button type="submit" disabled={isSubmitting} className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 disabled:opacity-70">{isSubmitting ? 'Saving...' : 'Save Changes'}</button>
+            <div className="fixed inset-0 bg-slate-950/90 z-[100] flex items-center justify-center p-6 backdrop-blur-md" onClick={() => setIsModalOpen(false)}>
+                <div className="bg-white dark:bg-slate-900 rounded-[3rem] w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[85vh] border border-white/5 animate-pop-in" onClick={e => e.stopPropagation()}>
+                    <div className="p-8 border-b dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                        <h3 className="font-black text-2xl dark:text-white font-serif">Compose Intel</h3>
+                        <button onClick={() => setIsModalOpen(false)} className="p-2 bg-white dark:bg-slate-700 rounded-full text-slate-400 hover:text-rose-500 transition-colors shadow-sm">✕</button>
+                    </div>
+                    <form onSubmit={handleFormSubmit} className="p-8 space-y-5 overflow-y-auto custom-scrollbar">
+                        <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Intel Heading</label>
+                            <input className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold dark:text-white" value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} required />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                             <div>
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Source Author</label>
+                                <input className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold dark:text-white text-xs" value={formData.author || ''} onChange={e => setFormData({...formData, author: e.target.value})} required />
+                            </div>
+                            <div className="relative">
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Attachment</label>
+                                <label className="flex items-center justify-center w-full p-4 bg-slate-50 dark:bg-slate-800 border border-transparent hover:border-indigo-500 rounded-2xl cursor-pointer transition-all">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 truncate">{formFile ? 'Locked' : 'Attach JPG'}</span>
+                                    <input type="file" className="hidden" onChange={e => e.target.files && setFormFile(e.target.files[0])} accept="image/*" />
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Intel Body</label>
+                            <textarea className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold dark:text-white min-h-[200px]" value={formData.content || ''} onChange={e => setFormData({...formData, content: e.target.value})} required />
+                        </div>
+                        <button type="submit" disabled={isSubmitting} className="w-full py-5 bg-indigo-600 text-white font-black rounded-3xl shadow-xl shadow-indigo-500/20 uppercase tracking-widest text-xs hover:bg-indigo-700 transition-all active:scale-95">
+                            {isSubmitting ? 'Transmitting...' : 'Dispatch Bulletin'}
+                        </button>
                     </form>
                 </div>
             </div>

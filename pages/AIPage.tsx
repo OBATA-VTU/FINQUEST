@@ -68,21 +68,17 @@ export const AIPage: React.FC = () => {
         }
     }, [messages, isLoading]);
 
-    // Internal Database Lookup Tool for "Who is" queries
     const performDeepSearch = async (queryText: string) => {
         const lowerQuery = queryText.toLowerCase();
-        // Extract potential names: looking for keywords like "who is", "know", "about"
         const nameMatch = queryText.match(/(?:who is|about|know|search for)\s+([a-zA-Z\s]+)/i);
         const searchName = nameMatch ? nameMatch[1].trim() : queryText.trim();
-        
         if (searchName.length < 2) return null;
 
         try {
             let contextString = "DATABASE SEARCH RESULTS:\n";
             let foundCount = 0;
 
-            // 1. Search Users
-            const userSnap = await getDocs(query(collection(db, 'users'), limit(10)));
+            const userSnap = await getDocs(collection(db, 'users'));
             const matchingUsers = userSnap.docs
                 .map(d => ({ id: d.id, ...d.data() } as User))
                 .filter(u => 
@@ -92,11 +88,10 @@ export const AIPage: React.FC = () => {
             
             matchingUsers.forEach(u => {
                 const maskedMatric = u.matricNumber ? u.matricNumber.slice(0, -3) + '***' : 'N/A';
-                contextString += `- USER: Name: ${u.name}, Level: ${u.level}, Username: @${u.username}, ID: ${maskedMatric}\n`;
+                contextString += `- USER: Full Name: ${u.name}, Level: ${u.level}, Username: @${u.username}, ID: ${maskedMatric}\n`;
                 foundCount++;
             });
 
-            // 2. Search Executives
             const execSnap = await getDocs(collection(db, 'executives'));
             const matchingExecs = execSnap.docs
                 .map(d => ({ id: d.id, ...d.data() } as Executive))
@@ -107,7 +102,6 @@ export const AIPage: React.FC = () => {
                 foundCount++;
             });
 
-            // 3. Search Lecturers
             const lectSnap = await getDocs(collection(db, 'lecturers'));
             const matchingLect = lectSnap.docs
                 .map(d => ({ id: d.id, ...d.data() } as Lecturer))
@@ -119,16 +113,13 @@ export const AIPage: React.FC = () => {
             });
 
             return foundCount > 0 ? contextString : "No records found for this name in the departmental database.";
-        } catch (e) {
-            return "Search error occurred.";
-        }
+        } catch (e) { return "Search error occurred."; }
     };
 
     const handleSend = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!user || (!input.trim() && !imageFile) || isLoading) return;
 
-        // FIXED: Inquiry cost updated to 30 credits as per request
         const creditCost = imageFile ? 400 : 30;
         const currentCredits = user.aiCredits ?? 0;
 
@@ -148,9 +139,7 @@ export const AIPage: React.FC = () => {
         setMessages(prev => [...prev, userMsg]);
 
         try {
-            // STEP 1: Perform Database Lookup for People Inquiries
             const dbContext = await performDeepSearch(userMsgText);
-
             let base64Image = '';
             if (currentImage) {
                 const reader = new FileReader();
@@ -169,16 +158,14 @@ export const AIPage: React.FC = () => {
                 model: 'gemini-3-flash-preview',
                 contents: [{
                     parts: [
-                        { text: `IDENTITY: Bee, official mascot and expert for the Dept of Finance, AAUA.
+                        { text: `IDENTITY: Bee, official mascot for the Dept of Finance, AAUA.
                                  STRICT RULES:
-                                 1. PEOPLE INQUIRIES: If the user asks "Who is [Name]", use the provided DATABASE SEARCH RESULTS below. 
-                                    - If a match is found: State their Full Name, Level, and Role (Student/Exec/Lecturer). Mention their office if Exec, or specialization if Lecturer. 
-                                    - NEVER reveal full Matric Numbers. Use the masked version provided.
-                                    - IF NO MATCH: Strictly say "The person you requested is not known or registered in our departmental records." DO NOT HALLUCINATE OR GUESS.
-                                 2. TONE: Be professional, accurate, and extremely fast. 
-                                 3. REPETITION: Do not constantly mention the user's level or say "As an AI...".
-                                 4. FORMAT: Use ##Header for structured data.
-                                 
+                                 1. PEOPLE INQUIRIES: If the user asks "Who is [Name]", strictly use the provided DATABASE SEARCH RESULTS below. 
+                                    - If match found: State Full Name, Level, and specific Role/Title.
+                                    - NEVER reveal full IDs. Masked version provided.
+                                    - IF NO MATCH: Say "The person you requested is not known or registered in our departmental records." 
+                                 2. Powered by Maths Teacher led administration.
+                                 3. REPETITION: Don't mention user's level repeatedly.
                                  ${dbContext ? `DATA CONTEXT: ${dbContext}` : ''}
                                  USER: ${user.username}` },
                         ...(base64Image ? [{ inlineData: { data: base64Image, mimeType: currentImage!.type } }] : [])
@@ -197,28 +184,19 @@ export const AIPage: React.FC = () => {
                     setMessages(prev => {
                         const newMsgs = [...prev];
                         const last = newMsgs[newMsgs.length - 1];
-                        if (last && last.role === 'bee') {
-                            last.text = fullText;
-                        }
+                        if (last && last.role === 'bee') last.text = fullText;
                         return newMsgs;
                     });
                 }
             }
-
             setMessages(prev => {
                 const newMsgs = [...prev];
                 const last = newMsgs[newMsgs.length - 1];
-                if (last && last.role === 'bee') {
-                    last.isStreaming = false;
-                }
+                if (last && last.role === 'bee') last.isStreaming = false;
                 return newMsgs;
             });
-
-        } catch (error: any) {
-            showNotification("Bee engine is recalibrating.", "error");
-        } finally {
-            setIsLoading(false);
-        }
+        } catch (error) { showNotification("Bee engine encountered an issue.", "error"); }
+        finally { setIsLoading(false); }
     };
 
     return (
@@ -231,7 +209,7 @@ export const AIPage: React.FC = () => {
                     <h1 className="font-black text-slate-900 dark:text-white truncate text-sm">Bee (FINSA AI)</h1>
                     <div className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Database Linked</span>
+                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Powered by Maths Teacher led administration</span>
                     </div>
                 </div>
                 <div className="bg-indigo-50 dark:bg-indigo-900/50 px-3 py-1.5 rounded-full border border-indigo-100 dark:border-indigo-800 flex items-center gap-1.5">
@@ -244,20 +222,14 @@ export const AIPage: React.FC = () => {
                 {messages.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full text-center opacity-30 px-10">
                         <BeeIcon className="w-12 h-12 text-slate-400 mb-4" />
-                        <p className="font-bold text-slate-500 uppercase tracking-[0.2em] text-[10px]">Portal Intel Ready. Ask about people, courses or theories.</p>
+                        <p className="font-bold text-slate-500 uppercase tracking-[0.2em] text-[10px]">Academic Intelligence Online. Ask anything.</p>
                     </div>
                 )}
                 {messages.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                         <div className={`max-w-[88%] md:max-w-[75%] rounded-2xl p-4 shadow-sm relative ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-200 dark:border-slate-700'}`}>
                             {msg.image && <img src={msg.image} alt="Upload" className="rounded-xl mb-3 max-h-56 w-auto object-contain mx-auto border border-black/5" />}
-                            
-                            {msg.role === 'bee' && msg.text === '' ? (
-                                <TypingDots />
-                            ) : (
-                                <MarkdownRenderer text={msg.text} />
-                            )}
-
+                            {msg.role === 'bee' && msg.text === '' ? <TypingDots /> : <MarkdownRenderer text={msg.text} />}
                             <div className="mt-2 text-[8px] font-black uppercase opacity-40 text-right">
                                 {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </div>
@@ -272,7 +244,7 @@ export const AIPage: React.FC = () => {
                         <div className="mb-2 p-2 bg-indigo-50 dark:bg-indigo-900/40 rounded-xl flex items-center justify-between border border-indigo-100 dark:border-indigo-800 animate-pop-in">
                             <div className="flex items-center gap-2">
                                 <img src={URL.createObjectURL(imageFile)} className="w-8 h-8 object-cover rounded-lg" alt="Preview" />
-                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Context Image</span>
+                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Image Analysis</span>
                             </div>
                             <button onClick={() => setImageFile(null)} className="p-1 text-rose-500 hover:bg-rose-100 rounded-full"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M6 18L18 6M6 6l12 12" /></svg></button>
                         </div>
@@ -282,16 +254,14 @@ export const AIPage: React.FC = () => {
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         </button>
                         <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && setImageFile(e.target.files[0])} />
-                        
                         <textarea 
                             value={input}
                             onChange={e => setInput(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                            placeholder="Enquire... (30 pts)"
+                            placeholder="Inquiry or academic task (30 pts)"
                             className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-2xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none max-h-32 text-sm dark:text-white transition-all shadow-inner border border-transparent"
                             rows={1}
                         />
-                        
                         <button type="submit" disabled={isLoading || (!input.trim() && !imageFile)} className="p-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:opacity-30 transition-all shadow-lg shrink-0 active:scale-95">
                             {isLoading ? <div className="w-6 h-6 border-2 border-white/50 border-t-white rounded-full animate-spin"></div> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>}
                         </button>
