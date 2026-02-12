@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { GoogleGenAI } from "@google/genai";
@@ -11,9 +12,9 @@ interface ChatMessage {
     text: string;
     image?: string;
     timestamp: number;
+    isStreaming?: boolean;
 }
 
-// Simple Markdown Parser for Professional Rendering
 const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
     const renderContent = () => {
         return text
@@ -54,25 +55,18 @@ export const AIPage: React.FC = () => {
 
     const user = auth?.user;
 
-    // Auto-scroll logic
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages, isLoading]);
 
-    // Fetch site context (News and Features)
     useEffect(() => {
         const fetchContext = async () => {
             try {
                 const newsSnap = await getDocs(query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(5)));
                 const news = newsSnap.docs.map(d => (d.data() as Announcement).title).join(', ');
-
-                setSiteContext(`
-                    CURRENT FEATURES: Dashboard, CBT Practice (Mock/AI Quizzes), Academic Vault (Archives), Student Lounge, Marketplace, Lost & Found.
-                    LATEST NEWS: ${news || 'Standard updates.'}
-                    OWNERSHIP: Owned by Dept of Finance AAUA. Initiated by Michael Boluwatife administration. Developed by OBA (PRO).
-                `);
+                setSiteContext(`FEATURES: Dashboard, CBT, Archives, Lounge. NEWS: ${news || 'Regular updates.'} DEPT: Finance AAUA.`);
             } catch (e) {}
         };
         fetchContext();
@@ -86,7 +80,7 @@ export const AIPage: React.FC = () => {
         const currentCredits = user.aiCredits ?? 0;
 
         if (currentCredits < creditCost) {
-            showNotification(`Low Bee Power! You need ${creditCost} pts. Resets daily.`, "warning");
+            showNotification(`Insufficient Credits (${creditCost} required).`, "warning");
             return;
         }
 
@@ -110,177 +104,131 @@ export const AIPage: React.FC = () => {
                 });
             }
 
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const modelParams = {
-                model: 'gemini-3-flash-preview',
-                contents: [{
-                    parts: [
-                        { text: `IDENTITY: You are Bee, the official AI Expert for the Department of Finance at Adekunle Ajasin University (AAUA).
-                                 
-                                 TASK PRIORITY:
-                                 1. ACADEMIC QUERIES: If the message is a request for definitions, explanations of academic concepts (e.g., "research process", "capital budgeting"), or exam preparation, you MUST provide a detailed, professional, and accurate academic response. Use headers (#, ##) and bold text to structure the info clearly.
-                                 2. CASUAL/ENTERTAINMENT: If the message is about movies, games, or general chat, you can be witty and more informal.
-                                 
-                                 PERSONA: Be interactive and conversational, but never compromise on academic depth for study questions. Avoid repeated greetings about the user's level.
-                                 
-                                 STRICT RULES: 
-                                 - Do NOT start every reply with "As a student...".
-                                 - For academic queries, focus on clarity and education. 
-                                 - Use Markdown for formatting (# Header, ## Subheader, **bold**, lists).
-                                 - If asked about research or finance topics, be a precise educator.
-                                 
-                                 CONTEXT: ${siteContext}
-                                 USER: ${user.username} (Level: ${user.level})
-                                 MESSAGE: ${userMsgText}` },
-                        ...(base64Image ? [{ inlineData: { data: base64Image, mimeType: currentImage!.type } }] : [])
-                    ]
-                }]
-            };
-
-            const result = await ai.models.generateContent(modelParams);
-            const responseText = result.text || "I'm momentarily disconnected from the network. Try again shortly?";
-
-            // Deduct Credits
+            // DEDUCT CREDITS IMMEDIATELY FOR THE OPERATION
             const newCredits = Math.max(0, currentCredits - creditCost);
             await updateDoc(doc(db, 'users', user.id), { aiCredits: newCredits });
             auth?.updateUser({ aiCredits: newCredits });
+
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             
-            setMessages(prev => [...prev, { role: 'bee', text: responseText, timestamp: Date.now() }]);
+            // USE STREAMING FOR "EXTREMELY FAST" FEEL
+            const result = await ai.models.generateContentStream({
+                model: 'gemini-3-flash-preview',
+                contents: [{
+                    parts: [
+                        { text: `IDENTITY: Bee, Mascot/Expert for Dept of Finance, AAUA.
+                                 RULES: 
+                                 1. ACADEMIC: Serious, formal professor mode for definitions/theories. No play.
+                                 2. CASUAL: Interactive/witty only for fun talk.
+                                 3. MARKDOWN: Always use ##Header and **Bold**.
+                                 USER: ${user.username} (Lvl ${user.level})
+                                 MSG: ${userMsgText}` },
+                        ...(base64Image ? [{ inlineData: { data: base64Image, mimeType: currentImage!.type } }] : [])
+                    ]
+                }]
+            });
+
+            // Create placeholder for the AI response
+            const beeMsg: ChatMessage = { role: 'bee', text: '', timestamp: Date.now(), isStreaming: true };
+            setMessages(prev => [...prev, beeMsg]);
+
+            let fullText = '';
+            for await (const chunk of result) {
+                const chunkText = chunk.text;
+                if (chunkText) {
+                    fullText += chunkText;
+                    setMessages(prev => {
+                        const newMsgs = [...prev];
+                        const last = newMsgs[newMsgs.length - 1];
+                        if (last && last.role === 'bee') {
+                            last.text = fullText;
+                        }
+                        return newMsgs;
+                    });
+                }
+            }
+
+            // Finalize message
+            setMessages(prev => {
+                const newMsgs = [...prev];
+                const last = newMsgs[newMsgs.length - 1];
+                if (last && last.role === 'bee') {
+                    last.isStreaming = false;
+                }
+                return newMsgs;
+            });
+
         } catch (error: any) {
-            showNotification("Processing failed. Credits preserved.", "error");
+            showNotification("Processing failed.", "error");
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <div className="flex flex-col h-[100dvh] bg-slate-50 dark:bg-slate-950 transition-colors overflow-hidden relative">
-            {/* Animated SVG Background */}
-            <div className="absolute inset-0 z-0 pointer-events-none opacity-20 dark:opacity-5 overflow-hidden">
-                <div className="absolute top-[10%] left-[10%] animate-bounce-slow text-indigo-500">
-                    <BeeIcon className="w-12 h-12" />
-                </div>
-                <div className="absolute bottom-[20%] right-[10%] animate-pulse text-indigo-500" style={{ animationDelay: '2s' }}>
-                    <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22m11-11H1" /></svg>
-                </div>
-                <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <pattern id="hex-pattern" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
-                            <path d="M40 0L80 20V60L40 80L0 60V20L40 0Z" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-indigo-400" />
-                        </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#hex-pattern)" />
-                </svg>
-            </div>
-
-            {/* AI Header */}
-            <div className="p-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 shadow-sm shrink-0 z-20">
-                <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg animate-bounce-slow">
+        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 transition-colors overflow-hidden relative">
+            <div className="p-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 shadow-sm shrink-0 z-20">
+                <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg shrink-0">
                     <BeeIcon className="w-6 h-6" />
                 </div>
                 <div className="flex-1 min-w-0">
                     <h1 className="font-black text-slate-900 dark:text-white truncate text-sm">Bee (FINSA AI)</h1>
                     <div className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Active Intelligence</span>
+                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Flash Engine Active</span>
                     </div>
                 </div>
-                {/* Credit Gauge */}
-                <div className="text-right">
-                    <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/50 px-3 py-1.5 rounded-full border border-indigo-100 dark:border-indigo-800">
-                        <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                        <span className="text-[10px] font-black text-indigo-700 dark:text-indigo-300">{user?.aiCredits ?? 0} <span className="opacity-60">PTS</span></span>
-                    </div>
+                <div className="bg-indigo-50 dark:bg-indigo-900/50 px-3 py-1.5 rounded-full border border-indigo-100 dark:border-indigo-800">
+                    <span className="text-[10px] font-black text-indigo-700 dark:text-indigo-300">{user?.aiCredits ?? 0} PTS</span>
                 </div>
             </div>
 
-            {/* Chat History */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth z-10 custom-scrollbar">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth z-10 custom-scrollbar bg-white dark:bg-slate-950">
                 {messages.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full text-center p-10 opacity-30">
-                        <div className="w-20 h-20 bg-slate-200 dark:bg-slate-800 rounded-3xl flex items-center justify-center mb-6">
-                            <BeeIcon className="w-10 h-10 text-slate-400" />
-                        </div>
-                        <p className="font-bold text-slate-500 max-w-xs uppercase tracking-[0.2em] text-[10px] leading-relaxed">Intelligence Engine Ready. Ask about department policies, exams, or upload a question paper for analysis.</p>
+                    <div className="flex flex-col items-center justify-center h-full text-center opacity-30 px-10">
+                        <BeeIcon className="w-12 h-12 text-slate-400 mb-4" />
+                        <p className="font-bold text-slate-500 uppercase tracking-[0.2em] text-[10px]">Intelligence Ready. Speed mode enabled.</p>
                     </div>
                 )}
                 {messages.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-pop-in`}>
-                        <div className={`max-w-[88%] rounded-2xl p-4 shadow-sm relative ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-100 dark:border-slate-700 rounded-tl-none'}`}>
-                            {msg.image && <img src={msg.image} alt="Uploaded Resource" className="rounded-xl mb-3 max-h-56 w-auto object-contain mx-auto shadow-inner border border-black/5" />}
-                            <MarkdownRenderer text={msg.text} />
-                            <div className="mt-2 flex items-center justify-end gap-1.5 opacity-40">
-                                <span className="text-[8px] font-black uppercase tracking-tighter">{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                {msg.role === 'user' && <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5" /></svg>}
+                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                        <div className={`max-w-[88%] md:max-w-[75%] rounded-2xl p-4 shadow-sm relative ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-200 dark:border-slate-700'}`}>
+                            {msg.image && <img src={msg.image} alt="Upload" className="rounded-xl mb-3 max-h-56 w-auto object-contain mx-auto border border-black/5" />}
+                            <MarkdownRenderer text={msg.text || (msg.isStreaming ? '...' : '')} />
+                            <div className="mt-2 text-[8px] font-black uppercase opacity-40 text-right">
+                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </div>
                         </div>
                     </div>
                 ))}
-                {isLoading && (
-                    <div className="flex justify-start animate-pulse">
-                        <div className="bg-white dark:bg-slate-800 p-3 px-5 rounded-2xl rounded-tl-none flex gap-2 items-center border border-slate-100 dark:border-slate-700 shadow-sm">
-                            <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-                            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                            <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                        </div>
-                    </div>
-                )}
             </div>
 
-            {/* Input Bar - Pinned to Bottom */}
-            <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0 z-20 shadow-2xl safe-p-bottom">
-                <div className="max-w-4xl mx-auto">
+            <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0 z-20 shadow-2xl pb-safe md:pb-4">
+                <div className="max-w-5xl mx-auto">
                     {imageFile && (
-                        <div className="mb-2 p-2 bg-indigo-50 dark:bg-indigo-900/40 rounded-xl flex items-center justify-between border border-indigo-200 dark:border-indigo-800 animate-pop-in">
+                        <div className="mb-2 p-2 bg-indigo-50 dark:bg-indigo-900/40 rounded-xl flex items-center justify-between border border-indigo-100 dark:border-indigo-800 animate-pop-in">
                             <div className="flex items-center gap-2">
-                                <img src={URL.createObjectURL(imageFile)} className="w-8 h-8 object-cover rounded-lg border border-indigo-200" alt="Preview" />
-                                <div>
-                                    <span className="text-[9px] block font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Image Analysis</span>
-                                    <span className="text-[8px] text-slate-500 font-bold uppercase">Cost: 400 Credits</span>
-                                </div>
+                                <img src={URL.createObjectURL(imageFile)} className="w-8 h-8 object-cover rounded-lg" alt="Preview" />
+                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Image Scan (400 PTS)</span>
                             </div>
-                            <button onClick={() => setImageFile(null)} className="p-2 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-full transition-colors">
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
+                            <button onClick={() => setImageFile(null)} className="p-1 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-full"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M6 18L18 6M6 6l12 12" /></svg></button>
                         </div>
                     )}
                     <form onSubmit={handleSend} className="flex items-end gap-2">
-                        <button 
-                            type="button" 
-                            onClick={() => fileInputRef.current?.click()}
-                            className="p-3.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors active:scale-90"
-                            title="Analyze Image"
-                        >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors shrink-0">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         </button>
                         <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && setImageFile(e.target.files[0])} />
-                        
-                        <div className="flex-1 relative">
-                            <textarea 
-                                value={input}
-                                onChange={e => setInput(e.target.value)}
-                                onKeyDown={e => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                        e.preventDefault();
-                                        handleSend();
-                                    }
-                                }}
-                                placeholder={`Ask Bee... (10 pts)`}
-                                className="w-full bg-slate-100 dark:bg-slate-800 rounded-2xl px-5 py-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none max-h-32 text-sm dark:text-white shadow-inner transition-all scrollbar-hide border border-transparent focus:border-indigo-200"
-                                rows={1}
-                            />
-                        </div>
-                        
-                        <button 
-                            type="submit" 
-                            disabled={isLoading || (!input.trim() && !imageFile)}
-                            className="p-3.5 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:opacity-30 transition-all shadow-lg active:scale-95 group"
-                        >
-                            {isLoading ? (
-                                <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
-                            ) : (
-                                <svg className="w-5 h-5 translate-x-0.5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                            )}
+                        <textarea 
+                            value={input}
+                            onChange={e => setInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                            placeholder="Ask Bee..."
+                            className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-2xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none max-h-32 text-sm dark:text-white transition-all shadow-inner border border-transparent"
+                            rows={1}
+                        />
+                        <button type="submit" disabled={isLoading || (!input.trim() && !imageFile)} className="p-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:opacity-30 transition-all shadow-lg shrink-0">
+                            {isLoading ? <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin"></div> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>}
                         </button>
                     </form>
                 </div>
