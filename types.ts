@@ -42,6 +42,7 @@ export interface Lecturer {
   title: string;
   imageUrl?: string;
   specialization?: string;
+  order?: number;
 }
 
 export interface GalleryItem {
