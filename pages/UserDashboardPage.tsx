@@ -24,7 +24,14 @@ export const UserDashboardPage: React.FC = () => {
   const [recommendedQuestions, setRecommendedQuestions] = useState<PastQuestion[]>([]);
   const [showLinkBanner, setShowLinkBanner] = useState(true);
 
-  // Check if user is using a stock avatar (from the Unsplash pool)
+  // Safety Check: If RequireAuth hasn't finished its job yet
+  if (!user) return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+  );
+
+  // Check if user is using a stock avatar
   const isStockAvatar = user?.avatarUrl?.includes('unsplash.com') || !user?.avatarUrl;
 
   useEffect(() => {
@@ -48,7 +55,7 @@ export const UserDashboardPage: React.FC = () => {
 
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const prompt = "Generate a single, unique, and insightful quote about finance, investing, or wealth. The quote should be inspiring, concise (under 25 words), and suitable for a university students' dashboard. Do not include author attribution.";
+            const prompt = "Generate a single, unique, and insightful quote about finance, investing, or wealth. Concise (under 25 words). Do not include author.";
             const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
             const newQuote = result.text.trim().replace(/^"|"$/g, '');
             setQuote(newQuote || "The best investment you can make is in yourself.");
@@ -83,20 +90,21 @@ export const UserDashboardPage: React.FC = () => {
               news.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
               setRecentNews(news.slice(0, 3));
 
-              const levelQuery = query(collection(db, 'questions'), where('status', '==', 'approved'), where('level', '==', user.level), limit(5));
-              const levelSnap = await getDocs(levelQuery);
-              setRecommendedQuestions(levelSnap.docs.map(d => ({ id: d.id, ...d.data() } as PastQuestion)));
+              // Safe check for level before querying
+              if (user.level) {
+                const levelQuery = query(collection(db, 'questions'), where('status', '==', 'approved'), where('level', '==', user.level), limit(5));
+                const levelSnap = await getDocs(levelQuery);
+                setRecommendedQuestions(levelSnap.docs.map(d => ({ id: d.id, ...d.data() } as PastQuestion)));
+              }
           } catch (e) {
               console.error(e);
           } finally {
               setLoading(false);
           }
       };
-      if (user?.id) fetchData();
+      fetchData();
   }, [user?.id, user?.level]);
 
-  if (!user || !auth) return null;
-  
   const { isPasswordAccount, isGoogleAccount, linkGoogleAccount } = auth;
   const topBadge = (user.badges || []).map(getBadge).filter(b => b).sort((a, b) => b!.rank - a!.rank)[0];
 
@@ -104,7 +112,6 @@ export const UserDashboardPage: React.FC = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 font-sans transition-colors p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
           
-          {/* PROFILE PERSONALIZATION PROMPT */}
           {isStockAvatar && (
             <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in shadow-xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-700">
@@ -145,10 +152,10 @@ export const UserDashboardPage: React.FC = () => {
                   <div className="text-center md:text-left">
                       <div className="flex flex-col md:flex-row items-center gap-5 mb-5">
                           <div className="w-20 h-20 rounded-[1.5rem] border-2 border-white/20 overflow-hidden bg-white/10 backdrop-blur-xl shadow-2xl">
-                              {user.avatarUrl ? <img src={user.avatarUrl} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full font-black text-2xl">{user.name.charAt(0)}</div>}
+                              {user.avatarUrl ? <img src={user.avatarUrl} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full font-black text-2xl">{user.name?.charAt(0) || 'U'}</div>}
                           </div>
                           <div>
-                              <p className="text-indigo-300 text-xs font-black tracking-[0.2em] uppercase mb-1">{user.level} Level Finance Student</p>
+                              <p className="text-indigo-300 text-xs font-black tracking-[0.2em] uppercase mb-1">{user.level || '?' } Level Finance Student</p>
                               <div className="flex items-center justify-center md:justify-start gap-2">
                                   <span className="font-bold text-2xl text-white">{user.name}</span>
                                   <VerificationBadge role={user.role} isVerified={user.isVerified} className="w-6 h-6 text-white" />
@@ -203,7 +210,7 @@ export const UserDashboardPage: React.FC = () => {
               <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-center items-center animate-slide-in-up">
                   <h3 className="font-black text-slate-900 dark:text-white mb-6 text-xs uppercase tracking-widest w-full text-left">Academic Rank</h3>
                   <div className="relative w-32 h-32 flex items-center justify-center mb-4">
-                      <svg className="w-full h-full transform -rotate-90"><circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-slate-100 dark:text-slate-800" /><circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray={351.8} strokeDashoffset={351.8 - (351.8 * avgScore) / 100} className={`text-indigo-600 dark:text-indigo-500 transition-all duration-1000 ease-out`} /></svg>
+                      <svg className="w-full h-full transform -rotate-90"><circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth={12} fill="transparent" className="text-slate-100 dark:text-slate-800" /><circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth={12} fill="transparent" strokeDasharray={351.8} strokeDashoffset={351.8 - (351.8 * avgScore) / 100} className={`text-indigo-600 dark:text-indigo-500 transition-all duration-1000 ease-out`} /></svg>
                       <span className="absolute text-3xl font-black text-slate-900 dark:text-white">{loading ? '...' : `${avgScore}%`}</span>
                   </div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Proficiency Index</p>

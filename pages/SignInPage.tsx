@@ -17,10 +17,19 @@ export const SignInPage: React.FC = () => {
 
     // EFFECT: Instantly take authenticated users to dashboard
     useEffect(() => {
-        if (authCtx?.user) {
+        if (!authCtx?.loading && authCtx?.user) {
             navigate('/dashboard', { replace: true });
         }
-    }, [authCtx?.user, navigate]);
+    }, [authCtx?.user, authCtx?.loading, navigate]);
+
+    // If still determining auth status, show a minimal loader to prevent UI flickering
+    if (authCtx?.loading) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -29,19 +38,21 @@ export const SignInPage: React.FC = () => {
         setLoading(true);
         try {
             await authCtx?.login(email, password);
-            // Navigation is handled by the useEffect above for better reliability
-            // but we keep it here as a fallback for immediate transition
+            // On success, the useEffect above will handle redirection automatically
+            // but we call it here too as a fallback for faster transition
             navigate('/dashboard', { replace: true });
         } catch (err: any) {
             console.error("Login attempt failed:", err.code);
-            // Explicit error handling for invalid credentials
+            let message = "Authentication failed. Please check your credentials.";
+            
             if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-                showNotification("Invalid credentials. Account not found or password incorrect.", "error");
-            } else {
-                showNotification("Authentication system error. Please try again.", "error");
+                message = "Invalid credentials. Account not found or password incorrect.";
+            } else if (err.code === 'auth/too-many-requests') {
+                message = "Too many failed attempts. Please try again later.";
             }
-        } finally {
-            setLoading(false);
+            
+            showNotification(message, "error");
+            setLoading(false); // Reset loading so user can try again
         }
     };
 
@@ -56,8 +67,6 @@ export const SignInPage: React.FC = () => {
                 navigate('/dashboard', { replace: true });
             }
         } catch (err) {
-            // Notification handled in context
-        } finally {
             setLoading(false);
         }
     };
