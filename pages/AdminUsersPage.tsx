@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, updateDoc, doc, addDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
 import { AuthContext } from '../contexts/AuthContext';
 import { VerificationBadge } from '../components/VerificationBadge';
+import { User } from '../types';
 
 const ALLOWED_ROLES = ['student', 'executive', 'lecturer', 'admin', 'librarian', 'vice_president', 'supplement'];
 
@@ -15,13 +15,13 @@ export const AdminUsersPage: React.FC = () => {
   const isSupplement = role === 'supplement';
   const hasWriteAccess = isSuperAdmin || isSupplement;
 
-  const [users, setUsers] = useState<any[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { showNotification } = useNotification();
   
-  const [promoUser, setPromoUser] = useState<any>(null);
+  const [promoUser, setPromoUser] = useState<User | null>(null);
   const [promoRole, setPromoRole] = useState('');
   const [promoDetails, setPromoDetails] = useState({ title: '', level: '100' });
 
@@ -33,7 +33,7 @@ export const AdminUsersPage: React.FC = () => {
           (u.name?.toLowerCase().includes(lower)) ||
           (u.email?.toLowerCase().includes(lower)) ||
           (u.username?.toLowerCase().includes(lower)) ||
-          (u.matricNumber?.includes(lower))
+          (u.matricNumber?.toLowerCase().includes(lower))
       ));
   }, [searchTerm, users]);
 
@@ -41,14 +41,16 @@ export const AdminUsersPage: React.FC = () => {
       setLoading(true);
       try {
           const snap = await getDocs(collection(db, 'users'));
-          const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-          data.sort((a, b) => b.contributionPoints - a.contributionPoints);
+          const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as User));
+          data.sort((a, b) => (b.contributionPoints || 0) - (a.contributionPoints || 0));
           setUsers(data);
           setFilteredUsers(data);
+      } catch (e) {
+          showNotification("Failed to fetch users", "error");
       } finally { setLoading(false); }
   };
 
-  const handleRoleChange = (user: any, newRole: string) => {
+  const handleRoleChange = (user: User, newRole: string) => {
       if (!isSuperAdmin) { showNotification("Unauthorized", "error"); return; }
       if (newRole === 'executive' || newRole === 'lecturer') {
           setPromoUser(user);
@@ -57,7 +59,7 @@ export const AdminUsersPage: React.FC = () => {
   };
 
   const confirmPromotion = async () => {
-      if (!promoDetails.title) return;
+      if (!promoUser || !promoDetails.title) return;
       try {
           await updateUserRole(promoUser.id, promoRole);
           const col = promoRole === 'executive' ? 'executives' : 'lecturers';
@@ -72,20 +74,20 @@ export const AdminUsersPage: React.FC = () => {
 
   const updateUserRole = async (uid: string, newRole: string) => {
       try {
-          await updateDoc(doc(db, 'users', uid), { role: newRole });
-          setUsers(prev => prev.map(u => u.id === uid ? { ...u, role: newRole } : u));
+          await updateDoc(doc(db, 'users', uid), { role: newRole as any });
+          setUsers(prev => prev.map(u => u.id === uid ? { ...u, role: newRole as any } : u));
           showNotification("Permissions updated.", "success");
       } catch (e) { showNotification("Action failed", "error"); }
   };
 
-  const handleVerifyToggle = async (user: any) => {
+  const handleVerifyToggle = async (user: User) => {
       if (!hasWriteAccess) return;
       const newValue = !user.isVerified;
       try {
           await updateDoc(doc(db, 'users', user.id), { isVerified: newValue });
           setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isVerified: newValue } : u));
           showNotification(newValue ? "Verified" : "Unverified", "success");
-      } catch (e) { showNotification("Failed", "error"); }
+      } catch (e) { showNotification("Failed to update status", "error"); }
   };
 
   return (
