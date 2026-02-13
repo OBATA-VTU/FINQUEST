@@ -1,4 +1,3 @@
-
 import React, { useState, useContext, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
@@ -28,6 +27,13 @@ export const SignUpPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [checkingUsername, setCheckingUsername] = useState(false);
     const [usernameStatus, setUsernameStatus] = useState<'available' | 'taken' | 'short' | null>(null);
+
+    // EFFECT: Instantly take authenticated users to dashboard if they reach this page
+    useEffect(() => {
+        if (auth?.user) {
+            navigate('/dashboard', { replace: true });
+        }
+    }, [auth?.user, navigate]);
 
     // Debounced Username Check
     useEffect(() => {
@@ -68,7 +74,7 @@ export const SignUpPage: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (usernameStatus !== 'available' || !isIdValid) return;
+        if (usernameStatus !== 'available' || !isIdValid || loading) return;
         
         setLoading(true);
         try {
@@ -78,7 +84,7 @@ export const SignUpPage: React.FC = () => {
                 pass: googleAuthData ? undefined : formData.password,
                 googleUid: googleAuthData?.uid
             });
-            navigate('/dashboard');
+            navigate('/dashboard', { replace: true });
         } catch (err) {
             // Handled by context notifications
         } finally {
@@ -87,6 +93,7 @@ export const SignUpPage: React.FC = () => {
     };
 
     const handleGoogleSignUp = async () => {
+        if (loading) return;
         setLoading(true);
         try {
             const result = await auth?.loginWithGoogle();
@@ -98,7 +105,7 @@ export const SignUpPage: React.FC = () => {
                     email: result.googleUser.email || prev.email,
                 }));
             } else {
-                navigate('/dashboard');
+                navigate('/dashboard', { replace: true });
             }
         } catch (err) {
             // Handled by context notifications

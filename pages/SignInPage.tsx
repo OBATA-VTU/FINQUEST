@@ -1,5 +1,4 @@
-
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { Logo } from '../components/Logo';
@@ -16,30 +15,51 @@ export const SignInPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [view, setView] = useState<'login' | 'forgot'>('login');
 
+    // EFFECT: Instantly take authenticated users to dashboard
+    useEffect(() => {
+        if (authCtx?.user) {
+            navigate('/dashboard', { replace: true });
+        }
+    }, [authCtx?.user, navigate]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (loading) return;
+        
         setLoading(true);
         try {
             await authCtx?.login(email, password);
-            navigate('/dashboard');
+            // Navigation is handled by the useEffect above for better reliability
+            // but we keep it here as a fallback for immediate transition
+            navigate('/dashboard', { replace: true });
         } catch (err: any) {
-            // Context handles generic display, but we can add specific ones here if needed
+            console.error("Login attempt failed:", err.code);
+            // Explicit error handling for invalid credentials
+            if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+                showNotification("Invalid credentials. Account not found or password incorrect.", "error");
+            } else {
+                showNotification("Authentication system error. Please try again.", "error");
+            }
         } finally {
             setLoading(false);
         }
     };
 
     const handleGoogleLogin = async () => {
+        if (loading) return;
         setLoading(true);
         try {
             const result = await authCtx!.loginWithGoogle();
             if (result?.needsProfileCompletion) {
                 navigate('/signup', { state: { googleUser: result.googleUser } });
             } else {
-                navigate('/dashboard');
+                navigate('/dashboard', { replace: true });
             }
-        } catch (err) {} 
-        finally { setLoading(false); }
+        } catch (err) {
+            // Notification handled in context
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleResetPassword = async (e: React.FormEvent) => {
