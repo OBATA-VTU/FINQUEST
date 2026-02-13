@@ -16,11 +16,14 @@ interface ErrorBoundaryState {
 // Use React.Component to ensure props and state are correctly inherited and recognized by TypeScript.
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   
-  // Standard state initialization for React class components in TypeScript.
-  public state: ErrorBoundaryState = {
-    hasError: false,
-    error: null,
-  };
+  // Fix: Explicitly define the constructor and call super(props) to ensure this.props is correctly typed and available.
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+    };
+  }
 
   // Static method to update state so the next render will show the fallback UI.
   public static getDerivedStateFromError(error: Error): ErrorBoundaryState {

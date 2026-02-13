@@ -1,27 +1,26 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
-import { collection, getDocs, query, where, addDoc, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, addDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useNavigate, Link } from 'react-router-dom';
 import { useNotification } from '../contexts/NotificationContext';
 import { AuthContext } from '../contexts/AuthContext';
+import { AiSettings } from '../types';
 
 export const AdminPage: React.FC = () => {
-  const navigate = useNavigate();
   const auth = useContext(AuthContext);
   const { showNotification } = useNotification();
-  const [stats, setStats] = useState({ users: 0, activeUsers: 0, pendingMaterials: 0, materials: 0, pendingLostFound: 0 });
+  const [stats, setStats] = useState({ users: 0, activeUsers: 0, pendingMaterials: 0, materials: 0, aiCalls: 0 });
+  const [aiSettings, setAiSettings] = useState<AiSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
   const [broadcastMsg, setBroadcastMsg] = useState('');
   const [broadcastTitle, setBroadcastTitle] = useState('Global Announcement');
 
-  const role = auth?.user?.role || 'student';
-
   useEffect(() => {
     const fetchStats = async () => {
         setLoading(true);
         try {
-            // Fetch Users and filter for 24h activity
             const uSnap = await getDocs(collection(db, 'users'));
             const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
             const activeCount = uSnap.docs.filter(doc => {
@@ -29,19 +28,24 @@ export const AdminPage: React.FC = () => {
                 return data.lastActive && new Date(data.lastActive).getTime() > twentyFourHoursAgo;
             }).length;
             
-            // Fetch Materials
             const qSnap = await getDocs(query(collection(db, 'questions'), where('status', '==', 'approved')));
             const pMatSnap = await getDocs(query(collection(db, 'questions'), where('status', '==', 'pending')));
             
-            // Fetch Lost Items
-            const pLostSnap = await getDocs(query(collection(db, 'lost_items'), where('status', '==', 'pending')));
+            // AI Stats
+            const aiSnap = await getDoc(doc(db, 'system_stats', 'ai_usage'));
+            const aiData = aiSnap.exists() ? aiSnap.data() : { total_calls: 0 };
+
+            // AI Status
+            const statusSnap = await getDoc(doc(db, 'config', 'ai_settings'));
+            if (statusSnap.exists()) setAiSettings(statusSnap.data() as AiSettings);
+            else setAiSettings({ isAvailable: true });
 
             setStats({
                 users: uSnap.size,
                 activeUsers: activeCount,
                 materials: qSnap.size,
                 pendingMaterials: pMatSnap.size,
-                pendingLostFound: pLostSnap.size
+                aiCalls: aiData.total_calls || 0
             });
         } catch (error) {
             console.error("Failed to fetch admin stats:", error);
@@ -51,6 +55,18 @@ export const AdminPage: React.FC = () => {
     };
     fetchStats();
   }, []);
+
+  const handleToggleAi = async () => {
+      const newState = !aiSettings?.isAvailable;
+      try {
+          await updateDoc(doc(db, 'config', 'ai_settings'), {
+              isAvailable: newState,
+              shutdownReason: newState ? "" : "Manual Shutdown by Admin"
+          });
+          setAiSettings(prev => prev ? { ...prev, isAvailable: newState } : null);
+          showNotification(`AI System is now ${newState ? 'Online' : 'Offline'}`, "success");
+      } catch (e) { showNotification("Failed to toggle AI", "error"); }
+  };
 
   const handleBroadcast = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -114,27 +130,34 @@ export const AdminPage: React.FC = () => {
             <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 p-8 shadow-sm">
                 <h3 className="font-bold text-lg mb-6 text-slate-800 dark:text-white flex items-center gap-2">
                     <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
-                    Quick Management
+                    AI System Management
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Link to="/admin/news" className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-2xl flex items-center gap-4 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
-                        <div className="w-10 h-10 bg-white dark:bg-slate-600 rounded-xl flex items-center justify-center text-indigo-600 shadow-sm">
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="p-6 bg-slate-50 dark:bg-slate-700/50 rounded-2xl flex flex-col gap-4">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <p className="font-black text-slate-900 dark:text-white">Bee Engine Status</p>
+                                <p className="text-xs text-slate-500">Service availability control</p>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${aiSettings?.isAvailable ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                                {aiSettings?.isAvailable ? 'Online' : 'Offline'}
+                            </span>
                         </div>
-                        <div>
-                            <p className="font-bold text-slate-800 dark:text-white">Announcements</p>
-                            <p className="text-xs text-slate-500">Post news and updates</p>
-                        </div>
-                    </Link>
-                    <Link to="/admin/executives" className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-2xl flex items-center gap-4 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
-                        <div className="w-10 h-10 bg-white dark:bg-slate-600 rounded-xl flex items-center justify-center text-rose-600 shadow-sm">
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                        </div>
-                        <div>
-                            <p className="font-bold text-slate-800 dark:text-white">Executives</p>
-                            <p className="text-xs text-slate-500">Manage council directory</p>
-                        </div>
-                    </Link>
+                        <button 
+                            onClick={handleToggleAi}
+                            className={`w-full py-3 rounded-xl font-bold text-xs transition-all ${aiSettings?.isAvailable ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                        >
+                            {aiSettings?.isAvailable ? 'Emergency Shutdown' : 'Re-activate AI System'}
+                        </button>
+                        {!aiSettings?.isAvailable && aiSettings?.shutdownReason && (
+                            <p className="text-[10px] text-rose-500 font-bold italic">Note: {aiSettings.shutdownReason}</p>
+                        )}
+                    </div>
+                    <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl flex flex-col justify-center">
+                        <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1">AI Usage Intel</p>
+                        <p className="text-3xl font-black text-indigo-700 dark:text-indigo-300">{stats.aiCalls.toLocaleString()}</p>
+                        <p className="text-[10px] text-indigo-500/60 font-bold uppercase mt-1">Total lifetime requests processed</p>
+                    </div>
                 </div>
             </div>
 
@@ -148,7 +171,9 @@ export const AdminPage: React.FC = () => {
                     </div>
                     <div className="flex justify-between items-center">
                         <span className="text-indigo-300 text-sm">Cloud AI</span>
-                        <span className="text-emerald-400 font-bold text-sm">Ready</span>
+                        <span className={`font-bold text-sm ${aiSettings?.isAvailable ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {aiSettings?.isAvailable ? 'Ready' : 'Resting'}
+                        </span>
                     </div>
                 </div>
             </div>

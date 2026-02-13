@@ -4,8 +4,8 @@ import { AuthContext } from '../contexts/AuthContext';
 import { GoogleGenAI } from "@google/genai";
 import { useNotification } from '../contexts/NotificationContext';
 import { db } from '../firebase';
-import { doc, updateDoc, collection, query, orderBy, limit, getDocs, where, or } from 'firebase/firestore';
-import { Announcement, Executive, Lecturer, User } from '../types';
+import { doc, updateDoc, collection, getDocs, getDoc, setDoc } from 'firebase/firestore';
+import { Executive, Lecturer, User, AiSettings } from '../types';
 
 interface ChatMessage {
     role: 'user' | 'bee';
@@ -57,10 +57,28 @@ export const AIPage: React.FC = () => {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [imageFile, setImageFile] = useState<File | null>(null);
+    const [aiStatus, setAiStatus] = useState<AiSettings | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const user = auth?.user;
+
+    useEffect(() => {
+        const fetchAiStatus = async () => {
+            try {
+                const statusDoc = await getDoc(doc(db, 'config', 'ai_settings'));
+                if (statusDoc.exists()) {
+                    setAiStatus(statusDoc.data() as AiSettings);
+                } else {
+                    setAiStatus({ isAvailable: true });
+                }
+            } catch (e) {
+                console.error("Failed to fetch AI status", e);
+                setAiStatus({ isAvailable: true });
+            }
+        };
+        fetchAiStatus();
+    }, []);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -69,7 +87,6 @@ export const AIPage: React.FC = () => {
     }, [messages, isLoading]);
 
     const performDeepSearch = async (queryText: string) => {
-        const lowerQuery = queryText.toLowerCase();
         const nameMatch = queryText.match(/(?:who is|about|know|search for)\s+([a-zA-Z\s]+)/i);
         const searchName = nameMatch ? nameMatch[1].trim() : queryText.trim();
         if (searchName.length < 2) return null;
@@ -119,6 +136,10 @@ export const AIPage: React.FC = () => {
     const handleSend = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!user || (!input.trim() && !imageFile) || isLoading) return;
+        if (aiStatus && !aiStatus.isAvailable) {
+            showNotification("Bee is currently offline for maintenance.", "warning");
+            return;
+        }
 
         const creditCost = imageFile ? 400 : 30;
         const currentCredits = user.aiCredits ?? 0;
@@ -149,10 +170,6 @@ export const AIPage: React.FC = () => {
                 });
             }
 
-            const newCredits = Math.max(0, currentCredits - creditCost);
-            await updateDoc(doc(db, 'users', user.id), { aiCredits: newCredits });
-            auth?.updateUser({ aiCredits: newCredits });
-
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const result = await ai.models.generateContentStream({
                 model: 'gemini-3-flash-preview',
@@ -177,7 +194,17 @@ export const AIPage: React.FC = () => {
             setMessages(prev => [...prev, beeMsg]);
 
             let fullText = '';
+            let deductionDone = false;
+
             for await (const chunk of result) {
+                // Deduct credits ONLY on the first successful chunk received
+                if (!deductionDone) {
+                    const newCredits = Math.max(0, currentCredits - creditCost);
+                    await updateDoc(doc(db, 'users', user.id), { aiCredits: newCredits });
+                    auth?.updateUser({ aiCredits: newCredits });
+                    deductionDone = true;
+                }
+
                 const chunkText = chunk.text;
                 if (chunkText) {
                     fullText += chunkText;
@@ -195,9 +222,45 @@ export const AIPage: React.FC = () => {
                 if (last && last.role === 'bee') last.isStreaming = false;
                 return newMsgs;
             });
-        } catch (error) { showNotification("Bee engine encountered an issue.", "error"); }
+        } catch (error: any) {
+            console.error("AI Error:", error);
+            
+            // Check for exhaustion (429 or quota exceeded message)
+            const errorMessage = error.message?.toLowerCase() || "";
+            if (errorMessage.includes("quota") || errorMessage.includes("429") || errorMessage.includes("limit reached")) {
+                showNotification("Bee's API Key is exhausted. System shutting down for all users.", "error");
+                await setDoc(doc(db, 'config', 'ai_settings'), {
+                    isAvailable: false,
+                    shutdownReason: "API Quota Exhausted",
+                    lastExhaustionDate: new Date().toISOString()
+                }, { merge: true });
+                setAiStatus({ isAvailable: false });
+            } else {
+                showNotification("Bee engine encountered an issue. Credits not deducted.", "error");
+            }
+
+            // Remove the empty bot message if it was added
+            setMessages(prev => prev.filter(m => m.role !== 'bee' || m.text !== ''));
+        }
         finally { setIsLoading(false); }
     };
+
+    if (aiStatus && !aiStatus.isAvailable) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full bg-slate-50 dark:bg-slate-950 p-10 text-center animate-fade-in">
+                <div className="w-24 h-24 bg-rose-100 dark:bg-rose-900/30 rounded-full flex items-center justify-center text-rose-500 mb-8 border-4 border-rose-200 dark:border-rose-800">
+                    <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                </div>
+                <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-4">Bee is Resting</h1>
+                <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+                    Our AI service is temporarily unavailable due to API quota exhaustion or scheduled maintenance. Please check back later or contact the admin.
+                </p>
+                <div className="mt-8 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    Status: Offline • Reason: {aiStatus.shutdownReason || 'API Key Exhausted'}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 transition-colors overflow-hidden relative">
@@ -213,7 +276,7 @@ export const AIPage: React.FC = () => {
                     </div>
                 </div>
                 <div className="bg-indigo-50 dark:bg-indigo-900/50 px-3 py-1.5 rounded-full border border-indigo-100 dark:border-indigo-800 flex items-center gap-1.5">
-                    <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                     <span className="text-[10px] font-black text-indigo-700 dark:text-indigo-300">{user?.aiCredits ?? 0}</span>
                 </div>
             </div>
@@ -246,12 +309,12 @@ export const AIPage: React.FC = () => {
                                 <img src={URL.createObjectURL(imageFile)} className="w-8 h-8 object-cover rounded-lg" alt="Preview" />
                                 <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Image Analysis</span>
                             </div>
-                            <button onClick={() => setImageFile(null)} className="p-1 text-rose-500 hover:bg-rose-100 rounded-full"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M6 18L18 6M6 6l12 12" /></svg></button>
+                            <button onClick={() => setImageFile(null)} className="p-1 text-rose-500 hover:bg-rose-100 rounded-full"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M6 18L18 6M6 6l12 12" /></svg></button>
                         </div>
                     )}
                     <form onSubmit={handleSend} className="flex items-end gap-2">
                         <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors shrink-0">
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         </button>
                         <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && setImageFile(e.target.files[0])} />
                         <textarea 
@@ -263,7 +326,7 @@ export const AIPage: React.FC = () => {
                             rows={1}
                         />
                         <button type="submit" disabled={isLoading || (!input.trim() && !imageFile)} className="p-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:opacity-30 transition-all shadow-lg shrink-0 active:scale-95">
-                            {isLoading ? <div className="w-6 h-6 border-2 border-white/50 border-t-white rounded-full animate-spin"></div> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>}
+                            {isLoading ? <div className="w-6 h-6 border-2 border-white/50 border-t-white rounded-full animate-spin"></div> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>}
                         </button>
                     </form>
                 </div>

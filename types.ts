@@ -1,5 +1,4 @@
 
-
 export type Level = 100 | 200 | 300 | 400 | 'General';
 
 export type Page = 'home' | 'questions' | 'executives' | 'lecturers' | 'announcements' | 'login' | 'admin' | 'profile' | 'community' | 'ai';
@@ -26,7 +25,6 @@ export interface PastQuestion {
   category?: "Past Question" | "Lecture Note" | "Handout" | "Textbook" | "Test Question" | "Other";
 }
 
-// Added Missing Exported Member: Executive
 export interface Executive {
   id: string;
   name: string;
@@ -38,7 +36,6 @@ export interface Executive {
   email?: string;
 }
 
-// Added Missing Exported Member: Lecturer
 export interface Lecturer {
   id: string;
   name: string;
@@ -47,7 +44,6 @@ export interface Lecturer {
   specialization?: string;
 }
 
-// Added Missing Exported Member: GalleryItem
 export interface GalleryItem {
   id: string;
   imageUrl: string;
@@ -55,7 +51,6 @@ export interface GalleryItem {
   date: string;
 }
 
-// Added Missing Exported Member: CommunityGroup
 export interface CommunityGroup {
   id: string;
   name: string;
@@ -64,7 +59,6 @@ export interface CommunityGroup {
   description: string;
 }
 
-// Added Missing Exported Member: PendingQuestion
 export type PendingQuestion = PastQuestion;
 
 export interface Announcement {
@@ -92,14 +86,20 @@ export interface User {
   isVerified?: boolean;
   isBanned?: boolean;
   banUntil?: string;
-  aiCredits?: number; // Added: Daily pool (1000)
-  lastCreditRefreshDate?: string; // Added: YYYY-MM-DD
+  aiCredits?: number; 
+  lastCreditRefreshDate?: string; 
   aiImageCount?: number; 
   lastAiImageDate?: string; 
   badges?: string[];
   viewedSessionWrapTimestamp?: string;
   infractionCount?: number;
   chatBanUntil?: string;
+}
+
+export interface AiSettings {
+  isAvailable: boolean;
+  shutdownReason?: string;
+  lastExhaustionDate?: string;
 }
 
 export interface TestResult {
