@@ -1,4 +1,3 @@
-
 import React, { useContext, useEffect, useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
@@ -83,6 +82,15 @@ const RequireAuth = ({ children, adminOnly = false }: { children?: React.ReactNo
 const AppContent: React.FC = () => {
   const auth = useContext(AuthContext);
   const [sessionWrapInfo, setSessionWrapInfo] = useState<{ start: string; end: string; session: string } | null>(null);
+
+  useEffect(() => {
+    // Once the AppContent is mounted, dismiss the pre-loader
+    const loader = document.getElementById('pre-loader');
+    if (loader) {
+      loader.classList.add('fade-out');
+      setTimeout(() => loader.remove(), 600);
+    }
+  }, []);
 
   useEffect(() => {
     if (!auth?.user?.id) return;

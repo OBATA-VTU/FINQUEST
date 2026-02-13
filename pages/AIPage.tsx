@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { GoogleGenAI } from "@google/genai";
@@ -80,11 +79,11 @@ export const AIPage: React.FC = () => {
         };
         fetchAiStatus();
         
-        // Calculate time until next UTC midnight (roughly when Google resets quotas)
+        // Calculate time until next UTC midnight (typically when free tier resets)
         const calculateResetTime = () => {
             const now = new Date();
             const tomorrow = new Date(now);
-            tomorrow.setUTCHours(24, 0, 0, 0);
+            tomorrow.setUTCHours(24, 0, 0, 0); // Next UTC midnight
             const diff = tomorrow.getTime() - now.getTime();
             const hours = Math.floor(diff / (1000 * 60 * 60));
             const minutes = Math.floor((diff / (1000 * 60)) % 60);
@@ -240,15 +239,15 @@ export const AIPage: React.FC = () => {
             console.error("AI Error:", error);
             const errorMessage = error.message?.toLowerCase() || "";
             if (errorMessage.includes("quota") || errorMessage.includes("429") || errorMessage.includes("limit reached")) {
-                showNotification("Bee's API Key is exhausted. System shutting down for all users.", "error");
+                showNotification("Bee's API Key is exhausted.", "error");
                 await setDoc(doc(db, 'config', 'ai_settings'), {
                     isAvailable: false,
-                    shutdownReason: "API Quota Exhausted",
+                    shutdownReason: "Daily Quota Exhausted",
                     lastExhaustionDate: new Date().toISOString()
                 }, { merge: true });
-                setAiStatus({ isAvailable: false, shutdownReason: "API Quota Exhausted" });
+                setAiStatus({ isAvailable: false, shutdownReason: "Daily Quota Exhausted" });
             } else {
-                showNotification("Bee engine encountered an issue. Credits not deducted.", "error");
+                showNotification("Bee engine encountered an issue.", "error");
             }
             setMessages(prev => prev.filter(m => m.role !== 'bee' || m.text !== ''));
         }
@@ -258,19 +257,19 @@ export const AIPage: React.FC = () => {
     if (aiStatus && !aiStatus.isAvailable) {
         return (
             <div className="flex flex-col items-center justify-center h-full bg-slate-50 dark:bg-slate-950 p-10 text-center animate-fade-in transition-colors">
-                <div className="w-32 h-32 bg-rose-100 dark:bg-rose-900/30 rounded-[3rem] flex items-center justify-center text-rose-500 mb-10 border-4 border-rose-200 dark:border-rose-800 shadow-2xl animate-pulse">
-                    <svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                <div className="w-40 h-40 bg-rose-100 dark:bg-rose-900/30 rounded-[3.5rem] flex items-center justify-center text-rose-500 mb-10 border-4 border-rose-200 dark:border-rose-800 shadow-3xl animate-pulse">
+                    <img src="/logo.svg" alt="FINSA" className="w-24 h-24 filter brightness-110" />
                 </div>
-                <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-4 uppercase tracking-tighter">CREDITS EXHAUSTED</h1>
-                <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed font-bold uppercase tracking-widest text-xs">
-                    The departmental AI engine has reached its daily intelligence quota. 
+                <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-4 uppercase tracking-tighter">CREDITS EXHAUSTED</h1>
+                <p className="text-slate-600 dark:text-slate-400 max-w-sm mx-auto leading-relaxed font-bold uppercase tracking-[0.2em] text-sm mb-12">
+                    The AI engine has reached its maximum daily capacity. 
                 </p>
-                <div className="mt-12 space-y-4">
-                    <div className="px-10 py-5 bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl inline-block">
-                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em] mb-2">CHECK BACK IN</p>
-                        <p className="text-3xl font-black text-slate-900 dark:text-white font-mono">{timeUntilReset}</p>
+                <div className="space-y-6">
+                    <div className="px-12 py-8 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-200 dark:border-slate-800 shadow-2xl inline-block transition-transform hover:scale-105">
+                        <p className="text-[11px] font-black text-indigo-500 uppercase tracking-[0.4em] mb-4">CHECK BACK IN</p>
+                        <p className="text-5xl font-black text-slate-900 dark:text-white font-mono tracking-tighter">{timeUntilReset}</p>
                     </div>
-                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Global Reset occurs at 00:00 UTC</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-[0.3em] block">Refilling at 00:00 UTC Daily</p>
                 </div>
             </div>
         );
