@@ -52,7 +52,7 @@ export const AdminLecturersPage: React.FC = () => {
           const payload = { ...formData };
           if (formFile) payload.imageUrl = await uploadToImgBB(formFile);
           
-          // Ensure order is a number
+          // Double check order is a number
           if (payload.order !== undefined) payload.order = Number(payload.order);
 
           if (editingItem) await updateDoc(doc(db, 'lecturers', editingItem.id), payload);
@@ -111,7 +111,14 @@ export const AdminLecturersPage: React.FC = () => {
                         <div className="grid grid-cols-1 gap-5">
                             <div>
                                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Profile Hierarchy (Order)</label>
-                                <input type="number" className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold dark:text-white" value={formData.order || ''} onChange={e => setFormData({...formData, order: e.target.value})} placeholder="e.g. 1 for Head of Department" required />
+                                <input 
+                                    type="number" 
+                                    className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold dark:text-white" 
+                                    value={formData.order ?? ''} 
+                                    onChange={e => setFormData({...formData, order: e.target.value ? Number(e.target.value) : undefined})} 
+                                    placeholder="e.g. 1 for Head of Department" 
+                                    required 
+                                />
                                 <p className="text-[9px] text-slate-400 mt-2 ml-1 font-medium">Controls the position on the registry. Lower numbers (1, 2, 3...) appear first.</p>
                             </div>
                             <div>

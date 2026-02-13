@@ -1,4 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+
+import React, { ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -13,18 +14,16 @@ interface ErrorBoundaryState {
  * ErrorBoundary component to catch JavaScript errors anywhere in their child component tree,
  * log those errors, and display a fallback UI instead of the component tree that crashed.
  */
-// FIX: Using React.Component explicitly to ensure instance properties like 'props' and 'state' are correctly inherited and recognized by the TypeScript compiler.
+// FIX: Extending React.Component directly to ensure proper type inheritance of 'props' and 'state' in TypeScript.
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   
-  // Explicitly initializing state as a class property to ensure it is correctly typed.
-  public state: ErrorBoundaryState = {
-    hasError: false,
-    error: null,
-  };
-
-  // Constructor ensures props are correctly passed to the base Component class.
+  // FIX: Explicitly initializing state in a constructor to ensure 'this' is correctly typed as the component instance.
   constructor(props: ErrorBoundaryProps) {
     super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+    };
   }
 
   // Static method to update state so the next render will show the fallback UI.
@@ -38,12 +37,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   public render(): ReactNode {
-    // Accessing hasError and children from this.state and this.props which are inherited from Component.
-    const { hasError } = this.state;
-    // FIX: Destructuring children from this.props inherited from React.Component.
-    const { children } = this.props;
-
-    if (hasError) {
+    // FIX: Using this.state.hasError ensures we check the correct instance property.
+    if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
           <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-xl max-w-lg w-full border border-red-100 dark:border-red-900 text-center">
@@ -65,6 +60,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       );
     }
 
-    return children;
+    // FIX: Returning children from this.props is now valid as types are correctly inherited from React.Component.
+    return this.props.children;
   }
 }

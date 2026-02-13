@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc } from 'firebase/firestore';
@@ -153,7 +152,7 @@ export const AdminMaterialsPage: React.FC = () => {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Study Level</label>
-                                <select className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl font-black text-[10px] uppercase tracking-widest outline-none dark:text-white" value={formData.level || '100'} onChange={e => setFormData({...formData, level: e.target.value})}>{LEVELS.map(l => <option key={l} value={l}>{l === 'General' ? l : `${l} Level`}</option>)}</select>
+                                <select className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl font-black text-[10px] uppercase tracking-widest outline-none dark:text-white" value={formData.level ?? 100} onChange={e => setFormData({...formData, level: e.target.value})}>{LEVELS.map(l => <option key={l} value={l}>{l === 'General' ? l : `${l} Level`}</option>)}</select>
                             </div>
                             <div>
                                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Semester Cycle</label>
@@ -164,7 +163,13 @@ export const AdminMaterialsPage: React.FC = () => {
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Academic Year</label>
-                                    <input type="number" className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold dark:text-white" value={formData.year || ''} onChange={e => setFormData({...formData, year: e.target.value})} required />
+                                    <input 
+                                        type="number" 
+                                        className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold dark:text-white" 
+                                        value={formData.year ?? ''} 
+                                        onChange={e => setFormData({...formData, year: e.target.value ? Number(e.target.value) : undefined})} 
+                                        required 
+                                    />
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Vault File</label>
