@@ -91,54 +91,63 @@ export const PastQuestionsPage: React.FC = () => {
       
       <div className="container mx-auto px-4 -mt-10 relative z-20">
         <div className="flex flex-col lg:flex-row gap-8">
-            {/* Control Sidebar */}
-            <aside className="w-full lg:w-80 flex-shrink-0 space-y-4">
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-slate-800">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6">Filter Resources</h4>
+            {/* Cleaner Control Sidebar */}
+            <aside className="w-full lg:w-80 flex-shrink-0 space-y-6">
+                <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-slate-800">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6 border-b border-slate-50 dark:border-slate-800 pb-2">Resource Filters</h4>
                     
                     <form onSubmit={handleSearchSubmit} className="mb-8">
                         <div className="relative group">
                             <input
                                 type="text"
-                                placeholder="Course code or title..."
+                                placeholder="Search course code or title..."
                                 value={localSearchTerm}
                                 onChange={(e) => setLocalSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all group-hover:border-indigo-300"
+                                className="w-full pl-10 pr-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all group-hover:border-indigo-300 shadow-inner"
                             />
                             <svg className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                         </div>
                     </form>
 
-                    <div className="space-y-6">
+                    <div className="space-y-8">
                         <div>
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Academic Level</label>
-                            <div className="grid grid-cols-2 gap-2">
-                                <button onClick={() => setSelectedLevel('all')} className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all border ${selectedLevel === 'all' ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300'}`}>All</button>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 ml-1">Academic Level</label>
+                            <div className="flex flex-wrap gap-2">
+                                <button onClick={() => setSelectedLevel('all')} className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all border ${selectedLevel === 'all' ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700'}`}>All</button>
                                 {LEVELS.map(l => (
-                                    <button key={l} onClick={() => setSelectedLevel(String(l))} className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all border ${selectedLevel === String(l) ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300'}`}>{typeof l === 'number' ? `${l}L` : l}</button>
+                                    <button key={l} onClick={() => setSelectedLevel(String(l))} className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all border ${selectedLevel === String(l) ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700'}`}>{typeof l === 'number' ? `${l}L` : l}</button>
                                 ))}
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Category Type</label>
-                            <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="w-full p-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none">
-                                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                            </select>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Category Type</label>
+                            <div className="relative">
+                                <select 
+                                    value={selectedCategory} 
+                                    onChange={e => setSelectedCategory(e.target.value)} 
+                                    className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl text-sm font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none shadow-sm cursor-pointer"
+                                >
+                                    {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                </select>
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M19 9l-7 7-7-7" /></svg>
+                                </div>
+                            </div>
                         </div>
 
                         <div>
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Chronological Order</label>
-                            <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Order</label>
+                            <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl shadow-inner">
                                 <button onClick={() => setSortOrder('newest')} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${sortOrder === 'newest' ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-500'}`}>Newest</button>
                                 <button onClick={() => setSortOrder('oldest')} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${sortOrder === 'oldest' ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-500'}`}>Oldest</button>
                             </div>
                         </div>
                     </div>
 
-                    <button onClick={() => navigate('/upload')} className="w-full mt-10 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 transition-all hover:-translate-y-1 active:scale-95 uppercase tracking-widest text-[10px] flex items-center justify-center gap-3">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
-                        Contribute Resource
+                    <button onClick={() => navigate('/upload')} className="w-full mt-10 py-5 bg-indigo-600 text-white font-black rounded-[2rem] shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 transition-all hover:-translate-y-1 active:scale-95 uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-3">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 4v16m8-8H4" /></svg>
+                        Upload to Vault
                     </button>
                 </div>
                 
@@ -149,14 +158,14 @@ export const PastQuestionsPage: React.FC = () => {
             
             {/* Main Content Area */}
             <main className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-8 px-2">
+                <div className="flex items-center justify-between mb-8 px-4 py-2 bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-inner">
+                        <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/50 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                         </div>
                         <div>
-                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Results</p>
-                           <p className="text-xl font-black text-slate-800 dark:text-white leading-none">{filteredQuestions.length} Documents Found</p>
+                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Archive Feed</p>
+                           <p className="text-sm font-black text-slate-800 dark:text-white leading-none">{filteredQuestions.length} Items Indexed</p>
                         </div>
                     </div>
                 </div>
@@ -178,8 +187,8 @@ export const PastQuestionsPage: React.FC = () => {
                               <div className="p-8 bg-slate-50 dark:bg-slate-800 rounded-full mb-6">
                                 <svg className="w-16 h-16 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                               </div>
-                              <h3 className="text-2xl font-black text-slate-900 dark:text-white">Vault Unresponsive</h3>
-                              <p className="text-slate-500 dark:text-slate-400 mt-2 max-w-xs text-sm">No materials match your current encryption filters. Try broadening your criteria.</p>
+                              <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Vault Empty</h3>
+                              <p className="text-slate-500 dark:text-slate-400 mt-2 max-w-xs text-xs font-bold uppercase tracking-widest">No materials found for this level/category.</p>
                           </div>
                       ) : (
                           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -187,7 +196,7 @@ export const PastQuestionsPage: React.FC = () => {
                           </div>
                       )}
                       
-                      <div className="lg:hidden">
+                      <div className="lg:hidden px-4">
                         <AdBanner />
                       </div>
                   </div>

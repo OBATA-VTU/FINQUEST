@@ -1,4 +1,4 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -13,16 +13,18 @@ interface ErrorBoundaryState {
  * ErrorBoundary component to catch JavaScript errors anywhere in their child component tree,
  * log those errors, and display a fallback UI instead of the component tree that crashed.
  */
-// Use React.Component to ensure props and state are correctly inherited and recognized by TypeScript.
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+// Use generic Component type to ensure props and state are correctly inherited and recognized by TypeScript.
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   
-  // Fix: Explicitly define the constructor and call super(props) to ensure this.props is correctly typed and available.
+  // Declaring state as a class property ensures TypeScript recognizes it on 'this'.
+  public state: ErrorBoundaryState = {
+    hasError: false,
+    error: null,
+  };
+
+  // Explicitly define the constructor and call super(props) to ensure this.props is correctly typed and available.
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = {
-      hasError: false,
-      error: null,
-    };
   }
 
   // Static method to update state so the next render will show the fallback UI.
@@ -36,7 +38,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   public render(): ReactNode {
-    // Accessing props and state from 'this'. By extending React.Component, these are provided by the base class with correct generic types.
+    // Fix: state and props are inherited from the generic Component class.
     const { hasError } = this.state;
     const { children } = this.props;
 

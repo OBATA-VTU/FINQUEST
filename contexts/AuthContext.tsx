@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { User, Level } from '../types';
 import { auth, db } from '../firebase';
@@ -55,17 +56,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const isPasswordAccount = auth.currentUser?.providerData.some(p => p.providerId === 'password') || false;
   const isGoogleAccount = auth.currentUser?.providerData.some(p => p.providerId === 'google.com') || false;
 
-  // Credit Refresh Logic: Runs whenever user or date changes
   const checkAndRefreshCredits = async (currentUser: User) => {
-    // We use Local Date string to ensure refresh happens at user's local midnight
-    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+    const today = new Date().toLocaleDateString('en-CA'); 
     if (currentUser.lastCreditRefreshDate !== today) {
       try {
         const updates = { aiCredits: 1000, lastCreditRefreshDate: today };
         const userRef = doc(db, 'users', currentUser.id);
         await updateDoc(userRef, updates);
         setUser(prev => prev && prev.id === currentUser.id ? { ...prev, ...updates } : prev);
-        console.log(`[System] AI credits replenished for ${today} at 00:00 boundary.`);
       } catch (e) {
         console.error("Failed to refresh credits:", e);
       }
@@ -86,10 +84,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
           const fullUser = { ...userData, id: firebaseUser.uid };
           setUser(fullUser);
-          
-          // Initial credit check on login
           await checkAndRefreshCredits(fullUser);
-          
           await updateDoc(userDocRef, { lastActive: new Date().toISOString() });
         }
       } else {
@@ -100,14 +95,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => unsubscribe();
   }, []);
 
-  // Periodic background check for midnight boundary
   useEffect(() => {
     if (!user) return;
-
-    const interval = setInterval(() => {
-      checkAndRefreshCredits(user);
-    }, 30000); // Check every 30 seconds for maximum responsiveness at 00:00
-
+    const interval = setInterval(() => { checkAndRefreshCredits(user); }, 30000);
     return () => clearInterval(interval);
   }, [user?.id, user?.lastCreditRefreshDate]);
 
@@ -136,12 +126,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     if (!uid) throw new Error("Authentication failed.");
 
+    // Verification Logic: Auto-verify if matric number starts with 230602
+    const isAutoVerified = data.matricNumber.trim().startsWith('230602');
+
     const userData: User = {
       id: uid,
       name: data.name,
       email: data.email,
-      username: data.username,
-      matricNumber: data.matricNumber,
+      username: data.username.toLowerCase().trim(),
+      matricNumber: data.matricNumber.toUpperCase().trim(),
       level: data.level,
       role: 'student',
       avatarUrl: data.avatarUrl || getRandomAvatar(),
@@ -151,10 +144,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       savedQuestions: [],
       createdAt: new Date().toISOString(),
       lastActive: new Date().toISOString(),
-      badges: []
+      badges: [],
+      isVerified: isAutoVerified
     };
     await setDoc(doc(db, 'users', uid), userData);
     setUser(userData);
+    
+    if (isAutoVerified) {
+        showNotification("Identity verified automatically based on departmental records!", "success");
+    }
   };
 
   const logout = async () => { await signOut(auth); setUser(null); };

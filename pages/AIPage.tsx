@@ -32,7 +32,7 @@ const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
 };
 
 const BeeIcon = ({ className }: { className?: string }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2L7 7H17L12 2Z" />
         <path d="M12 22V12" />
         <path d="M12 12L17 17H7L12 12Z" />
@@ -58,6 +58,7 @@ export const AIPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [aiStatus, setAiStatus] = useState<AiSettings | null>(null);
+    const [timeUntilReset, setTimeUntilReset] = useState<string>('');
     const scrollRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -78,6 +79,20 @@ export const AIPage: React.FC = () => {
             }
         };
         fetchAiStatus();
+        
+        // Calculate time until next UTC midnight (roughly when Google resets quotas)
+        const calculateResetTime = () => {
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setUTCHours(24, 0, 0, 0);
+            const diff = tomorrow.getTime() - now.getTime();
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff / (1000 * 60)) % 60);
+            setTimeUntilReset(`${hours}h ${minutes}m`);
+        };
+        calculateResetTime();
+        const interval = setInterval(calculateResetTime, 60000);
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
@@ -197,7 +212,6 @@ export const AIPage: React.FC = () => {
             let deductionDone = false;
 
             for await (const chunk of result) {
-                // Deduct credits ONLY on the first successful chunk received
                 if (!deductionDone) {
                     const newCredits = Math.max(0, currentCredits - creditCost);
                     await updateDoc(doc(db, 'users', user.id), { aiCredits: newCredits });
@@ -224,8 +238,6 @@ export const AIPage: React.FC = () => {
             });
         } catch (error: any) {
             console.error("AI Error:", error);
-            
-            // Check for exhaustion (429 or quota exceeded message)
             const errorMessage = error.message?.toLowerCase() || "";
             if (errorMessage.includes("quota") || errorMessage.includes("429") || errorMessage.includes("limit reached")) {
                 showNotification("Bee's API Key is exhausted. System shutting down for all users.", "error");
@@ -234,12 +246,10 @@ export const AIPage: React.FC = () => {
                     shutdownReason: "API Quota Exhausted",
                     lastExhaustionDate: new Date().toISOString()
                 }, { merge: true });
-                setAiStatus({ isAvailable: false });
+                setAiStatus({ isAvailable: false, shutdownReason: "API Quota Exhausted" });
             } else {
                 showNotification("Bee engine encountered an issue. Credits not deducted.", "error");
             }
-
-            // Remove the empty bot message if it was added
             setMessages(prev => prev.filter(m => m.role !== 'bee' || m.text !== ''));
         }
         finally { setIsLoading(false); }
@@ -247,16 +257,20 @@ export const AIPage: React.FC = () => {
 
     if (aiStatus && !aiStatus.isAvailable) {
         return (
-            <div className="flex flex-col items-center justify-center h-full bg-slate-50 dark:bg-slate-950 p-10 text-center animate-fade-in">
-                <div className="w-24 h-24 bg-rose-100 dark:bg-rose-900/30 rounded-full flex items-center justify-center text-rose-500 mb-8 border-4 border-rose-200 dark:border-rose-800">
-                    <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <div className="flex flex-col items-center justify-center h-full bg-slate-50 dark:bg-slate-950 p-10 text-center animate-fade-in transition-colors">
+                <div className="w-32 h-32 bg-rose-100 dark:bg-rose-900/30 rounded-[3rem] flex items-center justify-center text-rose-500 mb-10 border-4 border-rose-200 dark:border-rose-800 shadow-2xl animate-pulse">
+                    <svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                 </div>
-                <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-4">Bee is Resting</h1>
-                <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-                    Our AI service is temporarily unavailable due to API quota exhaustion or scheduled maintenance. Please check back later or contact the admin.
+                <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-4 uppercase tracking-tighter">CREDITS EXHAUSTED</h1>
+                <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed font-bold uppercase tracking-widest text-xs">
+                    The departmental AI engine has reached its daily intelligence quota. 
                 </p>
-                <div className="mt-8 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    Status: Offline • Reason: {aiStatus.shutdownReason || 'API Key Exhausted'}
+                <div className="mt-12 space-y-4">
+                    <div className="px-10 py-5 bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl inline-block">
+                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em] mb-2">CHECK BACK IN</p>
+                        <p className="text-3xl font-black text-slate-900 dark:text-white font-mono">{timeUntilReset}</p>
+                    </div>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Global Reset occurs at 00:00 UTC</p>
                 </div>
             </div>
         );
@@ -326,7 +340,7 @@ export const AIPage: React.FC = () => {
                             rows={1}
                         />
                         <button type="submit" disabled={isLoading || (!input.trim() && !imageFile)} className="p-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:opacity-30 transition-all shadow-lg shrink-0 active:scale-95">
-                            {isLoading ? <div className="w-6 h-6 border-2 border-white/50 border-t-white rounded-full animate-spin"></div> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>}
+                            {isLoading ? <div className="w-6 h-6 border-2 border-white/50 border-t-white rounded-full animate-spin"></div> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>}
                         </button>
                     </form>
                 </div>

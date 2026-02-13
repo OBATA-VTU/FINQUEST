@@ -35,6 +35,7 @@ export const UploadPage: React.FC = () => {
     const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [textContent, setTextContent] = useState('');
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
+    const [zoomImage, setZoomImage] = useState<string | null>(null);
     
     // Processing State
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,9 +44,6 @@ export const UploadPage: React.FC = () => {
     const [dragActive, setDragActive] = useState(false);
 
     const canUseAi = (auth?.user?.contributionPoints || 0) >= 500;
-    const isAdmin = ['admin', 'librarian', 'vice_president', 'supplement'].includes(auth?.user?.role || '');
-
-    // Fix: Define isAiMode to determine if the current upload flow is AI-driven
     const isAiMode = uploadType === 'ai';
 
     const resetForm = () => {
@@ -72,9 +70,9 @@ export const UploadPage: React.FC = () => {
 
         try {
             const questionData: any = {
-                courseCode: courseCode.toUpperCase(),
-                courseTitle,
-                lecturer,
+                courseCode: courseCode.toUpperCase().replace(/\s/g, ''),
+                courseTitle: courseTitle.trim(),
+                lecturer: lecturer.trim(),
                 level: level === 'General' ? 'General' : Number(level),
                 year,
                 semester: semester === 'N/A' ? 'N/A' : Number(semester),
@@ -82,7 +80,7 @@ export const UploadPage: React.FC = () => {
                 uploadedBy: auth.user.id,
                 uploadedByEmail: auth.user.email,
                 uploadedByName: auth.user.username,
-                status: 'pending', // User uploads always require approval
+                status: 'pending',
                 createdAt: new Date().toISOString()
             };
 
@@ -145,11 +143,9 @@ export const UploadPage: React.FC = () => {
     const applyFormat = (format: 'bold' | 'italic' | 'strike' | 'h2' | 'ul') => {
         const textarea = textAreaRef.current;
         if (!textarea) return;
-
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
         const selectedText = textContent.substring(start, end);
-
         let prefix = '', suffix = '';
         switch (format) {
             case 'bold': prefix = '**'; suffix = '**'; break;
@@ -158,42 +154,26 @@ export const UploadPage: React.FC = () => {
             case 'h2': prefix = '\n## '; suffix = '\n'; break;
             case 'ul': prefix = '\n- '; suffix = ''; break;
         }
-
-        const newText = 
-            textContent.substring(0, start) + 
-            prefix + 
-            (selectedText || '') + 
-            suffix + 
-            textContent.substring(end);
-
+        const newText = textContent.substring(0, start) + prefix + (selectedText || '') + suffix + textContent.substring(end);
         setTextContent(newText);
-        
         setTimeout(() => {
             textarea.focus();
-            if (selectedText) {
-                textarea.setSelectionRange(start + prefix.length, end + prefix.length);
-            } else {
-                textarea.setSelectionRange(start + prefix.length, start + prefix.length);
-            }
+            if (selectedText) textarea.setSelectionRange(start + prefix.length, end + prefix.length);
+            else textarea.setSelectionRange(start + prefix.length, start + prefix.length);
         }, 0);
     };
 
     const renderTextEditor = () => (
-        <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+        <div className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-inner">
             <div className="p-2 border-b border-slate-200 dark:border-slate-700 flex items-center gap-1 bg-slate-50 dark:bg-slate-800 flex-wrap">
-                <button type="button" onClick={() => applyFormat('bold')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center font-bold" title="Bold">B</button>
-                <button type="button" onClick={() => applyFormat('italic')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center italic font-serif" title="Italic">I</button>
-                <button type="button" onClick={() => applyFormat('strike')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center line-through" title="Strikethrough">S</button>
-                <div className="w-px h-6 bg-slate-300 dark:bg-slate-600 mx-1"></div>
-                <button type="button" onClick={() => applyFormat('h2')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center font-bold text-sm" title="Heading">H2</button>
-                <button type="button" onClick={() => applyFormat('ul')} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center" title="List Item">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" /></svg>
-                </button>
+                {['bold', 'italic', 'strike', 'h2', 'ul'].map((f) => (
+                    <button key={f} type="button" onClick={() => applyFormat(f as any)} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 w-9 h-9 flex items-center justify-center font-bold text-xs uppercase tracking-tighter transition-colors">{f.charAt(0)}</button>
+                ))}
             </div>
             <textarea 
                 ref={textAreaRef}
-                className="w-full h-64 p-4 resize-none bg-transparent outline-none text-slate-700 dark:text-slate-200" 
-                placeholder="Type your material here... Use the tools above for formatting." 
+                className="w-full h-48 p-4 resize-none bg-transparent outline-none text-slate-700 dark:text-slate-200 text-sm font-medium" 
+                placeholder="Compose your material here..." 
                 value={textContent} 
                 onChange={e => setTextContent(e.target.value)} 
                 required 
@@ -201,73 +181,196 @@ export const UploadPage: React.FC = () => {
         </div>
     );
 
-    const renderChoice = (type: UploadType, icon: React.ReactNode, title: string, desc: string, enabled = true, special = false) => (
-        <button 
-            onClick={() => enabled && setUploadType(type)}
-            disabled={!enabled}
-            className={`w-full p-6 border-2 rounded-2xl flex items-center gap-4 group transition-all text-left relative overflow-hidden ${enabled ? 'hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer' : 'opacity-50 cursor-not-allowed'} ${special ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'border-slate-200 dark:border-slate-700'}`}
-        >
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-300 ${special ? 'bg-amber-100 dark:bg-amber-900 text-amber-600 dark:text-amber-300' : 'bg-indigo-100 dark:bg-indigo-900'}`}>{icon}</div>
-            <div>
-                <h3 className="font-bold text-slate-800 dark:text-white group-hover:text-indigo-600">{title}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{desc}</p>
-            </div>
-            {!enabled && <div className="absolute top-2 right-2 text-[10px] font-bold bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">500+ Pts Required</div>}
-        </button>
-    );
+    const removeImage = (index: number) => {
+        setImageFiles(prev => prev.filter((_, i) => i !== index));
+    };
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4">
-            <div className="container mx-auto max-w-2xl">
-                <div className="text-center mb-10">
-                    <h1 className="text-3xl font-serif font-bold text-slate-900 dark:text-white">Contribute Material</h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-2">Share your resources and earn contribution points.</p>
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-4 transition-colors">
+            <div className="container mx-auto max-w-4xl">
+                <div className="text-center mb-12 animate-fade-in-down">
+                    <span className="text-indigo-600 font-black tracking-[0.3em] uppercase text-[10px] block mb-3">Academic Contribution</span>
+                    <h1 className="text-4xl md:text-6xl font-serif font-black text-slate-900 dark:text-white">Expand the Vault</h1>
+                    <p className="text-slate-500 dark:text-slate-400 mt-3 text-lg font-light leading-relaxed max-w-xl mx-auto">Your shared resources empower thousands of peers. Select your ingestion method below.</p>
                 </div>
 
-                <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-700">
-                    {uploadType === 'select' ? (
-                        <div className="space-y-4 animate-fade-in">
-                            {renderChoice('document', <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>, "Upload Document", "PDF, Word, etc. (Direct Upload)")}
-                            {renderChoice('images', <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>, "Upload Images", "Photos of exam papers or test questions")}
-                            {renderChoice('text', <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>, "Type Out Material", "Manually type notes or questions")}
-                            {renderChoice('ai', <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>, "Generate with AI", "Create notes on any topic", canUseAi, true)}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Method Selector / Sidebar */}
+                    <div className="lg:col-span-4 space-y-3">
+                        {(['document', 'images', 'text', 'ai'] as UploadType[]).map((type) => {
+                            const icons = {
+                                document: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+                                images: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
+                                text: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
+                                ai: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                            };
+                            const labels = { document: "Official PDF", images: "Photo Gallery", text: "Typed Intel", ai: "AI Synthesis" };
+                            const active = uploadType === type;
+                            const locked = type === 'ai' && !canUseAi;
+
+                            return (
+                                <button 
+                                    key={type} 
+                                    onClick={() => !locked && setUploadType(type)}
+                                    className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all group ${active ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-600/20 translate-x-2' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-500 hover:border-indigo-500'} ${locked ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className={`p-2.5 rounded-xl ${active ? 'bg-white/20' : 'bg-slate-50 dark:bg-slate-800'}`}>{icons[type]}</div>
+                                        <span className="font-black text-[10px] uppercase tracking-widest">{labels[type]}</span>
+                                    </div>
+                                    {locked && <div className="w-2 h-2 bg-rose-500 rounded-full"></div>}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Main Form Area */}
+                    <div className="lg:col-span-8">
+                        <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-8 md:p-10 shadow-2xl border border-slate-100 dark:border-slate-800 animate-slide-in-up">
+                            {uploadType === 'select' ? (
+                                <div className="h-64 flex items-center justify-center text-center">
+                                    <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Select Ingestion Method to Proceed</p>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleFormSubmit} className="space-y-6">
+                                    {/* Upload Source Area */}
+                                    <div className="bg-slate-50 dark:bg-slate-950 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-inner">
+                                        {uploadType === 'document' && (
+                                            <div 
+                                                className={`relative border-2 border-dashed rounded-3xl p-10 text-center transition-all ${dragActive ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-300 dark:border-slate-700'}`}
+                                                onDragEnter={handleDrag} onDrop={handleDrop} onDragLeave={handleDrag} onDragOver={handleDrag}
+                                            >
+                                                <input id="f" type="file" className="hidden" onChange={(e) => e.target.files && setFile(e.target.files[0])} accept=".pdf,.doc,.docx" />
+                                                <label htmlFor="f" className="cursor-pointer flex flex-col items-center gap-3">
+                                                    <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-md text-indigo-600"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 4v16m8-8H4" /></svg></div>
+                                                    <span className="font-bold text-slate-800 dark:text-white">{file ? file.name : "Attach Document (PDF/DOC)"}</span>
+                                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Max size 15MB • One file per upload</p>
+                                                </label>
+                                            </div>
+                                        )}
+                                        {uploadType === 'images' && (
+                                            <div className="space-y-6">
+                                                <div 
+                                                    className={`relative border-2 border-dashed rounded-3xl p-10 text-center ${dragActive ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-300 dark:border-slate-700'}`}
+                                                    onDragEnter={handleDrag} onDrop={handleDrop} onDragLeave={handleDrag} onDragOver={handleDrag}
+                                                >
+                                                    <input id="f-img" type="file" className="hidden" multiple onChange={(e) => e.target.files && setImageFiles(Array.from(e.target.files))} accept="image/*" />
+                                                    <label htmlFor="f-img" className="cursor-pointer flex flex-col items-center gap-3">
+                                                        <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-md text-indigo-600"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></div>
+                                                        <span className="font-bold text-slate-800 dark:text-white">Drop Photos of Inquiries</span>
+                                                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Multiple selection supported</p>
+                                                    </label>
+                                                </div>
+                                                
+                                                {/* Image Preview Thumbnails */}
+                                                {imageFiles.length > 0 && (
+                                                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 animate-fade-in">
+                                                        {imageFiles.map((f, i) => (
+                                                            <div key={i} className="relative group aspect-square">
+                                                                <img 
+                                                                    src={URL.createObjectURL(f)} 
+                                                                    className="w-full h-full object-cover rounded-xl border border-white dark:border-slate-800 shadow-sm cursor-zoom-in" 
+                                                                    alt="thumb" 
+                                                                    onClick={() => setZoomImage(URL.createObjectURL(f))}
+                                                                />
+                                                                <button 
+                                                                    type="button" 
+                                                                    onClick={() => removeImage(i)}
+                                                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-lg transform scale-0 group-hover:scale-100 transition-transform"
+                                                                >
+                                                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}><path d="M6 18L18 6M6 6l12 12" /></svg>
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        {uploadType === 'text' && renderTextEditor()}
+                                        {uploadType === 'ai' && (
+                                            <div className="py-10 text-center">
+                                                <div className="w-16 h-16 bg-white dark:bg-slate-900 rounded-3xl mx-auto flex items-center justify-center text-emerald-500 shadow-xl mb-4 animate-bounce-slow"><svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
+                                                <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Neural Link Active</p>
+                                                <p className="text-[10px] font-black uppercase text-slate-400 mt-1 tracking-widest">Generating High-Fidelity Study Intelligence</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Metadata Section */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-2">Reference Code</label>
+                                            <input type="text" value={courseCode} onChange={e => setCourseCode(e.target.value)} required className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-indigo-500 rounded-2xl outline-none font-black text-xs uppercase" placeholder="FIN 201" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-2">Full Course Title</label>
+                                            <input type="text" value={courseTitle} onChange={e => setCourseTitle(e.target.value)} required className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold text-sm" placeholder="e.g. Portfolio Management" />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-2">Academic Level</label>
+                                            <select value={level} onChange={e => setLevel(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl font-bold text-sm outline-none">{LEVELS.map(l => <option key={l} value={l}>{typeof l === 'number' ? `${l}L` : l}</option>)}</select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-2">Category</label>
+                                            <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl font-bold text-sm outline-none">{CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}</select>
+                                        </div>
+                                    </div>
+
+                                    {!isAiMode && (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-2">Semester Cycle</label>
+                                                <select value={semester} onChange={e => setSemester(e.target.value as any)} className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl font-bold text-sm outline-none"><option value="N/A">General</option><option value="1">Alpha (1st)</option><option value="2">Omega (2nd)</option></select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-2">Calendar Year</label>
+                                                <input type="number" className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl font-bold text-sm outline-none" value={year} onChange={e => setYear(Number(e.target.value))} required />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-2">Lecturer / Source</label>
+                                        <input type="text" value={lecturer} onChange={e => setLecturer(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold text-sm" placeholder="e.g. Dr. Sidiku" />
+                                    </div>
+                                    
+                                    {isSubmitting && (
+                                        <div className="space-y-2 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl animate-pulse">
+                                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+                                                <span>{uploadStatus}</span>
+                                                <span>{Math.round(uploadProgress)}%</span>
+                                            </div>
+                                            <div className="w-full bg-indigo-100 dark:bg-indigo-950 rounded-full h-1.5 overflow-hidden"><div className="bg-indigo-600 h-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div></div>
+                                        </div>
+                                    )}
+
+                                    <button 
+                                        type="submit" 
+                                        disabled={isSubmitting || (uploadType === 'document' && !file) || (uploadType === 'images' && imageFiles.length === 0) || (uploadType === 'text' && !textContent.trim())} 
+                                        className={`w-full py-5 text-white font-black rounded-[2rem] shadow-2xl transition-all active:scale-95 uppercase tracking-[0.2em] text-[10px] ${isAiMode ? 'bg-emerald-600 shadow-emerald-500/30' : 'bg-indigo-600 shadow-indigo-500/30'} disabled:opacity-30`}
+                                    >
+                                        {isSubmitting ? 'Syncing Intel...' : 'Finalize Submission'}
+                                    </button>
+                                </form>
+                            )}
                         </div>
-                    ) : (
-                        <form onSubmit={handleFormSubmit} className="space-y-5 animate-fade-in-up">
-                            <button type="button" onClick={() => setUploadType('select')} className="text-xs font-bold text-slate-400 hover:text-indigo-500 flex items-center gap-1">&larr; Back</button>
-                            
-                            {/* DYNAMIC UPLOAD AREA */}
-                            {uploadType === 'document' && <div className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all ${dragActive ? 'border-indigo-500' : 'border-slate-300'}`} onDragEnter={handleDrag} onDrop={handleDrop} onDragLeave={handleDrag} onDragOver={handleDrag}><input id="f" type="file" className="hidden" onChange={(e) => e.target.files && setFile(e.target.files[0])} accept=".pdf,.doc,.docx" /><label htmlFor="f" className="cursor-pointer">{file ? file.name : "Click or drag document"}</label></div>}
-                            {uploadType === 'images' && <div className={`relative border-2 border-dashed rounded-xl p-6 text-center ${dragActive ? 'border-indigo-500' : 'border-slate-300'}`} onDragEnter={handleDrag} onDrop={handleDrop} onDragLeave={handleDrag} onDragOver={handleDrag}><input id="f-img" type="file" className="hidden" multiple onChange={(e) => e.target.files && setImageFiles(Array.from(e.target.files))} accept="image/*" /><label htmlFor="f-img" className="cursor-pointer">{imageFiles.length > 0 ? `${imageFiles.length} images selected` : "Click or drag images"}</label></div>}
-                            {uploadType === 'text' && renderTextEditor()}
-                            {uploadType === 'ai' && <div className="bg-amber-50 p-4 rounded-xl text-center text-amber-800 text-sm font-medium">AI will generate content based on the Course Title you provide below.</div>}
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Code</label><input type="text" value={courseCode} onChange={e => setCourseCode(e.target.value)} required className="w-full p-3 border rounded-xl" placeholder="FIN 101" /></div>
-                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Title</label><input type="text" value={courseTitle} onChange={e => setCourseTitle(e.target.value)} required className="w-full p-3 border rounded-xl" placeholder="e.g. Intro to Finance" /></div>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Level</label><select value={level} onChange={e => setLevel(e.target.value)} className="w-full p-3 border rounded-xl bg-white">{LEVELS.map(l => <option key={l} value={l}>{typeof l === 'number' ? `${l}L` : l}</option>)}</select></div>
-                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Category</label><select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-3 border rounded-xl bg-white">{CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}</select></div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Semester</label><select value={semester} onChange={e => setSemester(e.target.value as any)} className="w-full p-3 border rounded-xl bg-white"><option value="N/A">Not Specified</option><option value="1">1st Semester</option><option value="2">2nd Semester</option></select></div>
-                                {!isAiMode && (<div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Year</label><input type="number" className="w-full p-3 border rounded-xl" value={year} onChange={e => setYear(Number(e.target.value))} required /></div>)}
-                            </div>
-
-                            <div><label className="block text-xs font-bold uppercase text-slate-500 mb-1">Lecturer (Optional)</label><input type="text" value={lecturer} onChange={e => setLecturer(e.target.value)} className="w-full p-3 border rounded-xl" placeholder="e.g. Dr. A. Adebayo" /></div>
-                            
-                            {isSubmitting && <div className="space-y-1"><div className="flex justify-between text-xs font-bold text-indigo-600"><span>{uploadStatus}</span><span>{Math.round(uploadProgress)}%</span></div><div className="w-full bg-slate-200 rounded-full h-2"><div className="bg-indigo-600 h-full rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div></div></div>}
-
-                            <button type="submit" disabled={isSubmitting} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 mt-2">
-                                {isSubmitting ? 'Submitting...' : 'Submit Contribution'}
-                            </button>
-                        </form>
-                    )}
+                    </div>
                 </div>
             </div>
+
+            {/* Lightbox / Preview Modal */}
+            {zoomImage && (
+                <div className="fixed inset-0 bg-slate-950/95 z-[100] flex items-center justify-center p-4 backdrop-blur-md" onClick={() => setZoomImage(null)}>
+                    <div className="relative max-w-5xl w-full h-full flex flex-col items-center justify-center" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setZoomImage(null)} className="absolute top-4 right-4 bg-white/10 hover:bg-rose-500 text-white p-3 rounded-full transition-all shadow-2xl z-10"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M6 18L18 6M6 6l12 12" /></svg></button>
+                        <img src={zoomImage} className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-3xl animate-pop-in" alt="zoom" />
+                        <p className="mt-8 text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Preview Mode • Click outside to exit</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
