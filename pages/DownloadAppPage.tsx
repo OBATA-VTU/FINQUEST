@@ -44,6 +44,8 @@ export const DownloadAppPage: React.FC = () => {
         };
     }, []);
     
+    const APK_URL = "https://cdn.applikeweb.com/downloads/android_ff3e6395-9b07-4752-abb4-4ea45c917593_1.0.0.apk";
+
     const handleInstallClick = async () => {
         if (deferredPrompt) {
             deferredPrompt.prompt();
@@ -53,32 +55,39 @@ export const DownloadAppPage: React.FC = () => {
         } else if (isIosDevice) {
             setShowIosInstructions(true);
         } else {
-            alert("To install, look for an 'Install' icon in your browser's address bar or menu. If you don't see one, your browser may not support PWA installation.");
+            // Fallback to APK download if PWA install fails or is not supported
+            window.location.href = APK_URL;
         }
     };
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 flex items-center justify-center transition-colors">
             <div className="max-w-2xl w-full text-center animate-fade-in-up">
-                <h1 className="text-4xl font-serif font-bold text-slate-900 dark:text-white mb-4">Install FINSA App</h1>
-                <p className="text-slate-600 dark:text-slate-400 mb-8">Get the best experience by installing the FINSA portal directly to your home screen for quick access.</p>
+                <h1 className="text-4xl font-serif font-bold text-slate-900 dark:text-white mb-4">Download FINSA App</h1>
+                <p className="text-slate-600 dark:text-slate-400 mb-8">Get the best experience by downloading the official FINSA app for Android or installing the portal to your home screen.</p>
                 
-                {isInstallable ? (
-                    <button 
-                        onClick={handleInstallClick}
-                        className="px-12 py-5 bg-indigo-600 text-white font-bold rounded-full shadow-2xl hover:bg-indigo-700 transition uppercase tracking-widest text-sm transform hover:scale-105 duration-300"
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+                    <a 
+                        href={APK_URL}
+                        className="w-full sm:w-auto px-12 py-5 bg-indigo-600 text-white font-bold rounded-full shadow-2xl hover:bg-indigo-700 transition uppercase tracking-widest text-sm transform hover:scale-105 duration-300 flex items-center justify-center gap-3"
                     >
-                        Download Here
-                    </button>
-                ) : (
-                    <p className="px-12 py-5 bg-slate-200 dark:bg-slate-700 text-slate-500 font-bold rounded-full shadow-inner">
-                        App Already Installed or Not Supported
-                    </p>
-                )}
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.523 15.3414L20.355 18.1734L18.941 19.5874L16.109 16.7554L13.277 19.5874L11.863 18.1734L14.695 15.3414L11.863 12.5094L13.277 11.0954L16.109 13.9274L18.941 11.0954L20.355 12.5094L17.523 15.3414ZM12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2ZM12 20C7.589 20 4 16.411 4 12C4 7.589 7.589 4 12 4C16.411 4 20 7.589 20 12C20 16.411 16.411 20 12 20Z"/></svg>
+                        Download APK
+                    </a>
+                    
+                    {isInstallable && (
+                        <button 
+                            onClick={handleInstallClick}
+                            className="w-full sm:w-auto px-12 py-5 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-2 border-indigo-600 dark:border-indigo-400 font-bold rounded-full shadow-xl hover:bg-indigo-50 transition uppercase tracking-widest text-sm transform hover:scale-105 duration-300"
+                        >
+                            Install Web App
+                        </button>
+                    )}
+                </div>
 
                 <div className="relative flex py-8 items-center">
                     <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
-                    <span className="flex-shrink-0 mx-4 text-slate-400 text-xs font-bold uppercase">Or visit the app store</span>
+                    <span className="flex-shrink-0 mx-4 text-slate-400 text-xs font-bold uppercase">App Store Links</span>
                     <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
                 </div>
 

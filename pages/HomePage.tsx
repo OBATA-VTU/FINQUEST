@@ -113,6 +113,12 @@ export const HomePage: React.FC = () => {
                         <svg className="w-4 h-4 transition-transform group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                     </button>
                     <button
+                        onClick={() => navigate('/download-app')}
+                        className="group w-full sm:w-auto inline-flex items-center justify-center gap-3 px-10 py-5 border-2 border-white/20 text-white font-bold rounded-full backdrop-blur-sm hover:bg-white/10 hover:border-white/50 transition-all duration-300"
+                    >
+                        <span className="text-xs uppercase tracking-widest">Download App</span>
+                    </button>
+                    <button
                         onClick={() => navigate('/announcements')}
                         className="group w-full sm:w-auto inline-flex items-center justify-center gap-3 px-10 py-5 border-2 border-white/20 text-white font-bold rounded-full backdrop-blur-sm hover:bg-white/10 hover:border-white/50 transition-all duration-300"
                     >

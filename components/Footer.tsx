@@ -84,6 +84,7 @@ export const Footer: React.FC = () => {
                         <li className="text-xs text-slate-500 mt-2">Access to resources requires login.</li>
                     </>
                 )}
+                <li><Link to="/download-app" className="text-sm hover:text-indigo-400 transition-colors flex items-center gap-2 group"><span className="w-1 h-1 bg-slate-600 group-hover:bg-indigo-400 rounded-full transition-colors"></span>Download App</Link></li>
                 <li><Link to="/faq" className="text-sm hover:text-indigo-400 transition-colors flex items-center gap-2 group"><span className="w-1 h-1 bg-slate-600 group-hover:bg-indigo-400 rounded-full transition-colors"></span>FAQ</Link></li>
                 <li><Link to="/privacy" className="text-sm hover:text-indigo-400 transition-colors flex items-center gap-2 group"><span className="w-1 h-1 bg-slate-600 group-hover:bg-indigo-400 rounded-full transition-colors"></span>Privacy Policy</Link></li>
             </ul>
