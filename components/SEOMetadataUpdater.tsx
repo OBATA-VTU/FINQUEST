@@ -23,8 +23,12 @@ export const SEOMetadataUpdater: React.FC = () => {
         description = "Manage your academic journey, view test scores and contribution points.";
         break;
       case '/questions':
-        title = "FINSA AAUA | Resources Archives";
+        title = "FINSA AAUA | Past Questions Page";
         description = "Access the largest collection of Finance past questions, lecture notes, and academic materials at Adekunle Ajasin University. Download verified resources for all levels.";
+        break;
+      case '/library':
+        title = "FINSA AAUA | E-Library";
+        description = "Access real-time academic resources and literature from the Open Library global database.";
         break;
       case '/community':
         title = "FINSA AAUA | Student Hub & Lounge";

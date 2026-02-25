@@ -3,7 +3,7 @@ import { Level } from '../types';
 import { LEVELS } from '../constants';
 import { uploadDocument, uploadToImgBB, trackAiUsage } from '../utils/api';
 import { db } from '../firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { GoogleGenAI } from "@google/genai";
@@ -41,9 +41,36 @@ export const UploadPage: React.FC = () => {
     const [uploadStatus, setUploadStatus] = useState<string>(''); 
     const [uploadProgress, setUploadProgress] = useState(0);
     const [dragActive, setDragActive] = useState(false);
+    const [existingQuestions, setExistingQuestions] = useState<any[]>([]);
 
     const canUseAi = (auth?.user?.contributionPoints || 0) >= 500;
     const isAiMode = uploadType === 'ai';
+
+    useEffect(() => {
+        const checkDuplicates = async () => {
+            if (!courseCode || courseCode.length < 3) {
+                setExistingQuestions([]);
+                return;
+            }
+
+            try {
+                const q = query(
+                    collection(db, 'questions'),
+                    where('courseCode', '==', courseCode.toUpperCase().replace(/\s/g, '')),
+                    where('year', '==', year),
+                    where('category', '==', category)
+                );
+                const querySnapshot = await getDocs(q);
+                const matches = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setExistingQuestions(matches);
+            } catch (error) {
+                console.error("Duplicate check failed:", error);
+            }
+        };
+
+        const timer = setTimeout(checkDuplicates, 500);
+        return () => clearTimeout(timer);
+    }, [courseCode, year, category]);
 
     const resetForm = () => {
         setFile(null);
@@ -346,6 +373,29 @@ export const UploadPage: React.FC = () => {
                         <label className="block text-sm font-black uppercase tracking-[0.2em] text-slate-400 ml-3">Lecturer Name</label>
                         <input type="text" value={lecturer} onChange={e => setLecturer(e.target.value)} className="w-full p-6 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-indigo-500 rounded-[2rem] outline-none font-bold text-lg dark:text-white transition-all shadow-sm" placeholder="Who taught this course?" />
                     </div>
+
+                    {existingQuestions.length > 0 && (
+                        <div className="p-8 bg-amber-50 dark:bg-amber-900/20 rounded-[2.5rem] border border-amber-200 dark:border-amber-800 animate-fade-in">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900 flex items-center justify-center rounded-full text-amber-600 dark:text-amber-400">
+                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                </div>
+                                <h3 className="font-black text-amber-900 dark:text-amber-200 uppercase tracking-widest text-sm">Similar Resources Found</h3>
+                            </div>
+                            <p className="text-amber-800 dark:text-amber-300 text-sm mb-4 font-medium">The following resources already exist for this course, year, and category. Please ensure you are not uploading a duplicate.</p>
+                            <div className="space-y-3">
+                                {existingQuestions.map((q, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-2xl border border-amber-100 dark:border-amber-900/50 shadow-sm">
+                                        <div className="flex flex-col">
+                                            <span className="font-black text-slate-900 dark:text-white text-xs">{q.courseCode} - {q.year}</span>
+                                            <span className="text-[10px] text-slate-500 truncate max-w-[200px]">{q.courseTitle}</span>
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-slate-500">{q.category}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     
                     {isSubmitting && (
                         <div className="space-y-5 p-8 bg-indigo-50 dark:bg-indigo-900/20 rounded-[3rem] animate-pulse border border-indigo-100 dark:border-indigo-800">

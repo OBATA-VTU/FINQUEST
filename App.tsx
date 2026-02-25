@@ -36,6 +36,7 @@ const SessionWrapPage = lazy(() => import('./pages/SessionWrapPage').then(m => (
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then(m => ({ default: m.LeaderboardPage })));
 const LostFoundPage = lazy(() => import('./pages/LostFoundPage').then(m => ({ default: m.LostFoundPage })));
 const FAQPage = lazy(() => import('./pages/FAQPage').then(m => ({ default: m.FAQPage })));
+const ELibraryPage = lazy(() => import('./pages/ELibraryPage').then(m => ({ default: m.ELibraryPage })));
 const DownloadAppPage = lazy(() => import('./pages/DownloadAppPage').then(m => ({ default: m.DownloadAppPage })));
 const AIPage = lazy(() => import('./pages/AIPage').then(m => ({ default: m.AIPage })));
 
@@ -141,6 +142,7 @@ const AppContent: React.FC = () => {
                         <Route path="/gallery" element={<Suspense fallback={<PageLoader />}><GalleryPage /></Suspense>} />
                         <Route path="/faq" element={<Suspense fallback={<PageLoader />}><FAQPage /></Suspense>} />
                         <Route path="/download-app" element={<Suspense fallback={<PageLoader />}><DownloadAppPage /></Suspense>} />
+                        <Route path="/library" element={<Suspense fallback={<PageLoader />}><ELibraryPage /></Suspense>} />
                         <Route path="/lost-and-found" element={<Suspense fallback={<PageLoader />}><LostFoundPage /></Suspense>} />
                         
                         {/* Authenticated Routes */}

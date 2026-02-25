@@ -76,6 +76,12 @@ export const getDropboxDownloadUrl = (url: string | undefined): string => {
 
 export const forceDownload = async (url: string, filename: string) => {
   try {
+    // For Google Drive, we prefer direct location change for download
+    if (url.includes('drive.google.com')) {
+        const dlUrl = url.replace('export=view', 'export=download');
+        window.location.href = dlUrl;
+        return;
+    }
     const response = await fetch(url, { mode: 'cors' });
     const blob = await response.blob();
     const blobUrl = window.URL.createObjectURL(blob);
@@ -164,5 +170,23 @@ export const uploadToImgBB = async (file: File): Promise<string> => {
         const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: formData });
         const data = await response.json();
         return data?.data?.url || '';
+    }
+};
+
+/**
+ * Migration utility to move existing resources to Google Drive.
+ */
+export const migrateResourceToGoogleDrive = async (oldUrl: string, fileName: string): Promise<{ url: string, path: string } | null> => {
+    try {
+        if (oldUrl.includes('drive.google.com')) return null; // Already on Drive
+        
+        const response = await fetch(oldUrl);
+        const blob = await response.blob();
+        const file = new File([blob], fileName, { type: blob.type });
+        
+        return await uploadFileToGoogleDrive(file);
+    } catch (error) {
+        console.error("Migration failed for:", oldUrl, error);
+        return null;
     }
 };

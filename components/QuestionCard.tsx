@@ -90,7 +90,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
                  window.location.href = dlUrl;
             } else if (url.includes('drive.google.com')) {
                  const dlUrl = url.replace('export=view', 'export=download');
-                 window.open(dlUrl, '_blank');
+                 window.location.href = dlUrl;
             } else {
                  // ImgBB / Other logic -> Force Download using Blob
                  try {

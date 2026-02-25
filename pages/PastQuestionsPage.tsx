@@ -81,8 +81,8 @@ export const PastQuestionsPage: React.FC = () => {
       <header className="bg-indigo-950 text-white pt-24 pb-20 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/hexellence.png')]"></div>
         <div className="container mx-auto px-4 relative z-10 text-center">
-            <span className="inline-block px-4 py-1.5 bg-white/10 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-6 border border-white/20">Secure Archives</span>
-            <h1 className="text-5xl md:text-7xl font-serif font-black mb-6 tracking-tight">The Academic Vault</h1>
+            <span className="inline-block px-4 py-1.5 bg-white/10 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-6 border border-white/20">Academic Repository</span>
+            <h1 className="text-5xl md:text-7xl font-serif font-black mb-6 tracking-tight">Past Questions Page</h1>
             <p className="text-indigo-200 max-w-xl mx-auto text-lg font-light leading-relaxed">
                 A verified repository of departmental intelligence, past questions, and lecture notes.
             </p>

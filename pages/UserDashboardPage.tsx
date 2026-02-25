@@ -92,9 +92,17 @@ export const UserDashboardPage: React.FC = () => {
 
               // Safe check for level before querying
               if (user.level) {
-                const levelQuery = query(collection(db, 'questions'), where('status', '==', 'approved'), where('level', '==', user.level), limit(5));
+                const levelQuery = query(
+                    collection(db, 'questions'), 
+                    where('status', '==', 'approved'), 
+                    where('level', '==', user.level),
+                    limit(10)
+                );
                 const levelSnap = await getDocs(levelQuery);
-                setRecommendedQuestions(levelSnap.docs.map(d => ({ id: d.id, ...d.data() } as PastQuestion)));
+                const questions = levelSnap.docs.map(d => ({ id: d.id, ...d.data() } as PastQuestion));
+                // Sort by date descending client-side to ensure latest
+                questions.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+                setRecommendedQuestions(questions.slice(0, 5));
               }
           } catch (e) {
               console.error(e);
@@ -219,7 +227,7 @@ export const UserDashboardPage: React.FC = () => {
               <div className="md:col-span-3 lg:col-span-1 bg-slate-900 rounded-[2.5rem] p-8 shadow-2xl flex flex-col animate-slide-in-up border border-white/5">
                   <h3 className="font-black text-white mb-6 flex items-center gap-3 uppercase tracking-widest text-xs">
                     <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                    Intelligence
+                    Latest {user.level}L Resources
                   </h3>
                   <div className="flex-1 space-y-4">
                       {loading ? (

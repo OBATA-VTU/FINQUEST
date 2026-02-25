@@ -5,6 +5,7 @@ import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch, del
 import { useNotification } from '../contexts/NotificationContext';
 import { AuthContext } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { migrateResourceToGoogleDrive } from '../utils/api';
 
 const GOOGLE_DRIVE_CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID;
 const GOOGLE_DRIVE_CLIENT_SECRET = process.env.GOOGLE_DRIVE_CLIENT_SECRET;
@@ -27,7 +28,9 @@ export const AdminSettingsPage: React.FC = () => {
   const [isWipeModalOpen, setIsWipeModalOpen] = useState(false);
   const [wipeConfirmText, setWipeConfirmText] = useState('');
   const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
+  const [isMigrationModalOpen, setIsMigrationModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [migrationProgress, setMigrationProgress] = useState({ current: 0, total: 0 });
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -210,6 +213,50 @@ export const AdminSettingsPage: React.FC = () => {
       finally { setIsWipeModalOpen(false); setIsProcessing(false); setWipeConfirmText(''); }
   };
 
+  const handleCloudMigration = async () => {
+      setIsProcessing(true);
+      try {
+          const questionsSnap = await getDocs(collection(db, 'questions'));
+          const nonDriveQuestions = questionsSnap.docs.filter(d => {
+              const data = d.data();
+              return data.fileUrl && !data.fileUrl.includes('drive.google.com');
+          });
+
+          setMigrationProgress({ current: 0, total: nonDriveQuestions.length });
+
+          if (nonDriveQuestions.length === 0) {
+              showNotification("All resources are already on Google Drive.", "info");
+              return;
+          }
+
+          for (let i = 0; i < nonDriveQuestions.length; i++) {
+              const docRef = nonDriveQuestions[i].ref;
+              const data = nonDriveQuestions[i].data();
+              
+              const fileName = `${data.courseCode}_${data.year}_migration_${i}`;
+              const result = await migrateResourceToGoogleDrive(data.fileUrl, fileName);
+              
+              if (result) {
+                  await updateDoc(docRef, {
+                      fileUrl: result.url,
+                      storagePath: result.path,
+                      migrationDate: new Date().toISOString()
+                  });
+              }
+              
+              setMigrationProgress(prev => ({ ...prev, current: i + 1 }));
+          }
+
+          showNotification(`Migration complete: ${nonDriveQuestions.length} files moved.`, "success");
+      } catch (error: any) {
+          console.error("Migration error:", error);
+          showNotification(`Migration failed: ${error.message}`, "error");
+      } finally {
+          setIsProcessing(false);
+          setIsMigrationModalOpen(false);
+      }
+  };
+
   if (!isSuperAdmin) return <div className="p-20 text-center font-black">UNAUTHORIZED ACCESS</div>;
 
   return (
@@ -255,11 +302,37 @@ export const AdminSettingsPage: React.FC = () => {
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4">
                     <button onClick={() => setIsAdvanceModalOpen(true)} className="flex-1 py-5 bg-amber-500 text-indigo-950 font-black rounded-[2rem] shadow-xl uppercase tracking-[0.2em] text-[10px] hover:bg-amber-400 transition-all active:scale-95">Advance Tenure</button>
+                    <button onClick={() => setIsMigrationModalOpen(true)} className="flex-1 py-5 bg-indigo-500 text-white font-black rounded-[2rem] shadow-xl uppercase tracking-[0.2em] text-[10px] hover:bg-indigo-400 transition-all active:scale-95">Cloud Migration</button>
                     <button onClick={() => setIsWipeModalOpen(true)} className="flex-1 py-5 border-2 border-rose-500/30 text-rose-500 font-black rounded-[2rem] uppercase tracking-[0.2em] text-[10px] hover:bg-rose-500/10 transition-all active:scale-95">Wipe Activity Logs</button>
                 </div>
             </div>
         </section>
 
+        {isMigrationModalOpen && (
+            <ConfirmationModal 
+                title="Cloud Migration" 
+                onConfirm={handleCloudMigration} 
+                onCancel={() => setIsMigrationModalOpen(false)} 
+                isProcessing={isProcessing}
+            >
+                {isProcessing ? (
+                    <div className="space-y-4">
+                        <p className="text-sm font-bold text-indigo-600 animate-pulse">Moving files to Google Drive...</p>
+                        <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+                            <div 
+                                className="bg-indigo-600 h-full transition-all duration-300" 
+                                style={{ width: `${(migrationProgress.current / migrationProgress.total) * 100}%` }}
+                            ></div>
+                        </div>
+                        <p className="text-[10px] font-black uppercase text-slate-400 text-center tracking-widest">
+                            {migrationProgress.current} / {migrationProgress.total} Files Processed
+                        </p>
+                    </div>
+                ) : (
+                    "This will automatically move all resources currently stored on ImgBB or Dropbox to your connected Google Drive. This ensures all archives are in one place. This process may take a few minutes."
+                )}
+            </ConfirmationModal>
+        )}
         {isAdvanceModalOpen && <ConfirmationModal title="Seal Tenure" onConfirm={handleAdvanceSession} onCancel={() => setIsAdvanceModalOpen(false)} isProcessing={isProcessing}>This seals the current session. Student levels increase by 100, 400Ls graduate, and all administrative privileges are revoked for a fresh start. This cannot be undone.</ConfirmationModal>}
         {isWipeModalOpen && <ConfirmationModal title="Confirm Data Wipe" onConfirm={handleWipeData} onCancel={() => setIsWipeModalOpen(false)} isProcessing={isProcessing} needsTextInput={true} confirmText={wipeConfirmText} onTextChange={setWipeConfirmText}>Purge all student-generated tests, messages, and reports from the database.</ConfirmationModal>}
     </div>

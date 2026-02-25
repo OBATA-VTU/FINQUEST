@@ -81,7 +81,7 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
            document.body.removeChild(link);
       } else if (fileUrl.includes('drive.google.com')) {
            const dlUrl = fileUrl.replace('export=view', 'export=download');
-           window.open(dlUrl, '_blank');
+           window.location.href = dlUrl;
       } else {
            // ImgBB or other image hosts
            const ext = fileUrl.split('.').pop()?.split('?')[0] || 'jpg';
