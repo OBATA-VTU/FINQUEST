@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState, lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -113,6 +114,8 @@ const AppContent: React.FC = () => {
     checkSession();
   }, [auth?.user?.id]);
 
+  const location = useLocation();
+
   if (sessionWrapInfo) return <Suspense fallback={<PageLoader />}><SessionWrapPage info={sessionWrapInfo} onFinish={() => setSessionWrapInfo(null)} /></Suspense>;
   
   return (
@@ -120,53 +123,64 @@ const AppContent: React.FC = () => {
         <ScrollToTop />
         <NotificationHandler />
         <SEOMetadataUpdater />
-        <Routes>
-            <Route path="/login" element={<Suspense fallback={<PageLoader />}><SignInPage /></Suspense>} />
-            <Route path="/signup" element={<Suspense fallback={<PageLoader />}><SignUpPage /></Suspense>} />
-            <Route element={<Layout />}>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/announcements" element={<Suspense fallback={<PageLoader />}><AnnouncementsPage /></Suspense>} />
-                <Route path="/gallery" element={<Suspense fallback={<PageLoader />}><GalleryPage /></Suspense>} />
-                <Route path="/faq" element={<Suspense fallback={<PageLoader />}><FAQPage /></Suspense>} />
-                <Route path="/download-app" element={<Suspense fallback={<PageLoader />}><DownloadAppPage /></Suspense>} />
-                <Route path="/lost-and-found" element={<Suspense fallback={<PageLoader />}><LostFoundPage /></Suspense>} />
-                
-                {/* Authenticated Routes */}
-                <Route path="/dashboard" element={<RequireAuth><Suspense fallback={<PageLoader />}><UserDashboardPage /></Suspense></RequireAuth>} />
-                <Route path="/ai" element={<RequireAuth><Suspense fallback={<PageLoader />}><AIPage /></Suspense></RequireAuth>} />
-                <Route path="/questions" element={<RequireAuth><Suspense fallback={<PageLoader />}><PastQuestionsPage /></Suspense></RequireAuth>} />
-                <Route path="/community" element={<RequireAuth><Suspense fallback={<PageLoader />}><CommunityPage /></Suspense></RequireAuth>} />
-                <Route path="/profile" element={<RequireAuth><Suspense fallback={<PageLoader />}><ProfilePage /></Suspense></RequireAuth>} />
-                <Route path="/test" element={<RequireAuth><Suspense fallback={<PageLoader />}><TestPage /></Suspense></RequireAuth>} />
-                <Route path="/arcade" element={<RequireAuth><Suspense fallback={<PageLoader />}><ArcadePage /></Suspense></RequireAuth>} />
-                <Route path="/notes" element={<RequireAuth><Suspense fallback={<PageLoader />}><NotesPage /></Suspense></RequireAuth>} />
-                <Route path="/upload" element={<RequireAuth><Suspense fallback={<PageLoader />}><UploadPage /></Suspense></RequireAuth>} />
-                <Route path="/marketplace" element={<RequireAuth><Suspense fallback={<PageLoader />}><MarketplacePage /></Suspense></RequireAuth>} />
-                <Route path="/notifications" element={<RequireAuth><Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense></RequireAuth>} />
-                <Route path="/executives" element={<RequireAuth><Suspense fallback={<PageLoader />}><ExecutivesPage /></Suspense></RequireAuth>} />
-                <Route path="/lecturers" element={<RequireAuth><Suspense fallback={<PageLoader />}><LecturersPage /></Suspense></RequireAuth>} />
-                <Route path="/leaderboard" element={<RequireAuth><Suspense fallback={<PageLoader />}><LeaderboardPage /></Suspense></RequireAuth>} />
-            </Route>
+        <AnimatePresence mode="wait">
+            <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+                className="min-h-screen"
+            >
+                <Routes location={location}>
+                    <Route path="/login" element={<Suspense fallback={<PageLoader />}><SignInPage /></Suspense>} />
+                    <Route path="/signup" element={<Suspense fallback={<PageLoader />}><SignUpPage /></Suspense>} />
+                    <Route element={<Layout />}>
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/announcements" element={<Suspense fallback={<PageLoader />}><AnnouncementsPage /></Suspense>} />
+                        <Route path="/gallery" element={<Suspense fallback={<PageLoader />}><GalleryPage /></Suspense>} />
+                        <Route path="/faq" element={<Suspense fallback={<PageLoader />}><FAQPage /></Suspense>} />
+                        <Route path="/download-app" element={<Suspense fallback={<PageLoader />}><DownloadAppPage /></Suspense>} />
+                        <Route path="/lost-and-found" element={<Suspense fallback={<PageLoader />}><LostFoundPage /></Suspense>} />
+                        
+                        {/* Authenticated Routes */}
+                        <Route path="/dashboard" element={<RequireAuth><Suspense fallback={<PageLoader />}><UserDashboardPage /></Suspense></RequireAuth>} />
+                        <Route path="/ai" element={<RequireAuth><Suspense fallback={<PageLoader />}><AIPage /></Suspense></RequireAuth>} />
+                        <Route path="/questions" element={<RequireAuth><Suspense fallback={<PageLoader />}><PastQuestionsPage /></Suspense></RequireAuth>} />
+                        <Route path="/community" element={<RequireAuth><Suspense fallback={<PageLoader />}><CommunityPage /></Suspense></RequireAuth>} />
+                        <Route path="/profile" element={<RequireAuth><Suspense fallback={<PageLoader />}><ProfilePage /></Suspense></RequireAuth>} />
+                        <Route path="/test" element={<RequireAuth><Suspense fallback={<PageLoader />}><TestPage /></Suspense></RequireAuth>} />
+                        <Route path="/arcade" element={<RequireAuth><Suspense fallback={<PageLoader />}><ArcadePage /></Suspense></RequireAuth>} />
+                        <Route path="/notes" element={<RequireAuth><Suspense fallback={<PageLoader />}><NotesPage /></Suspense></RequireAuth>} />
+                        <Route path="/upload" element={<RequireAuth><Suspense fallback={<PageLoader />}><UploadPage /></Suspense></RequireAuth>} />
+                        <Route path="/marketplace" element={<RequireAuth><Suspense fallback={<PageLoader />}><MarketplacePage /></Suspense></RequireAuth>} />
+                        <Route path="/notifications" element={<RequireAuth><Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense></RequireAuth>} />
+                        <Route path="/executives" element={<RequireAuth><Suspense fallback={<PageLoader />}><ExecutivesPage /></Suspense></RequireAuth>} />
+                        <Route path="/lecturers" element={<RequireAuth><Suspense fallback={<PageLoader />}><LecturersPage /></Suspense></RequireAuth>} />
+                        <Route path="/leaderboard" element={<RequireAuth><Suspense fallback={<PageLoader />}><LeaderboardPage /></Suspense></RequireAuth>} />
+                    </Route>
 
-            {/* FIXED ADMIN ROUTING */}
-            <Route path="/admin" element={<RequireAuth adminOnly><Suspense fallback={<PageLoader />}><AdminLayout /></Suspense></RequireAuth>}>
-                <Route index element={<Navigate to="dashboard" replace />} />
-                <Route path="dashboard" element={<AdminPage />} />
-                <Route path="users" element={<AdminUsersPage />} />
-                <Route path="active-users" element={<AdminActiveUsersPage />} />
-                <Route path="materials" element={<AdminMaterialsPage />} />
-                <Route path="news" element={<AdminNewsPage />} />
-                <Route path="executives" element={<AdminExecutivesPage />} />
-                <Route path="lecturers" element={<AdminLecturersPage />} />
-                <Route path="community" element={<AdminCommunityPage />} />
-                <Route path="gallery" element={<AdminGalleryPage />} />
-                <Route path="approvals" element={<AdminApprovalsPage />} />
-                <Route path="settings" element={<AdminSettingsPage />} />
-                <Route path="*" element={<Navigate to="dashboard" replace />} />
-            </Route>
+                    {/* FIXED ADMIN ROUTING */}
+                    <Route path="/admin" element={<RequireAuth adminOnly><Suspense fallback={<PageLoader />}><AdminLayout /></Suspense></RequireAuth>}>
+                        <Route index element={<Navigate to="dashboard" replace />} />
+                        <Route path="dashboard" element={<AdminPage />} />
+                        <Route path="users" element={<AdminUsersPage />} />
+                        <Route path="active-users" element={<AdminActiveUsersPage />} />
+                        <Route path="materials" element={<AdminMaterialsPage />} />
+                        <Route path="news" element={<AdminNewsPage />} />
+                        <Route path="executives" element={<AdminExecutivesPage />} />
+                        <Route path="lecturers" element={<AdminLecturersPage />} />
+                        <Route path="community" element={<AdminCommunityPage />} />
+                        <Route path="gallery" element={<AdminGalleryPage />} />
+                        <Route path="approvals" element={<AdminApprovalsPage />} />
+                        <Route path="settings" element={<AdminSettingsPage />} />
+                        <Route path="*" element={<Navigate to="dashboard" replace />} />
+                    </Route>
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+            </motion.div>
+        </AnimatePresence>
     </>
   );
 };

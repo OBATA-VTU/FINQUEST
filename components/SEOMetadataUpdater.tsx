@@ -24,43 +24,51 @@ export const SEOMetadataUpdater: React.FC = () => {
         break;
       case '/questions':
         title = "FINSA AAUA | Resources Archives";
-        description = "Browse and download verified past questions and lecture notes for all levels in the Finance Department.";
+        description = "Access the largest collection of Finance past questions, lecture notes, and academic materials at Adekunle Ajasin University. Download verified resources for all levels.";
         break;
       case '/community':
-        title = "FINSA AAUA | Student Lounge";
-        description = "Connect with peers in the official Finance student chat lounge.";
+        title = "FINSA AAUA | Student Hub & Lounge";
+        description = "Join the conversation! Connect with fellow Finance students, share ideas, and stay updated with departmental activities in our official student lounge.";
         break;
       case '/gallery':
-        title = "FINSA AAUA | Photo Gallery";
-        description = "View photos and milestones from the Department of Finance activities and events.";
+        title = "FINSA AAUA | Moments & Milestones";
+        description = "Relive the best moments of the Department of Finance. Explore photos from induction ceremonies, sports festivals, and academic seminars.";
         break;
       case '/announcements':
-        title = "FINSA AAUA | News & Bulletins";
-        description = "Stay informed with official announcements from the Finance Department Executive Council.";
+        title = "FINSA AAUA | Official Bulletins";
+        description = "Get real-time updates on departmental news, exam schedules, and official notices from the Finance Executive Council.";
         break;
       case '/executives':
-        title = "FINSA AAUA | Executive Council";
-        description = "Meet the student leaders: President Comr. Sidiku Michael, VP Obe Bankole Michael, and more.";
+        title = "FINSA AAUA | Leadership Council";
+        description = "Meet the Comr. Sidiku Michael-led executive team dedicated to serving the interests of Finance students at AAUA.";
         break;
       case '/lecturers':
-        title = "FINSA AAUA | Academic Faculty";
-        description = "Meet the distinguished academic faculty and lecturers of the Department of Finance (FAMASSA).";
+        title = "FINSA AAUA | Distinguished Faculty";
+        description = "Learn more about the academic experts and mentors shaping the future of finance professionals at Adekunle Ajasin University.";
         break;
       case '/test':
-        title = "FINSA AAUA | CBT Practice Center";
-        description = "Take AI-powered mock exams and quizzes to prepare for your finance exams.";
+        title = "FINSA AAUA | Exam Prep Center";
+        description = "Sharpen your skills with our AI-powered CBT practice platform. Simulate real exam conditions and track your progress.";
         break;
       case '/marketplace':
-        title = "FINSA AAUA | Student Marketplace";
-        description = "Buy and sell goods or services within the Finance student community.";
+        title = "FINSA AAUA | Campus Marketplace";
+        description = "The trusted community marketplace for Finance students. Buy and sell textbooks, gadgets, and services securely.";
         break;
       case '/lost-and-found':
-        title = "FINSA AAUA | Lost & Found";
-        description = "Post and find lost items within the AAUA campus community.";
+        title = "FINSA AAUA | Campus Recovery";
+        description = "Lost something? Found something? Report it here to help fellow students recover their belongings within the AAUA community.";
         break;
       case '/arcade':
-        title = "FINSA Arcade | Finance Games";
-        description = "Play trivia and finance timeline games to learn and earn points.";
+        title = "FINSA Arcade | Edutainment Zone";
+        description = "Learn finance through play! Engage in trivia, timeline challenges, and earn contribution points while having fun.";
+        break;
+      case '/ai':
+        title = "FINSA AI | Academic Assistant";
+        description = "Leverage cutting-edge AI to summarize notes, solve complex finance problems, and generate study guides instantly.";
+        break;
+      case '/download-app':
+        title = "FINSA AAUA | Mobile Experience";
+        description = "Download the official FINSA AAUA mobile app for Android and iOS. Stay connected with the department on the go.";
         break;
       default:
         if (pathname.startsWith('/admin')) {

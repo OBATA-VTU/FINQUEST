@@ -47,8 +47,10 @@ const STOCK_AVATARS = [
 
 const getRandomAvatar = () => STOCK_AVATARS[Math.floor(Math.random() * STOCK_AVATARS.length)];
 
-const SESSION_TIMEOUT = 20 * 60 * 1000; // 20 minutes of inactivity
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes of inactivity
+const MAX_SESSION_DURATION = 2 * 60 * 60 * 1000; // 2 hours max session
 const ACTIVITY_STORAGE_KEY = 'finsa_last_activity';
+const SESSION_START_KEY = 'finsa_session_start';
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -62,21 +64,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+        localStorage.removeItem(SESSION_START_KEY);
+        return;
+    }
 
     // Initial activity set
     updateActivity();
+    if (!localStorage.getItem(SESSION_START_KEY)) {
+        localStorage.setItem(SESSION_START_KEY, Date.now().toString());
+    }
 
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
     events.forEach(event => window.addEventListener(event, updateActivity));
 
     const checkInterval = setInterval(async () => {
+      const now = Date.now();
       const lastActivity = parseInt(localStorage.getItem(ACTIVITY_STORAGE_KEY) || '0');
-      if (lastActivity && Date.now() - lastActivity > SESSION_TIMEOUT) {
-        console.log("Session expired due to inactivity");
+      const sessionStart = parseInt(localStorage.getItem(SESSION_START_KEY) || '0');
+
+      const isInactive = lastActivity && now - lastActivity > SESSION_TIMEOUT;
+      const isDurationExceeded = sessionStart && now - sessionStart > MAX_SESSION_DURATION;
+
+      if (isInactive || isDurationExceeded) {
+        console.log(isInactive ? "Session expired due to inactivity" : "Session duration exceeded");
         await logout();
         sessionStorage.setItem('session_expired', 'true');
-        // Force reload to clear state and redirect via RequireAuth/App logic
         window.location.href = '/login';
       }
     }, 30000); // Check every 30 seconds

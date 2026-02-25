@@ -1,5 +1,6 @@
 
 import React, { useState, useContext } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { PastQuestion } from '../types';
 import { downloadPDF, generatePDF } from '../utils/pdfGenerator';
 import { PDFViewerModal } from './PDFViewerModal';
@@ -14,6 +15,7 @@ interface QuestionCardProps {
 export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [isDownloading, setIsDownloading] = useState(false);
   const { showNotification } = useNotification();
   const auth = useContext(AuthContext);
 
@@ -70,34 +72,42 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
     e.stopPropagation();
     e.preventDefault();
 
-    if (question.textContent) {
-        downloadPDF(question.courseTitle, question.textContent, question.courseCode, question.year);
-        return;
-    }
+    if (isDownloading) return;
+    setIsDownloading(true);
 
-    if (question.fileUrl) {
-        const url = question.fileUrl;
-        
-        // Dropbox handling (standard download link)
-        if (url.includes('dropbox.com')) {
-             const dlUrl = getDropboxDownloadUrl(url);
-             // Direct location change is often more reliable for triggering downloads in mobile browsers
-             window.location.href = dlUrl;
-        } else if (url.includes('drive.google.com')) {
-             const dlUrl = url.replace('export=view', 'export=download');
-             window.open(dlUrl, '_blank');
-        } else {
-             // ImgBB / Other logic -> Force Download using Blob
-             try {
-                 const ext = url.split('.').pop()?.split('?')[0] || 'jpg';
-                 const filename = `${question.courseCode}_${question.year}_${question.courseTitle.substring(0, 10)}.${ext}`;
-                 await forceDownload(url, filename);
-             } catch (err) {
-                 // Fallback to direct opening if blob download fails
-                 window.open(url, '_blank');
-                 showNotification("Opening in new tab...", "info");
-             }
+    try {
+        if (question.textContent) {
+            downloadPDF(question.courseTitle, question.textContent, question.courseCode, question.year);
+            return;
         }
+
+        if (question.fileUrl) {
+            const url = question.fileUrl;
+            
+            // Dropbox handling (standard download link)
+            if (url.includes('dropbox.com')) {
+                 const dlUrl = getDropboxDownloadUrl(url);
+                 window.location.href = dlUrl;
+            } else if (url.includes('drive.google.com')) {
+                 const dlUrl = url.replace('export=view', 'export=download');
+                 window.open(dlUrl, '_blank');
+            } else {
+                 // ImgBB / Other logic -> Force Download using Blob
+                 try {
+                     const ext = url.split('.').pop()?.split('?')[0] || 'jpg';
+                     const filename = `${question.courseCode}_${question.year}_${question.courseTitle.substring(0, 10)}.${ext}`;
+                     
+                     // Show notification for potentially slow downloads
+                     showNotification("Preparing your download...", "info");
+                     await forceDownload(url, filename);
+                 } catch (err) {
+                     window.open(url, '_blank');
+                     showNotification("Opening in new tab...", "info");
+                 }
+            }
+        }
+    } finally {
+        setIsDownloading(false);
     }
   };
 
@@ -111,8 +121,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
   }
 
   return (
-    <>
-      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-500 transition-all duration-200 flex flex-col h-full group relative hover:-translate-y-1">
+    <motion.div 
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      whileHover={{ y: -4 }}
+      className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-500 transition-all duration-200 flex flex-col h-full group relative"
+    >
         <div className="flex justify-between items-start mb-2">
              <div className="flex gap-2 flex-wrap">
                 <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600">
@@ -161,21 +177,29 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
             </button>
             <button 
                 onClick={handleDownload} 
-                className="flex-1 py-2 text-xs font-bold text-white bg-indigo-600 rounded hover:bg-indigo-700 transition shadow-sm flex items-center justify-center gap-1 text-center"
+                disabled={isDownloading}
+                className="flex-1 py-2 text-xs font-bold text-white bg-indigo-600 rounded hover:bg-indigo-700 transition shadow-sm flex items-center justify-center gap-1 text-center disabled:opacity-50"
             >
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                {question.textContent ? 'PDF' : 'Download'}
+                {isDownloading ? (
+                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                ) : (
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                )}
+                {isDownloading ? 'Wait...' : (question.textContent ? 'PDF' : 'Download')}
             </button>
         </div>
-      </div>
-      
-      <PDFViewerModal 
-        isOpen={isPreviewOpen} 
-        onClose={handleClosePreview} 
-        fileUrl={previewUrl}
-        pages={question.pages}
-        title={`${question.courseCode} (${question.year})`}
-      />
-    </>
+
+        <AnimatePresence>
+            {isPreviewOpen && (
+                <PDFViewerModal 
+                    isOpen={isPreviewOpen} 
+                    onClose={handleClosePreview} 
+                    fileUrl={previewUrl}
+                    pages={question.pages}
+                    title={`${question.courseCode} (${question.year})`}
+                />
+            )}
+        </AnimatePresence>
+    </motion.div>
   );
 };
