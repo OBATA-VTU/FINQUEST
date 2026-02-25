@@ -83,6 +83,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
              const dlUrl = getDropboxDownloadUrl(url);
              // Direct location change is often more reliable for triggering downloads in mobile browsers
              window.location.href = dlUrl;
+        } else if (url.includes('drive.google.com')) {
+             const dlUrl = url.replace('export=view', 'export=download');
+             window.open(dlUrl, '_blank');
         } else {
              // ImgBB / Other logic -> Force Download using Blob
              try {

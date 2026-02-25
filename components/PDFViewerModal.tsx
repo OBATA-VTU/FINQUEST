@@ -39,6 +39,7 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
           const isImage = /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(lower) || 
                           lower.includes('imgbb') || 
                           lower.includes('alt=media') ||
+                          lower.includes('drive.google.com/uc') || // Google Drive view links are often images in this context
                           (pages && pages.length > 0); // If pages exist, treat as image set
 
           const isPdf = /\.(pdf)(\?.*)?$/i.test(lower) || 
@@ -78,6 +79,9 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
            document.body.appendChild(link);
            link.click();
            document.body.removeChild(link);
+      } else if (fileUrl.includes('drive.google.com')) {
+           const dlUrl = fileUrl.replace('export=view', 'export=download');
+           window.open(dlUrl, '_blank');
       } else {
            // ImgBB or other image hosts
            const ext = fileUrl.split('.').pop()?.split('?')[0] || 'jpg';

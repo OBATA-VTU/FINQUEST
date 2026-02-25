@@ -22,6 +22,15 @@ export const SignInPage: React.FC = () => {
         }
     }, [authCtx?.user, authCtx?.loading, navigate]);
 
+    // EFFECT: Check for session expiration flag
+    useEffect(() => {
+        const expired = sessionStorage.getItem('session_expired');
+        if (expired === 'true') {
+            showNotification("Session expired due to inactivity. Please log in again.", "warning");
+            sessionStorage.removeItem('session_expired');
+        }
+    }, [showNotification]);
+
     // If still determining auth status, show a minimal loader to prevent UI flickering
     if (authCtx?.loading) {
         return (

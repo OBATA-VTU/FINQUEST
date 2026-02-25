@@ -47,11 +47,45 @@ const STOCK_AVATARS = [
 
 const getRandomAvatar = () => STOCK_AVATARS[Math.floor(Math.random() * STOCK_AVATARS.length)];
 
+const SESSION_TIMEOUT = 20 * 60 * 1000; // 20 minutes of inactivity
+const ACTIVITY_STORAGE_KEY = 'finsa_last_activity';
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { showNotification } = useNotification();
   const isSigningIn = useRef(false);
+
+  // Session activity tracking
+  const updateActivity = () => {
+    localStorage.setItem(ACTIVITY_STORAGE_KEY, Date.now().toString());
+  };
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Initial activity set
+    updateActivity();
+
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
+    events.forEach(event => window.addEventListener(event, updateActivity));
+
+    const checkInterval = setInterval(async () => {
+      const lastActivity = parseInt(localStorage.getItem(ACTIVITY_STORAGE_KEY) || '0');
+      if (lastActivity && Date.now() - lastActivity > SESSION_TIMEOUT) {
+        console.log("Session expired due to inactivity");
+        await logout();
+        sessionStorage.setItem('session_expired', 'true');
+        // Force reload to clear state and redirect via RequireAuth/App logic
+        window.location.href = '/login';
+      }
+    }, 30000); // Check every 30 seconds
+
+    return () => {
+      events.forEach(event => window.removeEventListener(event, updateActivity));
+      clearInterval(checkInterval);
+    };
+  }, [user?.id]);
 
   const isPasswordAccount = auth.currentUser?.providerData.some(p => p.providerId === 'password') || false;
   const isGoogleAccount = auth.currentUser?.providerData.some(p => p.providerId === 'google.com') || false;
