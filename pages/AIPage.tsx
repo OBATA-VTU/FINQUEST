@@ -12,6 +12,7 @@ interface ChatMessage {
     image?: string;
     timestamp: number;
     isStreaming?: boolean;
+    status?: 'sending' | 'sent' | 'error';
 }
 
 const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
@@ -169,9 +170,23 @@ export const AIPage: React.FC = () => {
         setInput('');
         setImageFile(null);
 
-        const userMsg: ChatMessage = { role: 'user', text: userMsgText, timestamp: Date.now() };
+        const userMsg: ChatMessage = { 
+            role: 'user', 
+            text: userMsgText, 
+            timestamp: Date.now(),
+            status: 'sending'
+        };
         if (currentImage) userMsg.image = URL.createObjectURL(currentImage);
         setMessages(prev => [...prev, userMsg]);
+
+        // Immediate typing indicator for bot
+        const initialBeeMsg: ChatMessage = { 
+            role: 'bee', 
+            text: '', 
+            timestamp: Date.now(), 
+            isStreaming: true 
+        };
+        setMessages(prev => [...prev, initialBeeMsg]);
 
         try {
             const dbContext = await performDeepSearch(userMsgText);
@@ -204,8 +219,12 @@ export const AIPage: React.FC = () => {
                 }, { role: 'user', parts: [{ text: userMsgText }] }]
             });
 
-            const beeMsg: ChatMessage = { role: 'bee', text: '', timestamp: Date.now(), isStreaming: true };
-            setMessages(prev => [...prev, beeMsg]);
+            // Update user message status to sent
+            setMessages(prev => prev.map(m => 
+                (m.role === 'user' && m.timestamp === userMsg.timestamp) 
+                ? { ...m, status: 'sent' } 
+                : m
+            ));
 
             let fullText = '';
             let deductionDone = false;
@@ -306,8 +325,21 @@ export const AIPage: React.FC = () => {
                         <div className={`max-w-[88%] md:max-w-[75%] rounded-2xl p-4 shadow-sm relative ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-200 dark:border-slate-700'}`}>
                             {msg.image && <img src={msg.image} alt="Upload" className="rounded-xl mb-3 max-h-56 w-auto object-contain mx-auto border border-black/5" />}
                             {msg.role === 'bee' && msg.text === '' ? <TypingDots /> : <MarkdownRenderer text={msg.text} />}
-                            <div className="mt-2 text-[8px] font-black uppercase opacity-40 text-right">
-                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            <div className="mt-2 flex items-center justify-end gap-1 opacity-40">
+                                {msg.role === 'user' && (
+                                    <div className="text-[8px] font-black uppercase">
+                                        {msg.status === 'sending' ? (
+                                            <svg className="w-2.5 h-2.5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        ) : msg.status === 'error' ? (
+                                            <span className="text-rose-400">Failed</span>
+                                        ) : (
+                                            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="text-[8px] font-black uppercase">
+                                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
                             </div>
                         </div>
                     </div>

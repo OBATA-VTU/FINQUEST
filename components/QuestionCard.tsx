@@ -81,13 +81,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
         // Dropbox handling (standard download link)
         if (url.includes('dropbox.com')) {
              const dlUrl = getDropboxDownloadUrl(url);
-             const link = document.createElement('a');
-             link.href = dlUrl;
-             link.setAttribute('download', '');
-             link.target = "_blank"; // Fallback
-             document.body.appendChild(link);
-             link.click();
-             document.body.removeChild(link);
+             // Direct location change is often more reliable for triggering downloads in mobile browsers
+             window.location.href = dlUrl;
         } else {
              // ImgBB / Other logic -> Force Download using Blob
              try {
@@ -95,7 +90,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
                  const filename = `${question.courseCode}_${question.year}_${question.courseTitle.substring(0, 10)}.${ext}`;
                  await forceDownload(url, filename);
              } catch (err) {
-                 showNotification("Download started in new tab.", "info");
+                 // Fallback to direct opening if blob download fails
+                 window.open(url, '_blank');
+                 showNotification("Opening in new tab...", "info");
              }
         }
     }

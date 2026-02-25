@@ -119,9 +119,17 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
         {/* Content */}
         <div className="flex-grow bg-slate-100 dark:bg-slate-950 relative flex items-center justify-center overflow-hidden">
             {loading && (
-                <div className="absolute inset-0 flex flex-col gap-3 items-center justify-center z-10 pointer-events-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+                <div className="absolute inset-0 flex flex-col gap-3 items-center justify-center z-10 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
                     <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div>
-                    <span className="font-bold text-indigo-900 dark:text-indigo-300 animate-pulse">Loading Document...</span>
+                    <div className="flex flex-col items-center gap-2">
+                        <span className="font-bold text-indigo-900 dark:text-indigo-300 animate-pulse">Loading Document...</span>
+                        <button 
+                            onClick={() => window.open(displayUrl, '_blank')}
+                            className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 underline underline-offset-4 hover:text-indigo-800 pointer-events-auto"
+                        >
+                            Open directly if slow
+                        </button>
+                    </div>
                 </div>
             )}
             
