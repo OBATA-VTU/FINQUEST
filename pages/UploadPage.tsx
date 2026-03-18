@@ -6,7 +6,7 @@ import { db } from '../firebase';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { GoogleGenAI } from "@google/genai";
+import { OpenAI } from 'openai';
 import { useNavigate } from 'react-router-dom';
 
 type UploadType = 'select' | 'document' | 'images' | 'text' | 'ai';
@@ -134,11 +134,18 @@ export const UploadPage: React.FC = () => {
             } else if (uploadType === 'ai') {
                 if (!canUseAi) throw new Error("You don't have enough points for AI.");
                 setUploadStatus('AI is writing...');
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                const client = new OpenAI({
+                    apiKey: process.env.GROK_API_KEY,
+                    dangerouslyAllowBrowser: true,
+                    baseURL: "https://api.x.ai/v1",
+                });
                 const prompt = `Generate comprehensive, university-level study notes/lecture material on the topic: "${courseTitle}". Format in clean Markdown. Include a summary, key concepts, detailed explanation, and conclusion.`;
-                const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
+                const response = await client.chat.completions.create({
+                    model: "grok-beta",
+                    messages: [{ role: "user", content: prompt }],
+                });
                 trackAiUsage();
-                const aiText = result.text;
+                const aiText = response.choices[0].message.content;
                 if (!aiText) throw new Error("AI failed to create content.");
                 questionData.textContent = aiText;
             }

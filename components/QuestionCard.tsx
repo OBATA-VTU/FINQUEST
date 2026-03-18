@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { PastQuestion } from '../types';
 import { downloadPDF, generatePDF } from '../utils/pdfGenerator';
 import { PDFViewerModal } from './PDFViewerModal';
-import { getDropboxDownloadUrl, forceDownload } from '../utils/api';
+import { forceDownload } from '../utils/api';
 import { useNotification } from '../contexts/NotificationContext';
 import { AuthContext } from '../contexts/AuthContext';
 
@@ -51,12 +51,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
       } else if (question.fileUrl) {
           // Use stored URL. Ensure it is raw=1 for previewing content directly
           url = question.fileUrl;
-          if (url.includes('dropbox.com')) {
-              // Ensure we have the raw stream for preview, not the download or page
-              if (url.includes('?dl=0')) url = url.replace('?dl=0', '?raw=1');
-              else if (url.includes('?dl=1')) url = url.replace('?dl=1', '?raw=1');
-              else if (!url.includes('?')) url = `${url}?raw=1`;
-          }
       } else {
           showNotification("No preview available for this item.", "info");
           return;
@@ -84,11 +78,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
         if (question.fileUrl) {
             const url = question.fileUrl;
             
-            // Dropbox handling (standard download link)
-            if (url.includes('dropbox.com')) {
-                 const dlUrl = getDropboxDownloadUrl(url);
-                 window.location.href = dlUrl;
-            } else if (url.includes('drive.google.com')) {
+            if (url.includes('drive.google.com')) {
                  const dlUrl = url.replace('export=view', 'export=download');
                  window.location.href = dlUrl;
             } else {

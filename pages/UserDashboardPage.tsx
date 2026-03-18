@@ -6,7 +6,7 @@ import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { TestResult, Announcement, PastQuestion } from '../types';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { getBadge } from '../utils/badges';
-import { GoogleGenAI } from '@google/genai';
+import { OpenAI } from 'openai';
 import { Skeleton } from '../components/Skeleton';
 
 export const UserDashboardPage: React.FC = () => {
@@ -54,10 +54,17 @@ export const UserDashboardPage: React.FC = () => {
         } catch (e) {}
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const client = new OpenAI({
+                apiKey: process.env.GROK_API_KEY,
+                dangerouslyAllowBrowser: true,
+                baseURL: "https://api.x.ai/v1",
+            });
             const prompt = "Generate a single, unique, and insightful quote about finance, investing, or wealth. Concise (under 25 words). Do not include author.";
-            const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
-            const newQuote = result.text.trim().replace(/^"|"$/g, '');
+            const response = await client.chat.completions.create({
+                model: "grok-beta",
+                messages: [{ role: "user", content: prompt }],
+            });
+            const newQuote = response.choices[0].message.content?.trim().replace(/^"|"$/g, '');
             setQuote(newQuote || "The best investment you can make is in yourself.");
             localStorage.setItem('dailyQuote', JSON.stringify({ date: today, quote: newQuote }));
         } catch (error) {

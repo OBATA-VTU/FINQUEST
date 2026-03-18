@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
-import { GoogleGenAI } from "@google/genai";
+import { OpenAI } from 'openai';
 import { useNotification } from '../contexts/NotificationContext';
 import { db } from '../firebase';
 import { doc, updateDoc, collection, getDocs, getDoc, setDoc } from 'firebase/firestore';
@@ -199,12 +199,13 @@ export const AIPage: React.FC = () => {
                 });
             }
 
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const result = await ai.models.generateContentStream({
-                model: 'gemini-3-flash-preview',
-                contents: [{
-                    parts: [
-                        { text: `IDENTITY: Bee, official mascot for the Dept of Finance, AAUA.
+            const client = new OpenAI({
+                apiKey: process.env.GROK_API_KEY,
+                dangerouslyAllowBrowser: true,
+                baseURL: "https://api.x.ai/v1",
+            });
+
+            const systemPrompt = `IDENTITY: Bee, official mascot for the Dept of Finance, AAUA.
                                  STRICT RULES:
                                  1. PEOPLE INQUIRIES: If the user asks "Who is [Name]", strictly use the provided DATABASE SEARCH RESULTS below. 
                                     - If match found: State Full Name, Level, and specific Role/Title.
@@ -213,10 +214,24 @@ export const AIPage: React.FC = () => {
                                  2. Powered by Maths Teacher led administration.
                                  3. REPETITION: Don't mention user's level repeatedly.
                                  ${dbContext ? `DATA CONTEXT: ${dbContext}` : ''}
-                                 USER: ${user.username}` },
-                        ...(base64Image ? [{ inlineData: { data: base64Image, mimeType: currentImage!.type } }] : [])
-                    ]
-                }, { role: 'user', parts: [{ text: userMsgText }] }]
+                                 USER: ${user.username}`;
+
+            const messages: any[] = [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userMsgText }
+            ];
+
+            if (base64Image) {
+                messages[1].content = [
+                    { type: 'text', text: userMsgText },
+                    { type: 'image_url', image_url: { url: `data:${currentImage!.type};base64,${base64Image}` } }
+                ];
+            }
+
+            const stream = await client.chat.completions.create({
+                model: 'grok-beta',
+                messages: messages,
+                stream: true,
             });
 
             // Update user message status to sent
@@ -229,7 +244,7 @@ export const AIPage: React.FC = () => {
             let fullText = '';
             let deductionDone = false;
 
-            for await (const chunk of result) {
+            for await (const chunk of stream) {
                 if (!deductionDone) {
                     const newCredits = Math.max(0, currentCredits - creditCost);
                     await updateDoc(doc(db, 'users', user.id), { aiCredits: newCredits });
@@ -237,7 +252,7 @@ export const AIPage: React.FC = () => {
                     deductionDone = true;
                 }
 
-                const chunkText = chunk.text;
+                const chunkText = chunk.choices[0]?.delta?.content || '';
                 if (chunkText) {
                     fullText += chunkText;
                     setMessages(prev => {

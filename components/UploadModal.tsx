@@ -1,6 +1,6 @@
 // THIS FILE IS DEPRECATED AND NO LONGER USED.
 // The functionality has been moved to pages/UploadPage.tsx to ensure
-// the correct upload logic (respecting Google Drive/Dropbox settings) is used.
+// the correct upload logic (respecting Google Drive settings) is used.
 // If you see this modal, it means an old component is still calling it.
 
 import React from 'react';

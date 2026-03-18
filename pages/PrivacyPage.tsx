@@ -46,9 +46,8 @@ export const PrivacyPage: React.FC = () => {
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">4. Data Sharing and Third-Party Services</h2>
             <p>The platform does not sell your personal data. However, it relies on third-party services to function, which may process your data:</p>
             <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li><strong>Firebase (by Google):</strong> Used for authentication, database storage (Firestore), and hosting.</li>
-              <li><strong>Google Drive / Dropbox:</strong> Used for file storage if configured by the administrator. Uploaded files are subject to the privacy policies of these services.</li>
-              <li><strong>Google Gemini API:</strong> Used for generating AI-powered test questions and notes. Prompts containing academic topics may be sent to Google for processing.</li>
+              <li><strong>Firebase (by Google):</strong> Used for authentication, database storage (Firestore), file storage (Firebase Storage), and hosting.</li>
+              <li><strong>Grok AI (by xAI):</strong> Used for generating AI-powered test questions and notes. Prompts containing academic topics may be sent to xAI for processing.</li>
               <li><strong>Adsterra:</strong> Used to display advertisements. Adsterra may use cookies and other tracking technologies to serve personalized ads. The platform does not share your personal identification information with Adsterra.</li>
             </ul>
           </section>

@@ -4,7 +4,7 @@ import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc } from 'firebase
 import { useNotification } from '../contexts/NotificationContext';
 import { uploadDocument, deleteDocument } from '../utils/api';
 import { LEVELS } from '../constants';
-import { GoogleGenAI } from "@google/genai";
+import { OpenAI } from 'openai';
 
 const CATEGORIES = ["Past Question", "Test Question", "Lecture Note", "Handout", "Textbook", "Other"];
 
@@ -61,10 +61,17 @@ export const AdminMaterialsPage: React.FC = () => {
           payload.semester = payload.semester === 'N/A' ? 'N/A' : Number(payload.semester);
 
           if (isAiMode) {
-              const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+              const client = new OpenAI({
+                  apiKey: process.env.GROK_API_KEY,
+                  dangerouslyAllowBrowser: true,
+                  baseURL: "https://api.x.ai/v1",
+              });
               const prompt = `Generate comprehensive, university-level study notes/lecture material on the topic: "${payload.courseTitle}". Course Code: ${payload.courseCode}. Format in clean Markdown.`;
-              const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
-              const textContent = result.text;
+              const response = await client.chat.completions.create({
+                  model: "grok-beta",
+                  messages: [{ role: "user", content: prompt }],
+              });
+              const textContent = response.choices[0].message.content;
               if (!textContent) throw new Error("AI engine failed to output data.");
               payload.textContent = textContent;
               payload.fileUrl = null;

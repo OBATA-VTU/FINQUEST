@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useContext } from 'react';
 import { triviaQuestions, timelineQuestions, FallbackQuestion } from '../utils/fallbackQuestions';
-import { GoogleGenAI } from "@google/genai";
+import { OpenAI } from 'openai';
 import { trackAiUsage } from '../utils/api';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -128,13 +128,24 @@ const GamePlayer: React.FC<{ game: Game; onFinish: (score: number, total: number
                 setQuestions(timelineQuestions.sort(() => 0.5 - Math.random()).slice(0, 10));
             } else {
                 try {
-                    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                    const client = new OpenAI({
+                        apiKey: process.env.GROK_API_KEY,
+                        dangerouslyAllowBrowser: true,
+                        baseURL: "https://api.x.ai/v1",
+                    });
                     const prompt = `Generate exactly 10 trivia questions about Nigerian finance, general finance calculations, and some basic world finance history. The first 5 should be relatively easy, and the last 5 should be progressively harder. Return a valid JSON array of objects with keys: "id" (number from 1-10), "text" (string), "options" (array of 4 strings), and "correctAnswer" (number from 0-3).`;
-                    const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt, config: { responseMimeType: 'application/json' } });
+                    const response = await client.chat.completions.create({
+                        model: "grok-beta",
+                        messages: [{ role: "user", content: prompt }],
+                        response_format: { type: "json_object" }
+                    });
                     trackAiUsage();
-                    const aiQuestions = JSON.parse(result.text.trim());
-                    if (!Array.isArray(aiQuestions) || aiQuestions.length < 10) throw new Error("AI did not return 10 questions.");
-                    setQuestions(aiQuestions);
+                    const content = response.choices[0].message.content || "[]";
+                    const aiQuestions = JSON.parse(content);
+                    // Handle case where AI might wrap the array in an object
+                    const questionsArray = Array.isArray(aiQuestions) ? aiQuestions : (aiQuestions.questions || aiQuestions.trivia || []);
+                    if (!Array.isArray(questionsArray) || questionsArray.length < 5) throw new Error("AI did not return enough questions.");
+                    setQuestions(questionsArray);
                 } catch (e) {
                     console.warn("AI generation for trivia failed, falling back to bank.", e);
                     setQuestions(triviaQuestions.sort(() => 0.5 - Math.random()).slice(0, 10));

@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { getDropboxDownloadUrl, forceDownload } from '../utils/api';
+import { forceDownload } from '../utils/api';
 
 interface PDFViewerModalProps {
   isOpen: boolean;
@@ -70,15 +70,6 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({ isOpen, onClose,
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-      } else if (fileUrl.includes('dropbox.com')) {
-           const url = getDropboxDownloadUrl(fileUrl);
-           const link = document.createElement('a');
-           link.href = url;
-           link.setAttribute('download', '');
-           link.target = "_blank";
-           document.body.appendChild(link);
-           link.click();
-           document.body.removeChild(link);
       } else if (fileUrl.includes('drive.google.com')) {
            const dlUrl = fileUrl.replace('export=view', 'export=download');
            window.location.href = dlUrl;

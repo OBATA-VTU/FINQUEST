@@ -1,7 +1,7 @@
 
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
-import { GoogleGenAI } from "@google/genai";
+import { OpenAI } from 'openai';
 import { useNotification } from '../contexts/NotificationContext';
 import { db } from '../firebase';
 import { collection, addDoc, doc, updateDoc, increment, getDoc } from 'firebase/firestore';
@@ -153,11 +153,22 @@ const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTi
     const startMock = async () => {
         setView('loading');
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const client = new OpenAI({
+                apiKey: process.env.GROK_API_KEY,
+                dangerouslyAllowBrowser: true,
+                baseURL: "https://api.x.ai/v1",
+            });
             const prompt = `Generate exactly 30 high-quality, university-level multiple-choice finance questions for level ${level}. Return as a JSON array of objects with "id", "text", "options" (4 strings), "correctAnswer" (0-3 index).`;
-            const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt, config: { responseMimeType: 'application/json' } });
+            const response = await client.chat.completions.create({
+                model: "grok-beta",
+                messages: [{ role: "user", content: prompt }],
+                response_format: { type: "json_object" }
+            });
             trackAiUsage();
-            startTest(JSON.parse(result.text.trim()), 40 * 60, 'mock', '');
+            const content = response.choices[0].message.content || "[]";
+            const aiQuestions = JSON.parse(content);
+            const questionsArray = Array.isArray(aiQuestions) ? aiQuestions : (aiQuestions.questions || aiQuestions.test || []);
+            startTest(questionsArray, 40 * 60, 'mock', '');
         } catch (e) {
             startTest(fallbackQuestions.filter(q => level === 'General' || q.level === level).sort(() => 0.5-Math.random()).slice(0, 30), 40 * 60, 'mock', '');
         }
@@ -166,22 +177,40 @@ const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTi
     const generateAiQuiz = async () => {
         setView('loading');
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const client = new OpenAI({
+                apiKey: process.env.GROK_API_KEY,
+                dangerouslyAllowBrowser: true,
+                baseURL: "https://api.x.ai/v1",
+            });
             const prompt = `Generate exactly 10 high-quality finance questions for the topic: "${topic}". Return as a JSON array of objects with "id", "text", "options", "correctAnswer".`;
-            const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt, config: { responseMimeType: 'application/json' } });
+            const response = await client.chat.completions.create({
+                model: "grok-beta",
+                messages: [{ role: "user", content: prompt }],
+                response_format: { type: "json_object" }
+            });
             trackAiUsage();
-            startTest(JSON.parse(result.text.trim()), 15 * 60, 'ai', topic);
+            const content = response.choices[0].message.content || "[]";
+            const aiQuestions = JSON.parse(content);
+            const questionsArray = Array.isArray(aiQuestions) ? aiQuestions : (aiQuestions.questions || aiQuestions.quiz || []);
+            startTest(questionsArray, 15 * 60, 'ai', topic);
         } catch (e) { showNotification("AI engine busy.", "error"); setView('configure'); }
     };
 
     const generateAiNotes = async () => {
         setView('loading');
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const client = new OpenAI({
+                apiKey: process.env.GROK_API_KEY,
+                dangerouslyAllowBrowser: true,
+                baseURL: "https://api.x.ai/v1",
+            });
             const prompt = `Generate professional university study notes on: "${topic}". Use Markdown.`;
-            const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
+            const response = await client.chat.completions.create({
+                model: "grok-beta",
+                messages: [{ role: "user", content: prompt }],
+            });
             trackAiUsage();
-            setAiNotes(result.text);
+            setAiNotes(response.choices[0].message.content || "");
             setView('notes');
         } catch (e) { showNotification("AI engine busy.", "error"); setView('configure'); }
     };

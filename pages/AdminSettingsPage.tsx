@@ -5,16 +5,7 @@ import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch, del
 import { useNotification } from '../contexts/NotificationContext';
 import { AuthContext } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { migrateResourceToGoogleDrive } from '../utils/api';
-
-const GOOGLE_DRIVE_CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID;
-const GOOGLE_DRIVE_CLIENT_SECRET = process.env.GOOGLE_DRIVE_CLIENT_SECRET;
-
-declare global {
-  interface Window {
-    google?: any;
-  }
-}
+import { migrateResourceToFirebase } from '../utils/api';
 
 export const AdminSettingsPage: React.FC = () => {
   const auth = useContext(AuthContext);
@@ -22,9 +13,8 @@ export const AdminSettingsPage: React.FC = () => {
   const { showNotification } = useNotification();
 
   const [socialLinks, setSocialLinks] = useState({ facebook: '', twitter: '', instagram: '', whatsapp: '', telegram: '', tiktok: '' });
-  const [siteSettings, setSiteSettings] = useState({ session: '2025/2026', showExecutives: true, uploadService: 'dropbox', googleDriveFolderId: '', googleDriveConnectedEmail: '' });
-  const [tokenClient, setTokenClient] = useState<any>(null);
-
+  const [siteSettings, setSiteSettings] = useState({ session: '2025/2026', showExecutives: true, uploadService: 'firebase' });
+  
   const [isWipeModalOpen, setIsWipeModalOpen] = useState(false);
   const [wipeConfirmText, setWipeConfirmText] = useState('');
   const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
@@ -46,74 +36,13 @@ export const AdminSettingsPage: React.FC = () => {
                 setSiteSettings({
                     session: data.session || '2025/2026',
                     showExecutives: data.showExecutives !== undefined ? data.showExecutives : true,
-                    uploadService: data.uploadService || 'dropbox',
-                    googleDriveFolderId: data.googleDriveFolderId || '',
-                    googleDriveConnectedEmail: data.googleDriveConnectedEmail || ''
+                    uploadService: data.uploadService || 'firebase'
                 });
             }
         } catch (e: any) { console.error("Failed to fetch settings:", e); }
     };
     fetchSettings();
-
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-        if (window.google) {
-            const client = window.google.accounts.oauth2.initCodeClient({
-                client_id: GOOGLE_DRIVE_CLIENT_ID,
-                scope: 'https://www.googleapis.com/auth/drive',
-                callback: handleGoogleAuthCallback,
-            });
-            setTokenClient(client);
-        }
-    };
-    document.body.appendChild(script);
-
-    return () => { document.body.removeChild(script); };
   }, []);
-
-  const handleGoogleAuthCallback = async (response: any) => {
-      showNotification("Authorization code received. Syncing...", "info");
-      try {
-          const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: new URLSearchParams({
-                code: response.code,
-                client_id: GOOGLE_DRIVE_CLIENT_ID || '',
-                client_secret: GOOGLE_DRIVE_CLIENT_SECRET || '',
-                redirect_uri: window.location.origin,
-                grant_type: 'authorization_code',
-              }),
-          });
-          
-          const tokens = await tokenResponse.json();
-          if (!tokenResponse.ok) throw new Error(tokens.error_description || "Token exchange failed.");
-
-          const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-              headers: { Authorization: `Bearer ${tokens.access_token}` },
-          });
-          const userProfile = await userResponse.json();
-          
-          await setDoc(doc(db, 'config', 'google_drive_settings'), {
-              access_token: tokens.access_token,
-              refresh_token: tokens.refresh_token,
-              expires_at: Date.now() + (tokens.expires_in * 1000),
-          }, { merge: true });
-
-          await updateDoc(doc(db, 'content', 'site_settings'), {
-              googleDriveConnectedEmail: userProfile.email,
-              uploadService: 'google_drive'
-          });
-
-          showNotification(`Drive connected for ${userProfile.email}.`, "success");
-          setSiteSettings(prev => ({ ...prev, googleDriveConnectedEmail: userProfile.email, uploadService: 'google_drive' }));
-      } catch (error: any) {
-          showNotification(`Connection failed: ${error.message}`, "error");
-      }
-  };
 
   const handleSaveSocial = async () => {
       try {
@@ -127,8 +56,7 @@ export const AdminSettingsPage: React.FC = () => {
           await updateDoc(doc(db, 'content', 'site_settings'), {
               session: siteSettings.session,
               showExecutives: siteSettings.showExecutives,
-              uploadService: siteSettings.uploadService,
-              googleDriveFolderId: siteSettings.googleDriveFolderId
+              uploadService: siteSettings.uploadService
           });
           showNotification("Site settings updated", "success");
       } catch(e) { showNotification("Update failed", "error"); }
@@ -217,24 +145,24 @@ export const AdminSettingsPage: React.FC = () => {
       setIsProcessing(true);
       try {
           const questionsSnap = await getDocs(collection(db, 'questions'));
-          const nonDriveQuestions = questionsSnap.docs.filter(d => {
+          const nonFirebaseQuestions = questionsSnap.docs.filter(d => {
               const data = d.data();
-              return data.fileUrl && !data.fileUrl.includes('drive.google.com');
+              return data.fileUrl && !data.fileUrl.includes('firebasestorage.googleapis.com');
           });
 
-          setMigrationProgress({ current: 0, total: nonDriveQuestions.length });
+          setMigrationProgress({ current: 0, total: nonFirebaseQuestions.length });
 
-          if (nonDriveQuestions.length === 0) {
-              showNotification("All resources are already on Google Drive.", "info");
+          if (nonFirebaseQuestions.length === 0) {
+              showNotification("All resources are already on Firebase Storage.", "info");
               return;
           }
 
-          for (let i = 0; i < nonDriveQuestions.length; i++) {
-              const docRef = nonDriveQuestions[i].ref;
-              const data = nonDriveQuestions[i].data();
+          for (let i = 0; i < nonFirebaseQuestions.length; i++) {
+              const docRef = nonFirebaseQuestions[i].ref;
+              const data = nonFirebaseQuestions[i].data();
               
               const fileName = `${data.courseCode}_${data.year}_migration_${i}`;
-              const result = await migrateResourceToGoogleDrive(data.fileUrl, fileName);
+              const result = await migrateResourceToFirebase(data.fileUrl, fileName);
               
               if (result) {
                   await updateDoc(docRef, {
@@ -247,7 +175,7 @@ export const AdminSettingsPage: React.FC = () => {
               setMigrationProgress(prev => ({ ...prev, current: i + 1 }));
           }
 
-          showNotification(`Migration complete: ${nonDriveQuestions.length} files moved.`, "success");
+          showNotification(`Migration complete: ${nonFirebaseQuestions.length} files moved.`, "success");
       } catch (error: any) {
           console.error("Migration error:", error);
           showNotification(`Migration failed: ${error.message}`, "error");
@@ -317,7 +245,7 @@ export const AdminSettingsPage: React.FC = () => {
             >
                 {isProcessing ? (
                     <div className="space-y-4">
-                        <p className="text-sm font-bold text-indigo-600 animate-pulse">Moving files to Google Drive...</p>
+                        <p className="text-sm font-bold text-indigo-600 animate-pulse">Moving files to Firebase Storage...</p>
                         <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
                             <div 
                                 className="bg-indigo-600 h-full transition-all duration-300" 
@@ -329,7 +257,7 @@ export const AdminSettingsPage: React.FC = () => {
                         </p>
                     </div>
                 ) : (
-                    "This will automatically move all resources currently stored on ImgBB or Dropbox to your connected Google Drive. This ensures all archives are in one place. This process may take a few minutes."
+                    "This will automatically move all resources currently stored on ImgBB or other external links to your Firebase Storage. This ensures all archives are in one place. This process may take a few minutes."
                 )}
             </ConfirmationModal>
         )}

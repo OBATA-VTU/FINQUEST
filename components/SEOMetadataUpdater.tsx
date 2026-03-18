@@ -28,7 +28,7 @@ export const SEOMetadataUpdater: React.FC = () => {
         break;
       case '/library':
         title = "FINSA AAUA | E-Library";
-        description = "Access real-time academic resources and literature from the Open Library global database.";
+        description = "Explore a vast collection of academic, professional, and entertainment literature powered by Google Books.";
         break;
       case '/community':
         title = "FINSA AAUA | Student Hub & Lounge";
