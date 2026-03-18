@@ -19,6 +19,7 @@ export const AdminMaterialsPage: React.FC = () => {
   const [formFile, setFormFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAiMode, setIsAiMode] = useState(false);
+  const [isLinkMode, setIsLinkMode] = useState(false);
 
   useEffect(() => { fetchContent(); }, []);
 
@@ -47,6 +48,7 @@ export const AdminMaterialsPage: React.FC = () => {
       setFormData(item || { level: 100, year: new Date().getFullYear(), semester: 'N/A', category: 'Past Question' });
       setFormFile(null);
       setIsAiMode(false);
+      setIsLinkMode(item?.fileUrl && !item?.storagePath && !item?.textContent ? true : false);
       setIsModalOpen(true);
   };
 
@@ -61,14 +63,15 @@ export const AdminMaterialsPage: React.FC = () => {
           payload.semester = payload.semester === 'N/A' ? 'N/A' : Number(payload.semester);
 
           if (isAiMode) {
+              const apiKey = process.env.GROQ_API_KEY || "";
               const client = new OpenAI({
-                  apiKey: process.env.GROK_API_KEY,
+                  apiKey: apiKey,
                   dangerouslyAllowBrowser: true,
-                  baseURL: "https://api.x.ai/v1",
+                  baseURL: "https://api.groq.com/openai/v1",
               });
               const prompt = `Generate comprehensive, university-level study notes/lecture material on the topic: "${payload.courseTitle}". Course Code: ${payload.courseCode}. Format in clean Markdown.`;
               const response = await client.chat.completions.create({
-                  model: "grok-beta",
+                  model: "llama-3.3-70b-versatile",
                   messages: [{ role: "user", content: prompt }],
               });
               const textContent = response.choices[0].message.content;
@@ -76,6 +79,10 @@ export const AdminMaterialsPage: React.FC = () => {
               payload.textContent = textContent;
               payload.fileUrl = null;
               payload.storagePath = null;
+          } else if (isLinkMode) {
+              if (!payload.fileUrl) throw new Error("External link is required.");
+              payload.storagePath = null;
+              payload.textContent = null;
           } else {
               if (formFile) {
                   const { url, path } = await uploadDocument(formFile, 'past_questions');
@@ -139,8 +146,9 @@ export const AdminMaterialsPage: React.FC = () => {
                     </div>
                     <form onSubmit={handleFormSubmit} className="p-8 space-y-5 max-h-[75vh] overflow-y-auto custom-scrollbar">
                         <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl mb-4">
-                            <button type="button" onClick={() => setIsAiMode(false)} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${!isAiMode ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-lg' : 'text-slate-500'}`}>Physical File</button>
-                            <button type="button" onClick={() => setIsAiMode(true)} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${isAiMode ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-500'}`}>AI Synthesis</button>
+                            <button type="button" onClick={() => { setIsAiMode(false); setIsLinkMode(false); }} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${!isAiMode && !isLinkMode ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-lg' : 'text-slate-500'}`}>File</button>
+                            <button type="button" onClick={() => { setIsAiMode(false); setIsLinkMode(true); }} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${isLinkMode ? 'bg-rose-500 text-white shadow-lg' : 'text-slate-500'}`}>Link</button>
+                            <button type="button" onClick={() => { setIsAiMode(true); setIsLinkMode(false); }} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${isAiMode ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-500'}`}>AI</button>
                         </div>
                         <div>
                             <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">{isAiMode ? 'Topic of Inquiry' : 'Course Title'}</label>
@@ -166,7 +174,7 @@ export const AdminMaterialsPage: React.FC = () => {
                                 <select className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl font-black text-[10px] uppercase tracking-widest outline-none dark:text-white" value={formData.semester || 'N/A'} onChange={e => setFormData({...formData, semester: e.target.value})}><option value="N/A">General</option><option value="1">Alpha (1st)</option><option value="2">Omega (2nd)</option></select>
                             </div>
                         </div>
-                        {!isAiMode && (
+                        {!isAiMode && !isLinkMode && (
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Academic Year</label>
@@ -187,8 +195,35 @@ export const AdminMaterialsPage: React.FC = () => {
                                 </div>
                             </div>
                         )}
-                        <button type="submit" disabled={isSubmitting} className={`w-full py-5 text-white font-black rounded-3xl shadow-xl uppercase tracking-widest text-xs transition-all active:scale-95 ${isAiMode ? 'bg-emerald-600 shadow-emerald-500/20 hover:bg-emerald-700' : 'bg-indigo-600 shadow-indigo-500/20 hover:bg-indigo-700'}`}>
-                            {isSubmitting ? 'Syncing...' : (isAiMode ? 'Commence Neural Synthesis' : 'Commit to Archive')}
+
+                        {isLinkMode && (
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Academic Year</label>
+                                    <input 
+                                        type="number" 
+                                        className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold dark:text-white" 
+                                        value={formData.year ?? ''} 
+                                        onChange={e => setFormData({...formData, year: e.target.value ? Number(e.target.value) : undefined})} 
+                                        required 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">External Resource URL</label>
+                                    <input 
+                                        type="url" 
+                                        className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold dark:text-white" 
+                                        placeholder="https://..."
+                                        value={formData.fileUrl || ''} 
+                                        onChange={e => setFormData({...formData, fileUrl: e.target.value})} 
+                                        required 
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <button type="submit" disabled={isSubmitting} className={`w-full py-5 text-white font-black rounded-3xl shadow-xl uppercase tracking-widest text-xs transition-all active:scale-95 ${isAiMode ? 'bg-emerald-600 shadow-emerald-500/20 hover:bg-emerald-700' : (isLinkMode ? 'bg-rose-600 shadow-rose-500/20 hover:bg-rose-700' : 'bg-indigo-600 shadow-indigo-500/20 hover:bg-indigo-700')}`}>
+                            {isSubmitting ? 'Syncing...' : (isAiMode ? 'Commence Neural Synthesis' : (isLinkMode ? 'Link External Resource' : 'Commit to Archive'))}
                         </button>
                     </form>
                 </div>

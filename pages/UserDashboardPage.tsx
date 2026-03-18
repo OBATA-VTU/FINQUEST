@@ -40,7 +40,7 @@ export const UserDashboardPage: React.FC = () => {
     else if (hour < 18) setGreeting('Good Afternoon');
     else setGreeting('Good Evening');
 
-    const fetchDailyQuote = async () => {
+        const fetchDailyQuote = async () => {
         const today = new Date().toISOString().split('T')[0];
         try {
             const cachedQuoteData = localStorage.getItem('dailyQuote');
@@ -54,14 +54,15 @@ export const UserDashboardPage: React.FC = () => {
         } catch (e) {}
 
         try {
+            const apiKey = process.env.GROQ_API_KEY || "";
             const client = new OpenAI({
-                apiKey: process.env.GROK_API_KEY,
+                apiKey: apiKey,
                 dangerouslyAllowBrowser: true,
-                baseURL: "https://api.x.ai/v1",
+                baseURL: "https://api.groq.com/openai/v1",
             });
             const prompt = "Generate a single, unique, and insightful quote about finance, investing, or wealth. Concise (under 25 words). Do not include author.";
             const response = await client.chat.completions.create({
-                model: "grok-beta",
+                model: "llama-3.3-70b-versatile",
                 messages: [{ role: "user", content: prompt }],
             });
             const newQuote = response.choices[0].message.content?.trim().replace(/^"|"$/g, '');

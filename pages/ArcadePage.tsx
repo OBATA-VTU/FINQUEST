@@ -128,14 +128,15 @@ const GamePlayer: React.FC<{ game: Game; onFinish: (score: number, total: number
                 setQuestions(timelineQuestions.sort(() => 0.5 - Math.random()).slice(0, 10));
             } else {
                 try {
+                    const apiKey = process.env.GROQ_API_KEY || "";
                     const client = new OpenAI({
-                        apiKey: process.env.GROK_API_KEY,
+                        apiKey: apiKey,
                         dangerouslyAllowBrowser: true,
-                        baseURL: "https://api.x.ai/v1",
+                        baseURL: "https://api.groq.com/openai/v1",
                     });
                     const prompt = `Generate exactly 10 trivia questions about Nigerian finance, general finance calculations, and some basic world finance history. The first 5 should be relatively easy, and the last 5 should be progressively harder. Return a valid JSON array of objects with keys: "id" (number from 1-10), "text" (string), "options" (array of 4 strings), and "correctAnswer" (number from 0-3).`;
                     const response = await client.chat.completions.create({
-                        model: "grok-beta",
+                        model: "llama-3.3-70b-versatile",
                         messages: [{ role: "user", content: prompt }],
                         response_format: { type: "json_object" }
                     });

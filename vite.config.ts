@@ -12,11 +12,8 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), tailwindcss()],
     define: {
-      // Map the Vercel/System environment variable to process.env.GROK_API_KEY 
-      // This is required for OpenAI client to work in the browser build.
-      // Use fallback to empty string to prevent JSON.stringify(undefined)
-      'process.env.GROK_API_KEY': JSON.stringify(env.GROK_API_KEY || ""),
-      'process.env.MEGA_API_KEY': JSON.stringify(env.VITE_MEGA_API_KEY || ""),
+      // Map environment variables to process.env for the browser
+      'process.env.GROQ_API_KEY': JSON.stringify(env.VITE_GROQ_API_KEY || env.GROQ_API_KEY || ""),
     },
     build: {
       outDir: 'dist',

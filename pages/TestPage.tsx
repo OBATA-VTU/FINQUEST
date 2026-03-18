@@ -153,14 +153,15 @@ const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTi
     const startMock = async () => {
         setView('loading');
         try {
+            const apiKey = process.env.GROQ_API_KEY || "";
             const client = new OpenAI({
-                apiKey: process.env.GROK_API_KEY,
+                apiKey: apiKey,
                 dangerouslyAllowBrowser: true,
-                baseURL: "https://api.x.ai/v1",
+                baseURL: "https://api.groq.com/openai/v1",
             });
             const prompt = `Generate exactly 30 high-quality, university-level multiple-choice finance questions for level ${level}. Return as a JSON array of objects with "id", "text", "options" (4 strings), "correctAnswer" (0-3 index).`;
             const response = await client.chat.completions.create({
-                model: "grok-beta",
+                model: "llama-3.3-70b-versatile",
                 messages: [{ role: "user", content: prompt }],
                 response_format: { type: "json_object" }
             });
@@ -177,14 +178,15 @@ const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTi
     const generateAiQuiz = async () => {
         setView('loading');
         try {
+            const apiKey = process.env.GROQ_API_KEY || "";
             const client = new OpenAI({
-                apiKey: process.env.GROK_API_KEY,
+                apiKey: apiKey,
                 dangerouslyAllowBrowser: true,
-                baseURL: "https://api.x.ai/v1",
+                baseURL: "https://api.groq.com/openai/v1",
             });
             const prompt = `Generate exactly 10 high-quality finance questions for the topic: "${topic}". Return as a JSON array of objects with "id", "text", "options", "correctAnswer".`;
             const response = await client.chat.completions.create({
-                model: "grok-beta",
+                model: "llama-3.3-70b-versatile",
                 messages: [{ role: "user", content: prompt }],
                 response_format: { type: "json_object" }
             });
@@ -199,14 +201,15 @@ const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTi
     const generateAiNotes = async () => {
         setView('loading');
         try {
+            const apiKey = process.env.GROQ_API_KEY || "";
             const client = new OpenAI({
-                apiKey: process.env.GROK_API_KEY,
+                apiKey: apiKey,
                 dangerouslyAllowBrowser: true,
-                baseURL: "https://api.x.ai/v1",
+                baseURL: "https://api.groq.com/openai/v1",
             });
             const prompt = `Generate professional university study notes on: "${topic}". Use Markdown.`;
             const response = await client.chat.completions.create({
-                model: "grok-beta",
+                model: "llama-3.3-70b-versatile",
                 messages: [{ role: "user", content: prompt }],
             });
             trackAiUsage();

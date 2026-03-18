@@ -189,6 +189,8 @@ export const AIPage: React.FC = () => {
         setMessages(prev => [...prev, initialBeeMsg]);
 
         try {
+            const apiKey = process.env.GROQ_API_KEY || "";
+
             const dbContext = await performDeepSearch(userMsgText);
             let base64Image = '';
             if (currentImage) {
@@ -200,9 +202,9 @@ export const AIPage: React.FC = () => {
             }
 
             const client = new OpenAI({
-                apiKey: process.env.GROK_API_KEY,
+                apiKey: apiKey,
                 dangerouslyAllowBrowser: true,
-                baseURL: "https://api.x.ai/v1",
+                baseURL: "https://api.groq.com/openai/v1",
             });
 
             const systemPrompt = `IDENTITY: Bee, official mascot for the Dept of Finance, AAUA.
@@ -229,7 +231,7 @@ export const AIPage: React.FC = () => {
             }
 
             const stream = await client.chat.completions.create({
-                model: 'grok-beta',
+                model: 'llama-3.3-70b-versatile',
                 messages: messages,
                 stream: true,
             });

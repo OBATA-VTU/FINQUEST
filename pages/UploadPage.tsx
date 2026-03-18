@@ -9,7 +9,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import { OpenAI } from 'openai';
 import { useNavigate } from 'react-router-dom';
 
-type UploadType = 'select' | 'document' | 'images' | 'text' | 'ai';
+type UploadType = 'select' | 'document' | 'images' | 'text' | 'ai' | 'link';
 
 const CATEGORIES = ["Past Question", "Test Question", "Lecture Note", "Handout", "Textbook", "Other"];
 
@@ -32,6 +32,7 @@ export const UploadPage: React.FC = () => {
     // Specific Fields
     const [file, setFile] = useState<File | null>(null);
     const [imageFiles, setImageFiles] = useState<File[]>([]);
+    const [externalLink, setExternalLink] = useState('');
     const [textContent, setTextContent] = useState('');
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const [zoomImage, setZoomImage] = useState<string | null>(null);
@@ -75,6 +76,7 @@ export const UploadPage: React.FC = () => {
     const resetForm = () => {
         setFile(null);
         setImageFiles([]);
+        setExternalLink('');
         setTextContent('');
         setCourseCode('');
         setCourseTitle('');
@@ -131,17 +133,22 @@ export const UploadPage: React.FC = () => {
             } else if (uploadType === 'text') {
                 if (!textContent.trim()) throw new Error("Text content is empty.");
                 questionData.textContent = textContent;
+            } else if (uploadType === 'link') {
+                if (!externalLink.trim()) throw new Error("Link is empty.");
+                questionData.fileUrl = externalLink.trim();
+                questionData.storagePath = null;
             } else if (uploadType === 'ai') {
                 if (!canUseAi) throw new Error("You don't have enough points for AI.");
                 setUploadStatus('AI is writing...');
+                const apiKey = process.env.GROQ_API_KEY || "";
                 const client = new OpenAI({
-                    apiKey: process.env.GROK_API_KEY,
+                    apiKey: apiKey,
                     dangerouslyAllowBrowser: true,
-                    baseURL: "https://api.x.ai/v1",
+                    baseURL: "https://api.groq.com/openai/v1",
                 });
                 const prompt = `Generate comprehensive, university-level study notes/lecture material on the topic: "${courseTitle}". Format in clean Markdown. Include a summary, key concepts, detailed explanation, and conclusion.`;
                 const response = await client.chat.completions.create({
-                    model: "grok-beta",
+                    model: "llama-3.3-70b-versatile",
                     messages: [{ role: "user", content: prompt }],
                 });
                 trackAiUsage();
@@ -230,6 +237,14 @@ export const UploadPage: React.FC = () => {
                     </div>
                     <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-3">Type Manually</h3>
                     <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed">Type your summary or past question text directly into the portal.</p>
+                </button>
+
+                <button onClick={() => setUploadType('link')} className="group p-10 bg-white dark:bg-slate-900 rounded-[3rem] border-2 border-slate-100 dark:border-slate-800 hover:border-rose-600 transition-all hover:-translate-y-2 shadow-xl shadow-slate-200/50 dark:shadow-none text-left">
+                    <div className="w-20 h-20 bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                    </div>
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-3">External Link</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed">Paste a link from Google Drive, Mega, or any other cloud storage.</p>
                 </button>
 
                 <button 
@@ -331,6 +346,26 @@ export const UploadPage: React.FC = () => {
                             </div>
                         )}
 
+                        {uploadType === 'link' && (
+                            <div className="space-y-6">
+                                <div className="w-20 h-20 bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 rounded-[2rem] flex items-center justify-center mx-auto mb-4 shadow-lg">
+                                    <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="block text-sm font-black uppercase tracking-widest text-slate-400 text-center">Paste Resource URL</label>
+                                    <input 
+                                        type="url" 
+                                        className="w-full p-6 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 focus:border-rose-500 rounded-[2rem] outline-none font-bold text-lg dark:text-white transition-all text-center" 
+                                        placeholder="https://drive.google.com/..." 
+                                        value={externalLink} 
+                                        onChange={e => setExternalLink(e.target.value)} 
+                                        required 
+                                    />
+                                    <p className="text-[10px] font-black uppercase text-slate-400 text-center tracking-widest">Supports Google Drive, Mega, Dropbox, etc.</p>
+                                </div>
+                            </div>
+                        )}
+
                         {uploadType === 'ai' && (
                             <div className="py-20 text-center">
                                 <div className="w-24 h-24 bg-white dark:bg-slate-900 rounded-[2.5rem] mx-auto flex items-center justify-center text-emerald-500 shadow-2xl mb-8 animate-pulse border border-slate-100 dark:border-slate-800"><svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
@@ -416,8 +451,8 @@ export const UploadPage: React.FC = () => {
 
                     <button 
                         type="submit" 
-                        disabled={isSubmitting || (uploadType === 'document' && !file) || (uploadType === 'images' && imageFiles.length === 0) || (uploadType === 'text' && !textContent.trim())} 
-                        className={`w-full py-7 text-white font-black rounded-[2.5rem] shadow-3xl transition-all active:scale-95 uppercase tracking-[0.3em] text-sm ${isAiMode ? 'bg-emerald-600 shadow-emerald-500/40' : 'bg-indigo-600 shadow-indigo-500/40'} disabled:opacity-30 disabled:cursor-not-allowed`}
+                        disabled={isSubmitting || (uploadType === 'document' && !file) || (uploadType === 'images' && imageFiles.length === 0) || (uploadType === 'text' && !textContent.trim()) || (uploadType === 'link' && !externalLink.trim())} 
+                        className={`w-full py-7 text-white font-black rounded-[2.5rem] shadow-3xl transition-all active:scale-95 uppercase tracking-[0.3em] text-sm ${isAiMode ? 'bg-emerald-600 shadow-emerald-500/40' : (uploadType === 'link' ? 'bg-rose-600 shadow-rose-500/40' : 'bg-indigo-600 shadow-indigo-500/40')} disabled:opacity-30 disabled:cursor-not-allowed`}
                     >
                         {isSubmitting ? 'Sending Information...' : 'Finish and Submit'}
                     </button>
