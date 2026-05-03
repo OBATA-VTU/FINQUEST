@@ -1,4 +1,3 @@
-
 import React, { useState, useContext } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PastQuestion } from '../types';
@@ -25,7 +24,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
       e.stopPropagation();
       e.preventDefault();
       if (!auth?.user) {
-          showNotification("Please login to bookmark items.", "info");
+          showNotification("Identification required for bookmarking.", "info");
           return;
       }
       auth.toggleBookmark(question.id);
@@ -37,22 +36,19 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
       
       let url = '';
       
-      // If AI generated text exists, generate a local blob
       if (question.textContent) {
           try {
             const doc = generatePDF(question.courseTitle, question.textContent, question.courseCode, question.year);
             const pdfBlob = doc.output('blob');
             url = URL.createObjectURL(pdfBlob);
           } catch (err) {
-              console.error("Error generating PDF preview", err);
-              showNotification("Could not generate preview.", "error");
+              showNotification("Rendering pipeline failed.", "error");
               return;
           }
       } else if (question.fileUrl) {
-          // Use stored URL. Ensure it is raw=1 for previewing content directly
           url = question.fileUrl;
       } else {
-          showNotification("No preview available for this item.", "info");
+          showNotification("No preview assets located.", "info");
           return;
       }
       
@@ -79,20 +75,17 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
             const url = question.fileUrl;
             
             if (url.includes('drive.google.com')) {
-                 const dlUrl = url.replace('export=view', 'export=download');
-                 window.location.href = dlUrl;
+                 // Try to force direct download for Google Drive
+                 const dlUrl = url.replace('file/d/', 'uc?export=download&id=').replace('/view?usp=sharing', '').replace('/view', '');
+                 window.open(dlUrl, '_blank');
             } else {
-                 // ImgBB / Other logic -> Force Download using Blob
                  try {
                      const ext = url.split('.').pop()?.split('?')[0] || 'jpg';
-                     const filename = `${question.courseCode}_${question.year}_${question.courseTitle.substring(0, 10)}.${ext}`;
-                     
-                     // Show notification for potentially slow downloads
-                     showNotification("Preparing your download...", "info");
+                     const filename = `${question.courseCode}_${question.year}_FINSA.${ext}`;
+                     showNotification("Extracting document...", "info");
                      await forceDownload(url, filename);
                  } catch (err) {
                      window.open(url, '_blank');
-                     showNotification("Opening in new tab...", "info");
                  }
             }
         }
@@ -103,7 +96,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
 
   const handleClosePreview = () => {
       setIsPreviewOpen(false);
-      // Clean up blob URL if it was generated locally
       if (previewUrl && previewUrl.startsWith('blob:')) {
           URL.revokeObjectURL(previewUrl);
       }
@@ -113,85 +105,83 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
   return (
     <motion.div 
       layout
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      whileHover={{ y: -4 }}
-      className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-500 transition-all duration-200 flex flex-col h-full group relative"
+      className="bg-white dark:bg-slate-900 rounded-[2rem] border-2 border-slate-100 dark:border-slate-800 p-0 shadow-xl hover:shadow-3xl hover:border-indigo-500/30 transition-all duration-500 group flex flex-col h-full relative overflow-hidden"
     >
-        <div className="flex justify-between items-start mb-2">
-             <div className="flex gap-2 flex-wrap">
-                <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600">
-                    {question.year}
-                </span>
-                {question.semester && question.semester !== 'N/A' && (
-                  <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600">
-                      {question.semester === 1 ? '1st Sem' : '2nd Sem'}
-                  </span>
-                )}
-                {question.textContent && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1 rounded border border-emerald-100">AI GEN</span>}
-                {question.pages && question.pages.length > 1 && <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1 rounded border border-indigo-100 dark:border-indigo-800">{question.pages.length} Pages</span>}
-             </div>
-             
-             <button 
-                onClick={handleBookmark}
-                className={`transition-transform active:scale-90 ${isBookmarked ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-slate-600 hover:text-indigo-400'}`}
-                title={isBookmarked ? "Remove bookmark" : "Bookmark this"}
-             >
-                 {isBookmarked ? (
-                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
-                 ) : (
-                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
-                 )}
-             </button>
-        </div>
+        {/* Card Header Pattern */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-slate-900 via-indigo-600 to-slate-200"></div>
         
-        <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-black text-indigo-900 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-900/50 px-2 py-1 rounded">{question.courseCode}</span>
+        {/* Side ID Tag */}
+        <div className="absolute top-0 right-0 py-8 px-2 bg-slate-50 dark:bg-slate-800 border-l border-slate-100 dark:border-slate-700 h-full flex flex-col items-center justify-start gap-4">
+            <span className="[writing-mode:vertical-rl] rotate-180 text-[8px] font-black tracking-[0.4em] text-slate-300 dark:text-slate-600 uppercase italic">Digital Vault</span>
+            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
         </div>
 
-        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug line-clamp-2 min-h-[2.5em]">
-            {question.courseTitle}
-        </h4>
+        <div className="p-8 pr-14 flex flex-col h-full">
+            {/* Metadata Tier */}
+            <div className="flex justify-between items-start mb-8">
+                <div className="space-y-1">
+                    <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">{question.category || 'Archive'}</p>
+                    <div className="flex items-center gap-2">
+                        <span className="text-2xl font-serif font-black text-slate-950 dark:text-white">{question.year}</span>
+                        <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Level {question.level}</span>
+                    </div>
+                </div>
+                
+                <button 
+                    onClick={handleBookmark}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all border ${isBookmarked ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-300 hover:text-indigo-500 hover:border-indigo-200'}`}
+                >
+                    <svg className="w-5 h-5" fill={isBookmarked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+                </button>
+            </div>
 
-        {question.uploadedByName && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 mb-3">
-                Uploaded by <span className="font-bold text-indigo-600 dark:text-indigo-400">@{question.uploadedByName}</span>
-            </p>
-        )}
+            {/* Core Subject Information */}
+            <div className="mb-8">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{question.courseCode}</p>
+                <h4 className="text-2xl font-serif font-black text-slate-950 dark:text-white leading-tight min-h-[2.5em] tracking-tight group-hover:text-indigo-600 transition-colors">
+                    {question.courseTitle}
+                </h4>
+            </div>
 
-        <div className="flex flex-wrap gap-2 mb-4">
-            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
-                question.difficulty === 'Advanced' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400' :
-                question.difficulty === 'Intermediate' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' :
-                'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-            }`}>
-                {question.difficulty || 'Beginner'}
-            </span>
-            {question.tags?.map(tag => (
-                <span key={tag} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-[9px] font-black uppercase tracking-wider rounded">
-                    #{tag}
-                </span>
-            ))}
-        </div>
+            {/* Verification Stamp */}
+            <div className="flex items-center gap-3 mb-10 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 relative overflow-hidden group/stamp">
+                <div className="absolute -right-2 -bottom-2 w-16 h-16 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full flex items-center justify-center -rotate-12 border border-emerald-500/20 opacity-0 group-hover/stamp:opacity-100 transition-opacity">
+                    <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">VERIFIED</span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-slate-100 dark:border-slate-600 shadow-sm">
+                    {question.uploadedByName?.charAt(0).toUpperCase() || 'U'}
+                </div>
+                <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Assigned Staff</p>
+                    <p className="text-[11px] font-black text-slate-950 dark:text-white truncate max-w-[140px] uppercase">{question.lecturer || 'DEPT. STAFF'}</p>
+                </div>
+            </div>
 
-        <div className="flex gap-2 mt-auto pt-2 border-t border-slate-50 dark:border-slate-700">
-            <button onClick={handlePreview} className="flex-1 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700 rounded hover:bg-white dark:hover:bg-slate-600 hover:text-indigo-600 dark:hover:text-indigo-300 hover:shadow-sm border border-transparent hover:border-slate-200 transition flex items-center justify-center gap-1">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                Preview
-            </button>
-            <button 
-                onClick={handleDownload} 
-                disabled={isDownloading}
-                className="flex-1 py-2 text-xs font-bold text-white bg-indigo-600 rounded hover:bg-indigo-700 transition shadow-sm flex items-center justify-center gap-1 text-center disabled:opacity-50"
-            >
-                {isDownloading ? (
-                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                ) : (
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                )}
-                {isDownloading ? 'Wait...' : (question.textContent ? 'PDF' : 'Download')}
-            </button>
+            {/* Operational Deck */}
+            <div className="mt-auto grid grid-cols-2 gap-3">
+                <button 
+                    onClick={handlePreview} 
+                    className="py-4 px-4 bg-slate-950 text-white dark:bg-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 dark:hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95"
+                >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    View
+                </button>
+                <button 
+                    onClick={handleDownload} 
+                    disabled={isDownloading}
+                    className="py-4 px-4 bg-white dark:bg-slate-700 text-slate-950 dark:text-white border-2 border-slate-950 dark:border-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 hover:border-indigo-600 hover:text-indigo-600 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                >
+                    {isDownloading ? (
+                        <div className="w-4 h-4 border-2 border-indigo-600/20 border-t-indigo-600 rounded-full animate-spin"></div>
+                    ) : (
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    )}
+                    {isDownloading ? 'Downloading' : 'Download'}
+                </button>
+            </div>
         </div>
 
         <AnimatePresence>
@@ -201,7 +191,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
                     onClose={handleClosePreview} 
                     fileUrl={previewUrl}
                     pages={question.pages}
-                    title={`${question.courseCode} (${question.year})`}
+                    title={`${question.courseCode}: ${question.courseTitle}`}
                 />
             )}
         </AnimatePresence>

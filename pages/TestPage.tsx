@@ -104,9 +104,9 @@ const ModeSelection: React.FC<{ setView: Function, setMode: Function, navigate: 
     return (
         <div className="max-w-6xl mx-auto px-4 py-20 animate-fade-in">
             <div className="text-center mb-16">
-                <span className="text-indigo-600 font-black tracking-[0.3em] uppercase text-[10px] block mb-4">Exam Preparedness</span>
-                <h1 className="text-5xl md:text-7xl font-serif font-black text-slate-900 dark:text-white leading-tight">CBT Practice Hub</h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-4 text-lg max-w-xl mx-auto">Master your departmental courses with our high-end testing engine.</p>
+                <span className="text-indigo-600 font-black tracking-[0.3em] uppercase text-[10px] block mb-4">Practice</span>
+                <h1 className="text-5xl md:text-7xl font-serif font-black text-slate-900 dark:text-white leading-tight">CBT Practice</h1>
+                <p className="text-slate-500 dark:text-slate-400 mt-4 text-lg max-w-xl mx-auto">Master your courses with our testing tool.</p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -114,18 +114,18 @@ const ModeSelection: React.FC<{ setView: Function, setMode: Function, navigate: 
                     <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                         <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
                     </div>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-4">Official Mock</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-8">Simulate real exam conditions with 30 timed questions across your level's curriculum.</p>
-                    <span className="text-indigo-600 font-bold uppercase tracking-widest text-[10px]">Launch Session &rarr;</span>
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-4">Practice Test</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-8">Practice with 30 timed questions based on your level's courses.</p>
+                    <span className="text-indigo-600 font-bold uppercase tracking-widest text-[10px]">Start Practice &rarr;</span>
                 </div>
 
                 <div onClick={() => { setMode('ai'); setView('configure'); }} className="group cursor-pointer bg-slate-900 p-10 rounded-[3rem] shadow-2xl border border-white/5 hover:border-emerald-500 transition-all hover:-translate-y-2 text-white">
                     <div className="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform shadow-inner shadow-emerald-500/20">
                         <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                     </div>
-                    <h3 className="text-2xl font-black mb-4">AI Topic Forge</h3>
-                    <p className="text-sm text-slate-400 leading-relaxed mb-8">Type any finance topic and Bee will generate a bespoke quiz or professional study notes instantly.</p>
-                    <span className="text-emerald-400 font-bold uppercase tracking-widest text-[10px]">Initialize AI &rarr;</span>
+                    <h3 className="text-2xl font-black mb-4">AI Study Helper</h3>
+                    <p className="text-sm text-slate-400 leading-relaxed mb-8">Type any topic and get a quick quiz or helpful study notes instantly.</p>
+                    <span className="text-emerald-400 font-bold uppercase tracking-widest text-[10px]">Start AI &rarr;</span>
                 </div>
 
                 <div onClick={() => navigate('/arcade')} className="group cursor-pointer bg-white dark:bg-slate-900 p-10 rounded-[3rem] shadow-xl border border-slate-100 dark:border-slate-800 hover:border-rose-500 transition-all hover:-translate-y-2">
@@ -157,6 +157,7 @@ const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTi
         setView('loading');
         try {
             const apiKey = process.env.GROQ_API_KEY || "";
+            if (!apiKey) throw new Error("AI helper is unavailable.");
             const groq = new Groq({
                 apiKey: apiKey,
                 dangerouslyAllowBrowser: true,
@@ -183,6 +184,7 @@ const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTi
         setView('loading');
         try {
             const apiKey = process.env.GROQ_API_KEY || "";
+            if (!apiKey) throw new Error("AI helper is unavailable.");
             const groq = new Groq({
                 apiKey: apiKey,
                 dangerouslyAllowBrowser: true,
@@ -207,6 +209,7 @@ const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTi
         setView('loading');
         try {
             const apiKey = process.env.GROQ_API_KEY || "";
+            if (!apiKey) throw new Error("AI helper is unavailable.");
             const groq = new Groq({
                 apiKey: apiKey,
                 dangerouslyAllowBrowser: true,
@@ -225,26 +228,26 @@ const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTi
     return (
         <div className="min-h-screen flex items-center justify-center p-4 animate-fade-in">
             <div className="w-full max-w-xl bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl p-10 border border-slate-100 dark:border-slate-800">
-                <button onClick={() => setView('select_mode')} className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 mb-8 flex items-center gap-2 transition-colors">&larr; Return to Selection</button>
-                <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2">{mode === 'mock' ? 'Mock Parameters' : 'Topic Configuration'}</h2>
-                <p className="text-slate-500 dark:text-slate-400 text-sm mb-10">Configure your session for optimal results.</p>
+                <button onClick={() => setView('select_mode')} className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 mb-8 flex items-center gap-2 transition-colors">&larr; Back to Selection</button>
+                <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2">{mode === 'mock' ? 'Practice Test' : 'Topic Settings'}</h2>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mb-10">Choose your settings to start.</p>
                 
                 <div className="space-y-8">
                     {mode === 'mock' ? (
                         <>
                             <div>
-                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Academic Level</label>
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Select Level</label>
                                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-[2rem]">
                                     {LEVELS.map(l => <button key={l} onClick={() => setLevel(l)} className={`py-3 rounded-[1.5rem] text-xs font-black transition-all ${level === l ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-white dark:hover:bg-slate-700'}`}>{typeof l === 'number' ? `${l}L` : l}</button>)}
                                 </div>
                             </div>
-                            <button onClick={startMock} className="w-full py-5 bg-indigo-600 text-white font-black rounded-[2rem] shadow-xl shadow-indigo-500/20 uppercase tracking-[0.2em] text-xs hover:bg-indigo-700 transition-all hover:scale-[1.02]">Start Examination</button>
+                            <button onClick={startMock} className="w-full py-5 bg-indigo-600 text-white font-black rounded-[2rem] shadow-xl shadow-indigo-500/20 uppercase tracking-[0.2em] text-xs hover:bg-indigo-700 transition-all hover:scale-[1.02]">Start Test</button>
                         </>
                     ) : (
                         <>
                             <div>
-                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Research Topic</label>
-                                <input type="text" placeholder="e.g. Capital Budgeting, Crypto Assets..." value={topic} onChange={e => setTopic(e.target.value)} className="w-full p-5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2rem] focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white font-bold" />
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Topic Name</label>
+                                <input type="text" placeholder="e.g. Finance, Accounting..." value={topic} onChange={e => setTopic(e.target.value)} className="w-full p-5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2rem] focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white font-bold" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <button onClick={generateAiQuiz} className="py-5 bg-indigo-600 text-white font-black rounded-[2rem] shadow-xl uppercase tracking-widest text-[10px] hover:bg-indigo-700">Quiz Forge</button>
@@ -265,8 +268,8 @@ const LoadingScreen: React.FC = () => (
             <div className="absolute inset-0 border-8 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
             <div className="absolute inset-0 flex items-center justify-center font-black text-indigo-600 animate-pulse">AI</div>
         </div>
-        <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2">Initializing Bee Engine</h2>
-        <p className="text-slate-500 dark:text-slate-400 font-medium text-center max-w-xs uppercase tracking-widest text-[10px]">Processing encrypted departmental intelligence...</p>
+        <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2">Starting AI Helper</h2>
+        <p className="text-slate-500 dark:text-slate-400 font-medium text-center max-w-xs uppercase tracking-widest text-[10px]">Processing questions and materials...</p>
     </div>
 );
 

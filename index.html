@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="bg-slate-900">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/logo.svg" type="image/svg+xml" />
@@ -36,6 +36,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
 </head>
   <body class="bg-slate-50 dark:bg-slate-900 antialiased transition-colors">
+    <script>
+      (function() {
+        const theme = localStorage.getItem('theme');
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+          document.addEventListener('DOMContentLoaded', function() {
+            const loader = document.getElementById('pre-loader');
+            if (loader) loader.classList.add('dark-loader');
+          });
+        }
+      })();
+    </script>
     <div id="pre-loader">
       <img src="/logo.svg" alt="FINSA" class="loader-logo" />
       <div class="loader-text">Loading...</div>

@@ -7,6 +7,7 @@ import { deleteDocument } from '../utils/api';
 import { PastQuestion, User } from '../types';
 import { AuthContext } from '../contexts/AuthContext';
 import { checkAndAwardBadges } from '../utils/badges';
+import { handleFirestoreError, OperationType } from '../utils/api';
 
 export const AdminApprovalsPage: React.FC = () => {
   const auth = useContext(AuthContext);
@@ -77,7 +78,10 @@ export const AdminApprovalsPage: React.FC = () => {
         }
         showNotification("Question approved & 10 Points awarded!", "success");
         fetchPending();
-    } catch (e) { showNotification("Approval failed", "error"); }
+    } catch (e) { 
+        handleFirestoreError(e, OperationType.WRITE, 'questions/approvals');
+        showNotification("Approval failed", "error"); 
+    }
   };
 
   const handleReject = async () => {
@@ -103,8 +107,10 @@ export const AdminApprovalsPage: React.FC = () => {
 
           showNotification("Record and file rejected.", "info");
           fetchPending();
-      } catch (e) { showNotification("Rejection failed", "error"); }
-      finally {
+      } catch (e) { 
+          handleFirestoreError(e, OperationType.WRITE, 'questions/rejections');
+          showNotification("Rejection failed", "error"); 
+      } finally {
           setRejectingItem(null);
           setRejectionReason('');
       }

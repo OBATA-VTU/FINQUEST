@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
-import { uploadToImgBB } from '../utils/api';
+import { uploadToImgBB, handleFirestoreError, OperationType } from '../utils/api';
 import { Lecturer } from '../types';
 
 export const AdminLecturersPage: React.FC = () => {
@@ -35,7 +35,10 @@ export const AdminLecturersPage: React.FC = () => {
           await deleteDoc(doc(db, 'lecturers', id));
           showNotification("Record Discarded", "info");
           fetchContent();
-      } catch (e) { showNotification("Purge failed", "error"); }
+      } catch (e) { 
+          handleFirestoreError(e, OperationType.DELETE, 'lecturers');
+          showNotification("Purge failed", "error"); 
+      }
   };
 
   const openModal = (item: Lecturer | null = null) => {
@@ -61,8 +64,10 @@ export const AdminLecturersPage: React.FC = () => {
           setIsModalOpen(false);
           fetchContent();
           showNotification("Faculty Profile Updated.", "success");
-      } catch (e: any) { showNotification("Update failed.", "error"); }
-      finally { setIsSubmitting(false); }
+      } catch (e: any) { 
+          handleFirestoreError(e, OperationType.WRITE, 'lecturers');
+          showNotification("Update failed.", "error"); 
+      } finally { setIsSubmitting(false); }
   };
 
   return (

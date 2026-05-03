@@ -38,8 +38,8 @@ export const InputPage: React.FC = () => {
         setUploadProgress(5);
 
         try {
-            // Using a separate folder for testing to avoid clutter
-            const { url, path } = await uploadDocument(file, 'test_uploads', setUploadProgress);
+            // Using firebase service and default materials folder for this test page
+            const { url, path } = await uploadDocument(file, 'firebase', 'materials', setUploadProgress);
 
             const questionData = {
                 courseCode: courseCode.toUpperCase(),

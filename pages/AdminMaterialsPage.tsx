@@ -38,9 +38,9 @@ export const AdminMaterialsPage: React.FC = () => {
       try {
           if (item.storagePath) await deleteDocument(item.storagePath);
           await deleteDoc(doc(db, 'questions', item.id));
-          showNotification("Record Discarded", "info");
+          showNotification("Deleted successfully", "info");
           fetchContent();
-      } catch (e) { showNotification("Purge failed", "error"); }
+      } catch (e) { showNotification("Delete failed", "error"); }
   };
 
   const openModal = (item: any = null) => {
@@ -84,7 +84,7 @@ export const AdminMaterialsPage: React.FC = () => {
               payload.textContent = null;
           } else {
               if (formFile) {
-                  const { url, path } = await uploadDocument(formFile, 'past_questions');
+                  const { url, path } = await uploadDocument(formFile, 'firebase', 'past_questions');
                   payload.fileUrl = url;
                   payload.storagePath = path;
               }
@@ -109,8 +109,8 @@ export const AdminMaterialsPage: React.FC = () => {
           
           setIsModalOpen(false);
           fetchContent();
-          showNotification(isAiMode ? "AI Intelligence Catalogued." : "Archive Updated.", "success");
-      } catch (e: any) { showNotification(e.message || "Failed to commit record.", "error"); }
+          showNotification(isAiMode ? "AI summary saved." : "Materials updated.", "success");
+      } catch (e: any) { showNotification(e.message || "Failed to save.", "error"); }
       finally { setIsSubmitting(false); }
   };
 
@@ -118,12 +118,12 @@ export const AdminMaterialsPage: React.FC = () => {
     <div className="animate-fade-in space-y-10 pb-20 max-w-7xl mx-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
             <div>
-                <h1 className="text-3xl font-black text-slate-900 dark:text-white">Academic Archives</h1>
-                <p className="text-slate-500 dark:text-slate-400 font-medium">Verified repository of study aids and past assessments.</p>
+                <h1 className="text-3xl font-black text-slate-900 dark:text-white">Uploaded Materials</h1>
+                <p className="text-slate-500 dark:text-slate-400 font-medium">Manage all files and documents that have been uploaded.</p>
             </div>
             <button onClick={() => openModal()} className="px-10 py-4 bg-indigo-600 text-white font-black rounded-3xl hover:bg-indigo-700 shadow-2xl shadow-indigo-500/20 transition-all active:scale-95 uppercase tracking-widest text-[10px] flex items-center gap-3">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 4v16m8-8H4" /></svg>
-                Ingest Material
+                Upload New File
             </button>
         </header>
 
@@ -151,7 +151,7 @@ export const AdminMaterialsPage: React.FC = () => {
             <div className="fixed inset-0 bg-slate-950/90 z-[100] flex items-center justify-center p-6 backdrop-blur-md" onClick={() => setIsModalOpen(false)}>
                 <div className="bg-white dark:bg-slate-900 rounded-[3.5rem] w-full max-w-xl overflow-hidden shadow-2xl border border-white/5 animate-pop-in" onClick={e => e.stopPropagation()}>
                     <div className="p-8 border-b dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
-                        <h3 className="font-black text-2xl dark:text-white font-serif">{editingItem ? 'Refine Archive' : 'New Intake'}</h3>
+                        <h3 className="font-black text-2xl dark:text-white font-serif">{editingItem ? 'Edit Material' : 'Add New File'}</h3>
                         <button onClick={() => setIsModalOpen(false)} className="p-2 bg-white dark:bg-slate-700 rounded-full text-slate-400 hover:text-rose-500 transition-colors shadow-sm">✕</button>
                     </div>
                     <form onSubmit={handleFormSubmit} className="p-8 space-y-5 max-h-[75vh] overflow-y-auto custom-scrollbar">
@@ -233,7 +233,7 @@ export const AdminMaterialsPage: React.FC = () => {
                         )}
 
                         <button type="submit" disabled={isSubmitting} className={`w-full py-5 text-white font-black rounded-3xl shadow-xl uppercase tracking-widest text-xs transition-all active:scale-95 ${isAiMode ? 'bg-emerald-600 shadow-emerald-500/20 hover:bg-emerald-700' : (isLinkMode ? 'bg-rose-600 shadow-rose-500/20 hover:bg-rose-700' : 'bg-indigo-600 shadow-indigo-500/20 hover:bg-indigo-700')}`}>
-                            {isSubmitting ? 'Syncing...' : (isAiMode ? 'Commence Neural Synthesis' : (isLinkMode ? 'Link External Resource' : 'Commit to Archive'))}
+                            {isSubmitting ? 'Saving...' : (isAiMode ? 'Generate with AI' : (isLinkMode ? 'Save External Link' : 'Upload File'))}
                         </button>
                     </form>
                 </div>

@@ -1,7 +1,8 @@
 import React, { useState, FormEvent, useRef, useEffect, useContext } from 'react';
 import { Level } from '../types';
 import { LEVELS } from '../constants';
-import { uploadDocument, uploadToImgBB, trackAiUsage, handleFirestoreError, OperationType } from '../utils/api';
+import { useSettings } from '../contexts/SettingsContext';
+import { uploadFileToFirebase, uploadDocument, uploadToImgBB, trackAiUsage, handleFirestoreError, OperationType } from '../utils/api';
 import { db } from '../firebase';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { AuthContext } from '../contexts/AuthContext';
@@ -16,6 +17,7 @@ const CATEGORIES = ["Past Question", "Test Question", "Lecture Note", "Handout",
 export const UploadPage: React.FC = () => {
     const auth = useContext(AuthContext);
     const { showNotification } = useNotification();
+    const { siteSettings } = useSettings();
     const navigate = useNavigate();
 
     const [uploadType, setUploadType] = useState<UploadType>('select');
@@ -120,32 +122,45 @@ export const UploadPage: React.FC = () => {
 
             if (uploadType === 'document') {
                 if (!file) throw new Error("Please pick a file first.");
-                setUploadStatus('Sending Document...');
-                const { url, path } = await uploadDocument(file, 'past_questions', setUploadProgress);
+                setUploadStatus('Sending File...');
+                const { url, path } = await uploadDocument(file, siteSettings.uploadService, siteSettings.driveFolderId, setUploadProgress);
                 questionData.fileUrl = url;
                 questionData.storagePath = path;
             } else if (uploadType === 'images') {
                 if (imageFiles.length === 0) throw new Error("Please pick images first.");
                 const imageUrls: string[] = [];
                 for (let i = 0; i < imageFiles.length; i++) {
-                    setUploadStatus(`Sending image ${i + 1}/${imageFiles.length}...`);
-                    const url = await uploadToImgBB(imageFiles[i]);
+                    setUploadStatus(`Sending photo ${i + 1}/${imageFiles.length}...`);
+                    
+                    let url = '';
+                    if (siteSettings.uploadService === 'firebase') {
+                         const result = await uploadFileToFirebase(imageFiles[i], 'questions/images', (p) => {
+                            const totalProgress = 10 + Math.round(((i + p / 100) / imageFiles.length) * 80);
+                            setUploadProgress(totalProgress);
+                         });
+                         url = result.url;
+                    } else {
+                         url = await uploadToImgBB(imageFiles[i], (p) => {
+                            const totalProgress = 10 + Math.round(((i + p / 100) / imageFiles.length) * 80);
+                            setUploadProgress(totalProgress);
+                         });
+                    }
                     imageUrls.push(url);
-                    setUploadProgress(10 + Math.round(((i + 1) / imageFiles.length) * 80));
                 }
                 questionData.fileUrl = imageUrls[0];
                 questionData.pages = imageUrls;
             } else if (uploadType === 'text') {
-                if (!textContent.trim()) throw new Error("Text content is empty.");
+                if (!textContent.trim()) throw new Error("Please type something first.");
                 questionData.textContent = textContent;
             } else if (uploadType === 'link') {
-                if (!externalLink.trim()) throw new Error("Link is empty.");
+                if (!externalLink.trim()) throw new Error("Please paste a link first.");
                 questionData.fileUrl = externalLink.trim();
                 questionData.storagePath = null;
             } else if (uploadType === 'ai') {
                 if (!canUseAi) throw new Error("You don't have enough points for AI.");
-                setUploadStatus('AI is writing...');
+                setUploadStatus('AI helper is writing...');
                 const apiKey = process.env.GROQ_API_KEY || "";
+                if (!apiKey) throw new Error("AI helper is currently unavailable.");
                 const groq = new Groq({
                     apiKey: apiKey,
                     dangerouslyAllowBrowser: true,
@@ -161,14 +176,14 @@ export const UploadPage: React.FC = () => {
                 questionData.textContent = aiText;
             }
 
-            setUploadStatus('Saving to archive...');
+            setUploadStatus('Saving progress...');
             try {
                 await addDoc(collection(db, 'questions'), questionData);
             } catch (e) {
                 handleFirestoreError(e, OperationType.CREATE, 'questions');
             }
             
-            showNotification('Success! Sent for approval.', 'success');
+            showNotification('Success! File sent for approval.', 'success');
             resetForm();
 
         } catch (error: any) {
@@ -230,55 +245,74 @@ export const UploadPage: React.FC = () => {
     };
 
     const SelectionScreen = () => (
-        <div className="max-w-4xl mx-auto animate-fade-in py-10 px-4">
-            <div className="text-center mb-12">
-                <h1 className="text-4xl md:text-5xl font-serif font-black text-slate-900 dark:text-white mb-4">What are you uploading?</h1>
-                <p className="text-slate-600 dark:text-slate-400 text-xl font-medium">Choose a method to start sharing your academic resources.</p>
+        <div className="max-w-6xl mx-auto animate-fade-in py-16 px-6">
+            <div className="text-center mb-16">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-indigo-100 dark:border-indigo-800">
+                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></div>
+                    Study Materials Portal
+                </div>
+                <h1 className="text-5xl md:text-7xl font-serif font-black text-slate-900 dark:text-white mb-6 tracking-tight">Share Your Materials.</h1>
+                <p className="text-slate-500 dark:text-slate-400 text-xl font-medium max-w-2xl mx-auto">Choose how you want to contribute to the student study collection.</p>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                <button onClick={() => setUploadType('document')} className="group p-10 bg-white dark:bg-slate-900 rounded-[3rem] border-2 border-slate-100 dark:border-slate-800 hover:border-indigo-600 transition-all hover:-translate-y-2 shadow-xl shadow-slate-200/50 dark:shadow-none text-left">
-                    <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <button onClick={() => setUploadType('document')} className="group p-10 bg-white dark:bg-slate-900 rounded-[3rem] border-2 border-slate-100 dark:border-slate-800 hover:border-indigo-600 transition-all hover:-translate-y-4 shadow-2xl shadow-indigo-100 dark:shadow-none text-left relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>
                     </div>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-3">Upload PDF Document</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed">Choose a single PDF or Word file from your phone or computer.</p>
+                    <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mb-10 group-hover:scale-110 transition-transform shadow-inner">
+                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                    </div>
+                    <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-4">Upload Document</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed font-medium">Upload PDF files, lecture notes, or textbooks from your device.</p>
                 </button>
 
-                <button onClick={() => setUploadType('images')} className="group p-10 bg-white dark:bg-slate-900 rounded-[3rem] border-2 border-slate-100 dark:border-slate-800 hover:border-emerald-600 transition-all hover:-translate-y-2 shadow-xl shadow-slate-200/50 dark:shadow-none text-left">
-                    <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                <button onClick={() => setUploadType('images')} className="group p-10 bg-white dark:bg-slate-900 rounded-[3rem] border-2 border-slate-100 dark:border-slate-800 hover:border-emerald-600 transition-all hover:-translate-y-4 shadow-2xl shadow-emerald-100 dark:shadow-none text-left relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c0 1.1.9-2 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
                     </div>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-3">Upload Photos</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed">Select pictures of question papers or lecture notes from your gallery.</p>
+                    <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center mb-10 group-hover:scale-110 transition-transform shadow-inner">
+                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    </div>
+                    <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-4">Snap a Photo</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed font-medium">Upload photos of your physical notes or board work.</p>
                 </button>
 
-                <button onClick={() => setUploadType('text')} className="group p-10 bg-white dark:bg-slate-900 rounded-[3rem] border-2 border-slate-100 dark:border-slate-800 hover:border-amber-600 transition-all hover:-translate-y-2 shadow-xl shadow-slate-200/50 dark:shadow-none text-left">
-                    <div className="w-20 h-20 bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                <button onClick={() => setUploadType('text')} className="group p-10 bg-white dark:bg-slate-900 rounded-[3rem] border-2 border-slate-100 dark:border-slate-800 hover:border-amber-600 transition-all hover:-translate-y-4 shadow-2xl shadow-amber-100 dark:shadow-none text-left relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                     </div>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-3">Type Manually</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed">Type your summary or past question text directly into the portal.</p>
+                    <div className="w-20 h-20 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center mb-10 group-hover:scale-110 transition-transform shadow-inner">
+                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    </div>
+                    <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-4">Type a Note</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed font-medium">Type up summaries or key points directly here.</p>
                 </button>
 
-                <button onClick={() => setUploadType('link')} className="group p-10 bg-white dark:bg-slate-900 rounded-[3rem] border-2 border-slate-100 dark:border-slate-800 hover:border-rose-600 transition-all hover:-translate-y-2 shadow-xl shadow-slate-200/50 dark:shadow-none text-left">
-                    <div className="w-20 h-20 bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                <button onClick={() => setUploadType('link')} className="group p-10 bg-white dark:bg-slate-900 rounded-[3rem] border-2 border-slate-100 dark:border-slate-800 hover:border-sky-600 transition-all hover:-translate-y-4 shadow-2xl shadow-sky-100 dark:shadow-none text-left relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
                     </div>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-3">External Link</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed">Paste a link from Google Drive, Mega, or any other cloud storage.</p>
+                    <div className="w-20 h-20 bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 rounded-2xl flex items-center justify-center mb-10 group-hover:scale-110 transition-transform shadow-inner">
+                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                    </div>
+                    <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-4">External Link</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed font-medium">Link files from Google Drive, Mega, or OneDrive.</p>
                 </button>
 
                 <button 
                     onClick={() => canUseAi && setUploadType('ai')} 
-                    className={`group p-10 rounded-[3rem] border-2 transition-all hover:-translate-y-2 shadow-xl shadow-slate-200/50 dark:shadow-none text-left ${canUseAi ? 'bg-slate-900 border-indigo-500/30 hover:border-indigo-500' : 'bg-slate-100 dark:bg-slate-800 border-transparent opacity-60 cursor-not-allowed'}`}
+                    className={`group p-10 rounded-[3rem] border-2 transition-all hover:-translate-y-4 shadow-2xl text-left relative overflow-hidden ${canUseAi ? 'bg-slate-950 border-indigo-500/30 hover:border-indigo-500 shadow-indigo-900/20' : 'bg-slate-100 dark:bg-slate-800 border-transparent opacity-60 cursor-not-allowed'}`}
                 >
-                    <div className="w-20 h-20 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform shadow-inner">
-                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    <div className="absolute top-0 right-0 p-8 opacity-10">
+                         <svg className="w-32 h-32 text-indigo-400" fill="currentColor" viewBox="0 0 24 24"><path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.1 19 12.38h2c0 2.26-.88 4.2-2.3 5.61l-1.42-1.42c1.1-1.1 1.72-2.57 1.72-4.19 0-3.31-2.69-6-6-6-3.31 0-6 2.69-6 6s2.69 6 6 6c1.33 0 2.56-.44 3.55-1.18l1.45 1.45C16.92 20.31 15.06 21 13 21c-4.41 0-8-3.59-8-8s3.59-8 8-8c2.21 0 4.21.9 5.66 2.34l2.34-2.34V10.12z"/></svg>
                     </div>
-                    <h3 className={`text-2xl font-black mb-3 ${canUseAi ? 'text-white' : 'text-slate-400'}`}>Generate using AI</h3>
-                    <p className={`text-lg leading-relaxed ${canUseAi ? 'text-indigo-200' : 'text-slate-500'}`}>Use artificial intelligence to create high-quality study notes for you.</p>
-                    {!canUseAi && <span className="mt-6 inline-block px-5 py-2 bg-amber-500/10 text-amber-500 text-xs font-black uppercase rounded-full tracking-widest">Locked: Needs 500 Points</span>}
+                    <div className="w-20 h-20 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center mb-10 group-hover:scale-110 transition-transform shadow-inner border border-indigo-500/20">
+                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    </div>
+                    <h3 className={`text-3xl font-black mb-4 ${canUseAi ? 'text-white' : 'text-slate-400'}`}>AI Summary</h3>
+                    <p className={`text-lg leading-relaxed font-medium ${canUseAi ? 'text-indigo-200' : 'text-slate-500'}`}>Use AI to automatically write study notes for any topic.</p>
+                    {!canUseAi && <div className="mt-8 inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 text-amber-500 text-[10px] font-black uppercase rounded-full tracking-widest border border-amber-500/20">Locked: Need 500 Credits</div>}
                 </button>
             </div>
         </div>
@@ -292,8 +326,8 @@ export const UploadPage: React.FC = () => {
             </button>
 
             <div className="bg-white dark:bg-slate-900 rounded-[3.5rem] p-10 md:p-16 shadow-2xl border border-slate-100 dark:border-slate-800">
-                <h2 className="text-3xl font-serif font-black text-slate-900 dark:text-white mb-3">Upload Details</h2>
-                <p className="text-slate-500 dark:text-slate-400 text-xl font-medium mb-12">Please provide correct information for the archive.</p>
+                <h2 className="text-3xl font-serif font-black text-slate-900 dark:text-white mb-3">Course Details</h2>
+                <p className="text-slate-500 dark:text-slate-400 text-xl font-medium mb-12">Please fill in the course information correctly.</p>
 
                 <form onSubmit={handleFormSubmit} className="space-y-10">
                     {/* Method Specific Input Area */}
@@ -306,7 +340,7 @@ export const UploadPage: React.FC = () => {
                                 <input id="f" type="file" className="hidden" onChange={(e) => e.target.files && setFile(e.target.files[0])} accept=".pdf,.doc,.docx" />
                                 <label htmlFor="f" className="cursor-pointer flex flex-col items-center gap-5">
                                     <div className="w-20 h-20 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-md text-indigo-600 border dark:border-slate-700"><svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 4v16m8-8H4" /></svg></div>
-                                    <span className="text-2xl font-black text-slate-800 dark:text-white leading-tight">{file ? file.name : "Tap to pick PDF or Word file"}</span>
+                                    <span className="text-2xl font-black text-slate-800 dark:text-white leading-tight">{file ? file.name : "Click to select a file"}</span>
                                     <p className="text-sm font-bold uppercase tracking-widest text-slate-400">Maximum size: 15MB</p>
                                 </label>
                             </div>
@@ -392,7 +426,7 @@ export const UploadPage: React.FC = () => {
                             <div className="py-20 text-center">
                                 <div className="w-24 h-24 bg-white dark:bg-slate-900 rounded-[2.5rem] mx-auto flex items-center justify-center text-emerald-500 shadow-2xl mb-8 animate-pulse border border-slate-100 dark:border-slate-800"><svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
                                 <p className="text-2xl font-black text-slate-800 dark:text-slate-100">AI is ready to write</p>
-                                <p className="text-sm font-black uppercase text-slate-400 mt-3 tracking-[0.3em]">Fill the topic below to begin</p>
+                                <p className="text-sm font-black uppercase text-slate-400 mt-3 tracking-[0.3em]">Fill in the topic below to start</p>
                             </div>
                         )}
                     </div>
@@ -508,7 +542,7 @@ export const UploadPage: React.FC = () => {
                         disabled={isSubmitting || (uploadType === 'document' && !file) || (uploadType === 'images' && imageFiles.length === 0) || (uploadType === 'text' && !textContent.trim()) || (uploadType === 'link' && !externalLink.trim())} 
                         className={`w-full py-7 text-white font-black rounded-[2.5rem] shadow-3xl transition-all active:scale-95 uppercase tracking-[0.3em] text-sm ${isAiMode ? 'bg-emerald-600 shadow-emerald-500/40' : (uploadType === 'link' ? 'bg-rose-600 shadow-rose-500/40' : 'bg-indigo-600 shadow-indigo-500/40')} disabled:opacity-30 disabled:cursor-not-allowed`}
                     >
-                        {isSubmitting ? 'Sending Information...' : 'Finish and Submit'}
+                        {isSubmitting ? 'Uploading...' : 'Submit File'}
                     </button>
                 </form>
             </div>

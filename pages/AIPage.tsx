@@ -5,6 +5,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import { db } from '../firebase';
 import { doc, updateDoc, collection, getDocs, getDoc, setDoc } from 'firebase/firestore';
 import { Executive, Lecturer, User, AiSettings } from '../types';
+import { handleFirestoreError, OperationType } from '../utils/api';
 
 interface ChatMessage {
     role: 'user' | 'bee';
@@ -75,7 +76,7 @@ export const AIPage: React.FC = () => {
                     setAiStatus({ isAvailable: true });
                 }
             } catch (e) {
-                console.error("Failed to fetch AI status", e);
+                handleFirestoreError(e, OperationType.GET, 'config/ai_settings');
                 setAiStatus({ isAvailable: true });
             }
         };
@@ -146,7 +147,10 @@ export const AIPage: React.FC = () => {
             });
 
             return foundCount > 0 ? contextString : "No records found for this name in the departmental database.";
-        } catch (e) { return "Search error occurred."; }
+        } catch (e) { 
+            handleFirestoreError(e, OperationType.LIST, 'multiple collections');
+            return "Search error occurred."; 
+        }
     };
 
     const handleSend = async (e?: React.FormEvent) => {
@@ -276,7 +280,7 @@ export const AIPage: React.FC = () => {
                 return newMsgs;
             });
         } catch (error: any) {
-            console.error("AI Error:", error);
+            handleFirestoreError(error, OperationType.WRITE, 'users/config');
             const errorMessage = error.message?.toLowerCase() || "";
             if (errorMessage.includes("quota") || errorMessage.includes("429") || errorMessage.includes("limit reached")) {
                 showNotification("Bee's API Key is exhausted.", "error");

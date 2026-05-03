@@ -130,6 +130,7 @@ const GamePlayer: React.FC<{ game: Game; onFinish: (score: number, total: number
             } else {
                 try {
                     const apiKey = process.env.GROQ_API_KEY || "";
+                    if (!apiKey) throw new Error("AI helper is currently unavailable.");
                     const groq = new Groq({
                         apiKey: apiKey,
                         dangerouslyAllowBrowser: true,
@@ -142,14 +143,14 @@ const GamePlayer: React.FC<{ game: Game; onFinish: (score: number, total: number
                     });
                     trackAiUsage();
                     const content = response.choices[0].message.content;
-                    if (!content) throw new Error("AI engine failed to output data.");
+                    if (!content) throw new Error("AI helper failed to output data.");
                     const aiQuestions = safeParse<any>(content, null);
                     // Handle case where AI might wrap the array in an object
                     const questionsArray = Array.isArray(aiQuestions) ? aiQuestions : (aiQuestions?.questions || aiQuestions?.trivia || []);
                     if (!Array.isArray(questionsArray) || questionsArray.length < 5) throw new Error("AI did not return enough questions.");
                     setQuestions(questionsArray);
                 } catch (e) {
-                    console.warn("AI generation for trivia failed, falling back to bank.", e);
+                    console.warn("AI generation failed, falling back to bank.", e);
                     setQuestions(triviaQuestions.sort(() => 0.5 - Math.random()).slice(0, 10));
                 }
             }

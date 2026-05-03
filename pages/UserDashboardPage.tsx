@@ -107,8 +107,19 @@ export const UserDashboardPage: React.FC = () => {
                     where('level', '==', user.level),
                     limit(10)
                 );
-                const levelSnap = await getDocs(levelQuery);
-                const questions = levelSnap.docs.map(d => ({ id: d.id, ...d.data() } as PastQuestion));
+                const levelSnap = await getDocs(levelQuery).catch(async (err) => {
+                    if (err.message?.includes('index') || err.code === 'failed-precondition') {
+                        // Fallback to just status approved if level composite index is missing
+                        const fallbackQ = query(collection(db, 'questions'), where('status', '==', 'approved'), limit(20));
+                        return await getDocs(fallbackQ);
+                    }
+                    throw err;
+                });
+                let questions = levelSnap.docs.map(d => ({ id: d.id, ...d.data() } as PastQuestion));
+                // If we used the fallback, filter by level client-side
+                if (user.level) {
+                    questions = questions.filter(q => q.level === user.level);
+                }
                 // Sort by date descending client-side to ensure latest
                 questions.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
                 setRecommendedQuestions(questions.slice(0, 5));

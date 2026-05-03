@@ -108,7 +108,7 @@ export const AdminPage: React.FC = () => {
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h1 className="text-3xl font-black text-slate-900 dark:text-white">Admin Dashboard</h1>
-                <p className="text-slate-500 dark:text-slate-400">System overview and departmental management.</p>
+                <p className="text-slate-500 dark:text-slate-400">Overview of users and materials.</p>
             </div>
             <button 
                 onClick={() => setIsBroadcastOpen(true)}
@@ -136,8 +136,8 @@ export const AdminPage: React.FC = () => {
                     <div className="p-6 bg-slate-50 dark:bg-slate-700/50 rounded-2xl flex flex-col gap-4">
                         <div className="flex justify-between items-center">
                             <div>
-                                <p className="font-black text-slate-900 dark:text-white">Bee Engine Status</p>
-                                <p className="text-xs text-slate-500">Service availability control</p>
+                                <p className="font-black text-slate-900 dark:text-white">AI Status</p>
+                                <p className="text-xs text-slate-500">Turn AI on or off</p>
                             </div>
                             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${aiSettings?.isAvailable ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
                                 {aiSettings?.isAvailable ? 'Online' : 'Offline'}
@@ -147,23 +147,23 @@ export const AdminPage: React.FC = () => {
                             onClick={handleToggleAi}
                             className={`w-full py-3 rounded-xl font-bold text-xs transition-all ${aiSettings?.isAvailable ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
                         >
-                            {aiSettings?.isAvailable ? 'Emergency Shutdown' : 'Re-activate AI System'}
+                            {aiSettings?.isAvailable ? 'Turn Off AI' : 'Turn On AI'}
                         </button>
                         {!aiSettings?.isAvailable && aiSettings?.shutdownReason && (
                             <p className="text-[10px] text-rose-500 font-bold italic">Note: {aiSettings.shutdownReason}</p>
                         )}
                     </div>
                     <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl flex flex-col justify-center">
-                        <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1">AI Usage Intel</p>
+                        <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1">AI Usage</p>
                         <p className="text-3xl font-black text-indigo-700 dark:text-indigo-300">{stats.aiCalls.toLocaleString()}</p>
-                        <p className="text-[10px] text-indigo-500/60 font-bold uppercase mt-1">Total lifetime requests processed</p>
+                        <p className="text-[10px] text-indigo-500/60 font-bold uppercase mt-1">Total requests processed</p>
                     </div>
                 </div>
             </div>
 
             <div className="bg-indigo-900 rounded-3xl p-8 text-white shadow-xl shadow-indigo-900/20 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10"><svg className="w-32 h-32" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" /></svg></div>
-                <h3 className="font-bold text-indigo-200 mb-6 uppercase tracking-widest text-xs">System Health</h3>
+                <h3 className="font-bold text-indigo-200 mb-6 uppercase tracking-widest text-xs">Status</h3>
                 <div className="space-y-4 relative z-10">
                     <div className="flex justify-between items-center">
                         <span className="text-indigo-300 text-sm">Database</span>

@@ -20,6 +20,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   useEffect(() => {
     const root = window.document.documentElement;
+    console.log("Applying theme:", theme);
     if (theme === 'dark') {
       root.classList.add('dark');
     } else {

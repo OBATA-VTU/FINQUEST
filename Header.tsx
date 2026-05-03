@@ -121,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSidebar }) => {
                 )}
                 {auth?.user && (
                     <Link to="/profile" className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-700 overflow-hidden flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold text-sm">
-                        {auth.user.avatarUrl ? <img src={auth.user.avatarUrl} alt={auth.user.name} className="w-full h-full object-cover" /> : auth.user.name.charAt(0).toUpperCase()}
+                        {auth.user.avatarUrl ? <img src={auth.user.avatarUrl} alt={auth.user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : auth.user.name.charAt(0).toUpperCase()}
                     </Link>
                 )}
           </div>

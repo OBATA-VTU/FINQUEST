@@ -95,8 +95,8 @@ export const AdminUsersPage: React.FC = () => {
         <header className="bg-slate-900 rounded-[3rem] p-10 md:p-14 text-white relative overflow-hidden shadow-2xl">
             <div className="absolute top-0 right-0 p-10 opacity-5 group"><svg className="w-64 h-64 group-hover:rotate-12 transition-transform duration-1000" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg></div>
             <div className="relative z-10">
-                <h1 className="text-4xl md:text-5xl font-black font-serif tracking-tighter mb-4">Student Directory</h1>
-                <p className="text-slate-400 max-w-xl font-medium">Manage permissions, verify identities, and monitor the departmental ecosystem.</p>
+                <h1 className="text-4xl md:text-5xl font-black font-serif tracking-tighter mb-4">Manage Users</h1>
+                <p className="text-slate-400 max-w-xl font-medium">Update roles, verify students, and see all accounts.</p>
             </div>
         </header>
 
@@ -111,7 +111,7 @@ export const AdminUsersPage: React.FC = () => {
             <svg className="w-6 h-6 text-slate-300 absolute left-5 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </div>
 
-        {loading ? <div className="text-center py-20 font-black uppercase text-slate-400 tracking-widest">Loading Intel...</div> : (
+        {loading ? <div className="text-center py-20 font-black uppercase text-slate-400 tracking-widest">Loading Users...</div> : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredUsers.map(u => (
                     <div key={u.id} className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all duration-500 group relative">
@@ -136,7 +136,7 @@ export const AdminUsersPage: React.FC = () => {
 
                         <div className="grid grid-cols-2 gap-3">
                             <button onClick={() => handleVerifyToggle(u)} className={`py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${u.isVerified ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' : 'bg-slate-900 text-white hover:bg-slate-800'}`}>
-                                {u.isVerified ? 'Revoke Seal' : 'Verify Identity'}
+                                {u.isVerified ? 'Unverify' : 'Verify User'}
                             </button>
                             {isSuperAdmin && (
                                 <select 
@@ -156,23 +156,23 @@ export const AdminUsersPage: React.FC = () => {
         {promoUser && (
             <div className="fixed inset-0 bg-slate-950/90 z-[100] flex items-center justify-center p-6 backdrop-blur-md">
                 <div className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] w-full max-w-md shadow-2xl border border-white/5">
-                    <h3 className="text-2xl font-black dark:text-white mb-2">Assign Authority</h3>
-                    <p className="text-slate-500 text-sm mb-8">Elevate <span className="font-black text-indigo-600">{promoUser.name}</span> to the {promoRole} council.</p>
+                    <h3 className="text-2xl font-black dark:text-white mb-2">Change User Role</h3>
+                    <p className="text-slate-500 text-sm mb-8">Update <span className="font-black text-indigo-600">{promoUser.name}</span> to the {promoRole} role.</p>
                     <div className="space-y-4 mb-8">
                         <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-2">Designation / Title</label>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-2">Job Title</label>
                             <input className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white font-bold" placeholder={promoRole === 'executive' ? 'e.g. Financial Secretary' : 'e.g. Senior Lecturer'} value={promoDetails.title} onChange={e => setPromoDetails({...promoDetails, title: e.target.value})} />
                         </div>
                         {promoRole === 'executive' && (
                             <div>
-                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-2">Tenure Level</label>
+                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-2">Level</label>
                                 <select className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl font-bold dark:text-white" value={promoDetails.level} onChange={e => setPromoDetails({...promoDetails, level: e.target.value})}><option value="100">100L</option><option value="200">200L</option><option value="300">300L</option><option value="400">400L</option></select>
                             </div>
                         )}
                     </div>
                     <div className="flex gap-4">
-                        <button onClick={() => setPromoUser(null)} className="flex-1 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px]">Abort</button>
-                        <button onClick={confirmPromotion} className="flex-1 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-500/20 uppercase tracking-widest text-[10px]">Confirm Elevation</button>
+                        <button onClick={() => setPromoUser(null)} className="flex-1 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px]">Cancel</button>
+                        <button onClick={confirmPromotion} className="flex-1 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-500/20 uppercase tracking-widest text-[10px]">Update Role</button>
                     </div>
                 </div>
             </div>

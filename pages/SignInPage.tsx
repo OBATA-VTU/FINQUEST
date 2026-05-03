@@ -104,12 +104,12 @@ export const SignInPage: React.FC = () => {
                 <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up border border-white/5">
                     <div className="p-8 text-center border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
                         <Logo className="h-16 w-16 mx-auto mb-4" />
-                        <h1 className="text-2xl font-serif font-bold text-slate-900 dark:text-white">Recover Access</h1>
-                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Regain control of your academic portal.</p>
+                        <h1 className="text-2xl font-serif font-bold text-slate-900 dark:text-white">Reset Password</h1>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Get back into your account.</p>
                     </div>
                     <form onSubmit={handleResetPassword} className="p-8 space-y-4">
                         <div>
-                            <label className="block text-xs font-black uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Student Email</label>
+                            <label className="block text-xs font-black uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Email</label>
                             <input 
                                 type="email" 
                                 value={email} 
@@ -143,8 +143,8 @@ export const SignInPage: React.FC = () => {
             <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up border border-white/5">
                 <div className="p-8 text-center border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
                     <Logo className="h-16 w-16 mx-auto mb-4" />
-                    <h1 className="text-2xl font-serif font-bold text-slate-900 dark:text-white">Student Portal</h1>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Log in to your departmental ecosystem.</p>
+                    <h1 className="text-2xl font-serif font-bold text-slate-900 dark:text-white">Sign In</h1>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Access your materials and tests.</p>
                 </div>
                 <div className="p-8 space-y-6">
                     <form onSubmit={handleSubmit} className="space-y-5">
@@ -177,7 +177,7 @@ export const SignInPage: React.FC = () => {
                             disabled={loading}
                             className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-95 uppercase tracking-widest text-xs"
                         >
-                            {loading ? "Authenticating..." : "Sign In to Portal"}
+                            {loading ? "Signing in..." : "Sign In"}
                         </button>
                     </form>
                     <div className="relative py-2">
@@ -195,7 +195,7 @@ export const SignInPage: React.FC = () => {
                 </div>
                 <div className="p-6 bg-slate-50/50 dark:bg-slate-800/30 text-center border-t border-slate-100 dark:border-slate-800">
                     <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                        New student? <Link to="/signup" className="text-indigo-600 font-black hover:underline ml-1">Enrol Here</Link>
+                        New student? <Link to="/signup" className="text-indigo-600 font-black hover:underline ml-1">Sign Up</Link>
                     </p>
                 </div>
             </div>

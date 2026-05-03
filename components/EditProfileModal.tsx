@@ -4,7 +4,8 @@ import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { Level } from '../types';
 import { LEVELS } from '../constants';
-import { uploadToImgBB } from '../utils/api';
+import { uploadFileToFirebase, uploadToImgBB } from '../utils/api';
+import { useSettings } from '../contexts/SettingsContext';
 import { updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { auth as firebaseAuth, db } from '../firebase';
@@ -16,6 +17,7 @@ interface EditProfileModalProps {
 
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) => {
   const auth = useContext(AuthContext);
+  const { siteSettings } = useSettings();
   const { showNotification } = useNotification();
   const [name, setName] = useState(auth?.user?.name || '');
   const [photo, setPhoto] = useState<File | null>(null);
@@ -58,7 +60,13 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
     try {
         let photoURL = auth.user?.avatarUrl;
         if (photo) {
-            photoURL = await uploadToImgBB(photo);
+            if (siteSettings.uploadService === 'firebase') {
+                const result = await uploadFileToFirebase(photo, `avatars/${auth.user.id}`);
+                photoURL = result.url;
+            } else {
+                photoURL = await uploadToImgBB(photo);
+            }
+            
             if (firebaseAuth.currentUser) {
                 await updateProfile(firebaseAuth.currentUser, { photoURL });
             }

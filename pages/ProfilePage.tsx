@@ -64,7 +64,7 @@ export const ProfilePage: React.FC = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-slate-500 font-bold animate-pulse">Synchronizing profile data...</p>
+        <p className="text-slate-500 font-bold animate-pulse">Loading profile...</p>
       </div>
     );
   }
@@ -96,7 +96,23 @@ export const ProfilePage: React.FC = () => {
           <div className="relative z-10 flex flex-col items-center">
             <div className="relative w-32 h-32 rounded-full border-4 border-indigo-200 dark:border-indigo-700 bg-slate-100 dark:bg-slate-700 overflow-hidden shadow-lg mb-4">
               {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                <img 
+                  src={user.avatarUrl} 
+                  alt={user.name} 
+                  className="w-full h-full object-cover" 
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      const div = document.createElement('div');
+                      div.className = "w-full h-full flex items-center justify-center text-5xl font-bold text-indigo-700 dark:text-indigo-300";
+                      div.textContent = user.name.charAt(0).toUpperCase();
+                      parent.appendChild(div);
+                    }
+                  }}
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-5xl font-bold text-indigo-700 dark:text-indigo-300">
                   {user.name.charAt(0).toUpperCase()}
@@ -210,8 +226,8 @@ export const ProfilePage: React.FC = () => {
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-10 text-center border-2 border-dashed border-slate-200 dark:border-slate-700">
               <svg className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
               <h3 className="mt-4 text-lg font-bold text-slate-400 dark:text-slate-500">No bookmarks yet</h3>
-              <p className="mt-1 text-sm text-slate-400 dark:text-slate-600">Materials you save from the archives will appear here.</p>
-              <button onClick={() => navigate('/questions')} className="mt-6 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:underline">Browse Archives &rarr;</button>
+              <p className="mt-1 text-sm text-slate-400 dark:text-slate-600">Materials you save will appear here.</p>
+              <button onClick={() => navigate('/questions')} className="mt-6 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:underline">Browse Files &rarr;</button>
             </div>
           )}
         </div>
