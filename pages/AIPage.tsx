@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
-import { OpenAI } from 'openai';
+import { Groq } from 'groq-sdk';
 import { useNotification } from '../contexts/NotificationContext';
 import { db } from '../firebase';
 import { doc, updateDoc, collection, getDocs, getDoc, setDoc } from 'firebase/firestore';
@@ -17,6 +17,7 @@ interface ChatMessage {
 
 const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
     const renderContent = () => {
+        if (!text) return "";
         return text
             .replace(/</g, "&lt;").replace(/>/g, "&gt;")
             .replace(/\*\*(.*?)\*\*/g, '<strong class="font-black text-indigo-900 dark:text-white">$1</strong>')
@@ -201,38 +202,37 @@ export const AIPage: React.FC = () => {
                 });
             }
 
-            const client = new OpenAI({
+            const groq = new Groq({
                 apiKey: apiKey,
                 dangerouslyAllowBrowser: true,
-                baseURL: "https://api.groq.com/openai/v1",
             });
 
             const systemPrompt = `IDENTITY: Bee, official mascot for the Dept of Finance, AAUA.
                                  STRICT RULES:
                                  1. PEOPLE INQUIRIES: If the user asks "Who is [Name]", strictly use the provided DATABASE SEARCH RESULTS below. 
-                                    - If match found: State Full Name, Level, and specific Role/Title.
-                                    - NEVER reveal full IDs. Masked version provided.
-                                    - IF NO MATCH: Say "The person you requested is not known or registered in our departmental records." 
+                                     - If match found: State Full Name, Level, and specific Role/Title.
+                                     - NEVER reveal full IDs. Masked version provided.
+                                     - IF NO MATCH: Say "The person you requested is not known or registered in our departmental records." 
                                  2. Powered by Maths Teacher led administration.
                                  3. REPETITION: Don't mention user's level repeatedly.
                                  ${dbContext ? `DATA CONTEXT: ${dbContext}` : ''}
                                  USER: ${user.username}`;
 
-            const messages: any[] = [
+            const chatMessages: any[] = [
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userMsgText }
             ];
 
             if (base64Image) {
-                messages[1].content = [
+                chatMessages[1].content = [
                     { type: 'text', text: userMsgText },
                     { type: 'image_url', image_url: { url: `data:${currentImage!.type};base64,${base64Image}` } }
                 ];
             }
 
-            const stream = await client.chat.completions.create({
-                model: 'llama-3.3-70b-versatile',
-                messages: messages,
+            const stream = await groq.chat.completions.create({
+                model: 'llama-3.1-8b-instant',
+                messages: chatMessages,
                 stream: true,
             });
 
@@ -259,16 +259,20 @@ export const AIPage: React.FC = () => {
                     fullText += chunkText;
                     setMessages(prev => {
                         const newMsgs = [...prev];
-                        const last = newMsgs[newMsgs.length - 1];
-                        if (last && last.role === 'bee') last.text = fullText;
+                        const lastIndex = newMsgs.length - 1;
+                        if (lastIndex >= 0 && newMsgs[lastIndex].role === 'bee') {
+                            newMsgs[lastIndex] = { ...newMsgs[lastIndex], text: fullText };
+                        }
                         return newMsgs;
                     });
                 }
             }
             setMessages(prev => {
                 const newMsgs = [...prev];
-                const last = newMsgs[newMsgs.length - 1];
-                if (last && last.role === 'bee') last.isStreaming = false;
+                const lastIndex = newMsgs.length - 1;
+                if (lastIndex >= 0 && newMsgs[lastIndex].role === 'bee') {
+                    newMsgs[lastIndex] = { ...newMsgs[lastIndex], isStreaming: false };
+                }
                 return newMsgs;
             });
         } catch (error: any) {

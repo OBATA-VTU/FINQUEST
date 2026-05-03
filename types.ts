@@ -23,6 +23,8 @@ export interface PastQuestion {
   status?: 'pending' | 'approved';
   createdAt?: string;
   category?: "Past Question" | "Lecture Note" | "Handout" | "Textbook" | "Test Question" | "Other";
+  tags?: string[];
+  difficulty?: 'Beginner' | 'Intermediate' | 'Advanced';
 }
 
 export interface Executive {

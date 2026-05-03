@@ -20,6 +20,9 @@ export const PastQuestionsPage: React.FC = () => {
   const [localSearchTerm, setLocalSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
+  const [selectedTag, setSelectedTag] = useState<string>('All');
+  const [allTags, setAllTags] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
 
   const auth = useContext(AuthContext);
@@ -44,12 +47,28 @@ export const PastQuestionsPage: React.FC = () => {
             const querySnapshot = await getDocs(q);
             let results = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PastQuestion));
 
+            // Extract all unique tags for the filter
+            const tagsSet = new Set<string>();
+            results.forEach(res => {
+                if (res.tags) res.tags.forEach(t => tagsSet.add(t));
+            });
+            setAllTags(Array.from(tagsSet).sort());
+
+            if (selectedDifficulty !== 'All') {
+                results = results.filter(res => res.difficulty === selectedDifficulty);
+            }
+
+            if (selectedTag !== 'All') {
+                results = results.filter(res => res.tags?.includes(selectedTag));
+            }
+
             if (searchTerm) {
                 const lowerTerm = searchTerm.toLowerCase().trim();
                 results = results.filter(res => 
                     (res.courseCode?.toLowerCase().includes(lowerTerm)) ||
                     (res.courseTitle?.toLowerCase().includes(lowerTerm)) ||
-                    (res.lecturer?.toLowerCase().includes(lowerTerm))
+                    (res.lecturer?.toLowerCase().includes(lowerTerm)) ||
+                    (res.tags?.some(t => t.toLowerCase().includes(lowerTerm)))
                 );
             }
 
@@ -68,7 +87,7 @@ export const PastQuestionsPage: React.FC = () => {
         }
     };
     fetchFilteredData();
-  }, [selectedLevel, selectedCategory, searchTerm, sortOrder]);
+  }, [selectedLevel, selectedCategory, selectedDifficulty, selectedTag, searchTerm, sortOrder]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,6 +154,44 @@ export const PastQuestionsPage: React.FC = () => {
                                 </div>
                             </div>
                         </div>
+
+                        <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Difficulty</label>
+                            <div className="relative">
+                                <select 
+                                    value={selectedDifficulty} 
+                                    onChange={e => setSelectedDifficulty(e.target.value)} 
+                                    className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl text-sm font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none shadow-sm cursor-pointer"
+                                >
+                                    <option value="All">All Levels</option>
+                                    <option value="Beginner">Beginner</option>
+                                    <option value="Intermediate">Intermediate</option>
+                                    <option value="Advanced">Advanced</option>
+                                </select>
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M19 9l-7 7-7-7" /></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        {allTags.length > 0 && (
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Filter by Tag</label>
+                                <div className="relative">
+                                    <select 
+                                        value={selectedTag} 
+                                        onChange={e => setSelectedTag(e.target.value)} 
+                                        className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl text-sm font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none shadow-sm cursor-pointer"
+                                    >
+                                        <option value="All">All Tags</option>
+                                        {allTags.map(tag => <option key={tag} value={tag}>{tag}</option>)}
+                                    </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M19 9l-7 7-7-7" /></svg>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <div>
                             <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Order</label>

@@ -6,8 +6,9 @@ import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { TestResult, Announcement, PastQuestion } from '../types';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { getBadge } from '../utils/badges';
-import { OpenAI } from 'openai';
+import { Groq } from 'groq-sdk';
 import { Skeleton } from '../components/Skeleton';
+import { safeStringify, safeParse } from '../utils/serialization';
 
 export const UserDashboardPage: React.FC = () => {
   const auth = useContext(AuthContext);
@@ -45,9 +46,9 @@ export const UserDashboardPage: React.FC = () => {
         try {
             const cachedQuoteData = localStorage.getItem('dailyQuote');
             if (cachedQuoteData) {
-                const { date, quote } = JSON.parse(cachedQuoteData);
-                if (date === today && quote) {
-                    setQuote(quote);
+                const parsed = safeParse<any>(cachedQuoteData, null);
+                if (parsed && parsed.date === today && parsed.quote) {
+                    setQuote(parsed.quote);
                     return;
                 }
             }
@@ -55,19 +56,19 @@ export const UserDashboardPage: React.FC = () => {
 
         try {
             const apiKey = process.env.GROQ_API_KEY || "";
-            const client = new OpenAI({
+            const groq = new Groq({
                 apiKey: apiKey,
                 dangerouslyAllowBrowser: true,
-                baseURL: "https://api.groq.com/openai/v1",
             });
             const prompt = "Generate a single, unique, and insightful quote about finance, investing, or wealth. Concise (under 25 words). Do not include author.";
-            const response = await client.chat.completions.create({
-                model: "llama-3.3-70b-versatile",
+            const response = await groq.chat.completions.create({
+                model: "llama-3.1-8b-instant",
                 messages: [{ role: "user", content: prompt }],
             });
-            const newQuote = response.choices[0].message.content?.trim().replace(/^"|"$/g, '');
+            const content = response.choices[0].message.content;
+            const newQuote = content ? content.trim().replace(/^"|"$/g, '') : null;
             setQuote(newQuote || "The best investment you can make is in yourself.");
-            localStorage.setItem('dailyQuote', JSON.stringify({ date: today, quote: newQuote }));
+            localStorage.setItem('dailyQuote', safeStringify({ date: today, quote: newQuote || "The best investment you can make is in yourself." }));
         } catch (error) {
             setQuote("Risk comes from not knowing what you are doing.");
         }

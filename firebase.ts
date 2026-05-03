@@ -4,7 +4,7 @@ import { getFirestore, Firestore } from "firebase/firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
 import { getFunctions } from 'firebase/functions';
 
-// Use Environment Variables first, fallback to hardcoded (development) values
+// Reverting to previous Firebase configuration as requested by user
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDQOg8iafqR-LEkFXj-03Ua2-Vci1tc7zY",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "finquest-9668d.firebaseapp.com",

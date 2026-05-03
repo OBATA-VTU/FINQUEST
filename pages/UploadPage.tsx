@@ -1,12 +1,12 @@
 import React, { useState, FormEvent, useRef, useEffect, useContext } from 'react';
 import { Level } from '../types';
 import { LEVELS } from '../constants';
-import { uploadDocument, uploadToImgBB, trackAiUsage } from '../utils/api';
+import { uploadDocument, uploadToImgBB, trackAiUsage, handleFirestoreError, OperationType } from '../utils/api';
 import { db } from '../firebase';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { OpenAI } from 'openai';
+import { Groq } from 'groq-sdk';
 import { useNavigate } from 'react-router-dom';
 
 type UploadType = 'select' | 'document' | 'images' | 'text' | 'ai' | 'link';
@@ -28,6 +28,9 @@ export const UploadPage: React.FC = () => {
     const [year, setYear] = useState(new Date().getFullYear());
     const [semester, setSemester] = useState<'1' | '2' | 'N/A'>('N/A');
     const [category, setCategory] = useState("Past Question");
+    const [difficulty, setDifficulty] = useState<'Beginner' | 'Intermediate' | 'Advanced'>('Beginner');
+    const [tags, setTags] = useState<string[]>([]);
+    const [tagInput, setTagInput] = useState('');
     
     // Specific Fields
     const [file, setFile] = useState<File | null>(null);
@@ -106,6 +109,8 @@ export const UploadPage: React.FC = () => {
                 year,
                 semester: semester === 'N/A' ? 'N/A' : Number(semester),
                 category,
+                difficulty,
+                tags,
                 uploadedBy: auth.user.id,
                 uploadedByEmail: auth.user.email,
                 uploadedByName: auth.user.username,
@@ -141,14 +146,13 @@ export const UploadPage: React.FC = () => {
                 if (!canUseAi) throw new Error("You don't have enough points for AI.");
                 setUploadStatus('AI is writing...');
                 const apiKey = process.env.GROQ_API_KEY || "";
-                const client = new OpenAI({
+                const groq = new Groq({
                     apiKey: apiKey,
                     dangerouslyAllowBrowser: true,
-                    baseURL: "https://api.groq.com/openai/v1",
                 });
                 const prompt = `Generate comprehensive, university-level study notes/lecture material on the topic: "${courseTitle}". Format in clean Markdown. Include a summary, key concepts, detailed explanation, and conclusion.`;
-                const response = await client.chat.completions.create({
-                    model: "llama-3.3-70b-versatile",
+                const response = await groq.chat.completions.create({
+                    model: "llama-3.1-8b-instant",
                     messages: [{ role: "user", content: prompt }],
                 });
                 trackAiUsage();
@@ -158,7 +162,11 @@ export const UploadPage: React.FC = () => {
             }
 
             setUploadStatus('Saving to archive...');
-            await addDoc(collection(db, 'questions'), questionData);
+            try {
+                await addDoc(collection(db, 'questions'), questionData);
+            } catch (e) {
+                handleFirestoreError(e, OperationType.CREATE, 'questions');
+            }
             
             showNotification('Success! Sent for approval.', 'success');
             resetForm();
@@ -205,6 +213,20 @@ export const UploadPage: React.FC = () => {
 
     const removeImage = (index: number) => {
         setImageFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const addTag = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && tagInput.trim()) {
+            e.preventDefault();
+            if (!tags.includes(tagInput.trim())) {
+                setTags([...tags, tagInput.trim()]);
+            }
+            setTagInput('');
+        }
+    };
+
+    const removeTag = (tag: string) => {
+        setTags(tags.filter(t => t !== tag));
     };
 
     const SelectionScreen = () => (
@@ -395,6 +417,38 @@ export const UploadPage: React.FC = () => {
                         <div className="space-y-3">
                             <label className="block text-sm font-black uppercase tracking-[0.2em] text-slate-400 ml-3">Material Category</label>
                             <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-6 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-indigo-500 rounded-[2rem] font-bold text-lg outline-none dark:text-white appearance-none cursor-pointer">{CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}</select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-3">
+                            <label className="block text-sm font-black uppercase tracking-[0.2em] text-slate-400 ml-3">Difficulty Level</label>
+                            <select value={difficulty} onChange={e => setDifficulty(e.target.value as any)} className="w-full p-6 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-indigo-500 rounded-[2rem] font-bold text-lg outline-none dark:text-white appearance-none cursor-pointer">
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
+                        </div>
+                        <div className="space-y-3">
+                            <label className="block text-sm font-black uppercase tracking-[0.2em] text-slate-400 ml-3">Tags (Press Enter)</label>
+                            <div className="relative">
+                                <input 
+                                    type="text" 
+                                    value={tagInput} 
+                                    onChange={e => setTagInput(e.target.value)} 
+                                    onKeyDown={addTag}
+                                    className="w-full p-6 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-indigo-500 rounded-[2rem] outline-none font-bold text-lg dark:text-white transition-all shadow-sm" 
+                                    placeholder="e.g. taxation, budgeting" 
+                                />
+                                <div className="flex flex-wrap gap-2 mt-3 px-3">
+                                    {tags.map(t => (
+                                        <span key={t} className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 text-xs font-black uppercase rounded-full flex items-center gap-2">
+                                            {t}
+                                            <button type="button" onClick={() => removeTag(t)} className="hover:text-rose-500">&times;</button>
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
 

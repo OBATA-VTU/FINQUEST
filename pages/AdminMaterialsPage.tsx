@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
-import { uploadDocument, deleteDocument } from '../utils/api';
+import { uploadDocument, deleteDocument, handleFirestoreError, OperationType } from '../utils/api';
 import { LEVELS } from '../constants';
-import { OpenAI } from 'openai';
+import { Groq } from 'groq-sdk';
 
 const CATEGORIES = ["Past Question", "Test Question", "Lecture Note", "Handout", "Textbook", "Other"];
 
@@ -64,14 +64,13 @@ export const AdminMaterialsPage: React.FC = () => {
 
           if (isAiMode) {
               const apiKey = process.env.GROQ_API_KEY || "";
-              const client = new OpenAI({
+              const groq = new Groq({
                   apiKey: apiKey,
                   dangerouslyAllowBrowser: true,
-                  baseURL: "https://api.groq.com/openai/v1",
               });
               const prompt = `Generate comprehensive, university-level study notes/lecture material on the topic: "${payload.courseTitle}". Course Code: ${payload.courseCode}. Format in clean Markdown.`;
-              const response = await client.chat.completions.create({
-                  model: "llama-3.3-70b-versatile",
+              const response = await groq.chat.completions.create({
+                  model: "llama-3.1-8b-instant",
                   messages: [{ role: "user", content: prompt }],
               });
               const textContent = response.choices[0].message.content;
@@ -94,8 +93,19 @@ export const AdminMaterialsPage: React.FC = () => {
           payload.status = 'approved';
           if (!editingItem) payload.createdAt = new Date().toISOString();
 
-          if (editingItem) await updateDoc(doc(db, 'questions', editingItem.id), payload);
-          else await addDoc(collection(db, 'questions'), payload);
+          if (editingItem) {
+              try {
+                  await updateDoc(doc(db, 'questions', editingItem.id), payload);
+              } catch (e) {
+                  handleFirestoreError(e, OperationType.UPDATE, `questions/${editingItem.id}`);
+              }
+          } else {
+              try {
+                  await addDoc(collection(db, 'questions'), payload);
+              } catch (e) {
+                  handleFirestoreError(e, OperationType.CREATE, 'questions');
+              }
+          }
           
           setIsModalOpen(false);
           fetchContent();

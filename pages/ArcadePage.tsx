@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect, useContext } from 'react';
 import { triviaQuestions, timelineQuestions, FallbackQuestion } from '../utils/fallbackQuestions';
-import { OpenAI } from 'openai';
+import { Groq } from 'groq-sdk';
 import { trackAiUsage } from '../utils/api';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { db } from '../firebase';
 import { doc, updateDoc, increment } from 'firebase/firestore';
+import { safeStringify, safeParse } from '../utils/serialization';
 
 type Game = 'trivia' | 'timeline';
 type ViewState = 'select' | 'in_game' | 'results';
@@ -111,8 +112,8 @@ const GamePlayer: React.FC<{ game: Game; onFinish: (score: number, total: number
             // Check for saved state
             const savedStateJSON = localStorage.getItem(storageKey);
             if (savedStateJSON) {
-                const savedState = JSON.parse(savedStateJSON);
-                if (savedState.game === game && window.confirm("Continue your last game?")) {
+                const savedState = safeParse<any>(savedStateJSON, null);
+                if (savedState && savedState.game === game && window.confirm("Continue your last game?")) {
                     setQuestions(savedState.questions);
                     setAnswers(savedState.answers);
                     setCurrentIndex(savedState.currentIndex);
@@ -129,22 +130,22 @@ const GamePlayer: React.FC<{ game: Game; onFinish: (score: number, total: number
             } else {
                 try {
                     const apiKey = process.env.GROQ_API_KEY || "";
-                    const client = new OpenAI({
+                    const groq = new Groq({
                         apiKey: apiKey,
                         dangerouslyAllowBrowser: true,
-                        baseURL: "https://api.groq.com/openai/v1",
                     });
                     const prompt = `Generate exactly 10 trivia questions about Nigerian finance, general finance calculations, and some basic world finance history. The first 5 should be relatively easy, and the last 5 should be progressively harder. Return a valid JSON array of objects with keys: "id" (number from 1-10), "text" (string), "options" (array of 4 strings), and "correctAnswer" (number from 0-3).`;
-                    const response = await client.chat.completions.create({
-                        model: "llama-3.3-70b-versatile",
+                    const response = await groq.chat.completions.create({
+                        model: "llama-3.1-8b-instant",
                         messages: [{ role: "user", content: prompt }],
                         response_format: { type: "json_object" }
                     });
                     trackAiUsage();
-                    const content = response.choices[0].message.content || "[]";
-                    const aiQuestions = JSON.parse(content);
+                    const content = response.choices[0].message.content;
+                    if (!content) throw new Error("AI engine failed to output data.");
+                    const aiQuestions = safeParse<any>(content, null);
                     // Handle case where AI might wrap the array in an object
-                    const questionsArray = Array.isArray(aiQuestions) ? aiQuestions : (aiQuestions.questions || aiQuestions.trivia || []);
+                    const questionsArray = Array.isArray(aiQuestions) ? aiQuestions : (aiQuestions?.questions || aiQuestions?.trivia || []);
                     if (!Array.isArray(questionsArray) || questionsArray.length < 5) throw new Error("AI did not return enough questions.");
                     setQuestions(questionsArray);
                 } catch (e) {
@@ -160,7 +161,7 @@ const GamePlayer: React.FC<{ game: Game; onFinish: (score: number, total: number
     // Save progress whenever it changes
     useEffect(() => {
         if (questions.length > 0 && !isLoading) {
-            localStorage.setItem(storageKey, JSON.stringify({ game, questions, answers, currentIndex }));
+            localStorage.setItem(storageKey, safeStringify({ game, questions, answers, currentIndex }));
         }
     }, [answers, currentIndex, questions, game, isLoading]);
 

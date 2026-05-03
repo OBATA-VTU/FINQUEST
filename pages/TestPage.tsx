@@ -1,7 +1,7 @@
 
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
-import { OpenAI } from 'openai';
+import { Groq } from 'groq-sdk';
 import { useNotification } from '../contexts/NotificationContext';
 import { db } from '../firebase';
 import { collection, addDoc, doc, updateDoc, increment, getDoc } from 'firebase/firestore';
@@ -13,6 +13,7 @@ import { Calculator } from '../components/Calculator';
 import { fallbackQuestions } from '../utils/fallbackQuestions';
 import { checkAndAwardBadges } from '../utils/badges';
 import { useNavigate } from 'react-router-dom';
+import { safeStringify, safeParse } from '../utils/serialization';
 
 interface Question {
   id: number;
@@ -48,25 +49,27 @@ export const TestPage: React.FC = () => {
         const savedStateJSON = localStorage.getItem(storageKey);
         if (savedStateJSON) {
             try {
-                const savedState = JSON.parse(savedStateJSON);
-                const { endTime } = savedState;
-                const now = Date.now();
-                const timeLeftFromEnd = Math.round((endTime - now) / 1000);
+                const savedState = safeParse<any>(savedStateJSON, null);
+                if (savedState) {
+                    const { endTime } = savedState;
+                    const now = Date.now();
+                    const timeLeftFromEnd = Math.round((endTime - now) / 1000);
 
-                if (timeLeftFromEnd <= 0) {
-                    localStorage.removeItem(storageKey);
-                    setView('select_mode');
-                } else if (window.confirm("An unfinished test session was found. Continue?")) {
-                    setMode(savedState.mode);
-                    setLevel(savedState.level);
-                    setTopic(savedState.topic);
-                    setQuestions(savedState.questions);
-                    setUserAnswers(savedState.userAnswers);
-                    setCurrentQuestionIndex(savedState.currentQuestionIndex);
-                    setTimeLeft(timeLeftFromEnd);
-                    setView('in_game');
-                } else {
-                    localStorage.removeItem(storageKey);
+                    if (timeLeftFromEnd <= 0) {
+                        localStorage.removeItem(storageKey);
+                        setView('select_mode');
+                    } else if (window.confirm("An unfinished test session was found. Continue?")) {
+                        setMode(savedState.mode);
+                        setLevel(savedState.level);
+                        setTopic(savedState.topic);
+                        setQuestions(savedState.questions);
+                        setUserAnswers(savedState.userAnswers);
+                        setCurrentQuestionIndex(savedState.currentQuestionIndex);
+                        setTimeLeft(timeLeftFromEnd);
+                        setView('in_game');
+                    } else {
+                        localStorage.removeItem(storageKey);
+                    }
                 }
             } catch (e) {
                 localStorage.removeItem(storageKey);
@@ -144,7 +147,7 @@ const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTi
 
     const startTest = (questions: Question[], time: number, mode: TestMode, currentTopic: string) => {
         const endTime = Date.now() + time * 1000;
-        localStorage.setItem(storageKey, JSON.stringify({ questions, userAnswers: {}, currentQuestionIndex: 0, endTime, mode, level, topic: currentTopic }));
+        localStorage.setItem(storageKey, safeStringify({ questions, userAnswers: {}, currentQuestionIndex: 0, endTime, mode, level, topic: currentTopic }));
         setQuestions(questions);
         setTimeLeft(time);
         setView('in_game');
@@ -154,21 +157,22 @@ const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTi
         setView('loading');
         try {
             const apiKey = process.env.GROQ_API_KEY || "";
-            const client = new OpenAI({
+            const groq = new Groq({
                 apiKey: apiKey,
                 dangerouslyAllowBrowser: true,
-                baseURL: "https://api.groq.com/openai/v1",
             });
             const prompt = `Generate exactly 30 high-quality, university-level multiple-choice finance questions for level ${level}. Return as a JSON array of objects with "id", "text", "options" (4 strings), "correctAnswer" (0-3 index).`;
-            const response = await client.chat.completions.create({
-                model: "llama-3.3-70b-versatile",
+            const response = await groq.chat.completions.create({
+                model: "llama-3.1-8b-instant",
                 messages: [{ role: "user", content: prompt }],
                 response_format: { type: "json_object" }
             });
             trackAiUsage();
-            const content = response.choices[0].message.content || "[]";
-            const aiQuestions = JSON.parse(content);
-            const questionsArray = Array.isArray(aiQuestions) ? aiQuestions : (aiQuestions.questions || aiQuestions.test || []);
+            const content = response.choices[0].message.content;
+            if (!content) throw new Error("AI engine failed to output data.");
+            const aiQuestions = safeParse<any>(content, null);
+            const questionsArray = Array.isArray(aiQuestions) ? aiQuestions : (aiQuestions?.questions || aiQuestions?.test || []);
+            if (questionsArray.length === 0) throw new Error("No questions generated.");
             startTest(questionsArray, 40 * 60, 'mock', '');
         } catch (e) {
             startTest(fallbackQuestions.filter(q => level === 'General' || q.level === level).sort(() => 0.5-Math.random()).slice(0, 30), 40 * 60, 'mock', '');
@@ -179,21 +183,22 @@ const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTi
         setView('loading');
         try {
             const apiKey = process.env.GROQ_API_KEY || "";
-            const client = new OpenAI({
+            const groq = new Groq({
                 apiKey: apiKey,
                 dangerouslyAllowBrowser: true,
-                baseURL: "https://api.groq.com/openai/v1",
             });
             const prompt = `Generate exactly 10 high-quality finance questions for the topic: "${topic}". Return as a JSON array of objects with "id", "text", "options", "correctAnswer".`;
-            const response = await client.chat.completions.create({
-                model: "llama-3.3-70b-versatile",
+            const response = await groq.chat.completions.create({
+                model: "llama-3.1-8b-instant",
                 messages: [{ role: "user", content: prompt }],
                 response_format: { type: "json_object" }
             });
             trackAiUsage();
-            const content = response.choices[0].message.content || "[]";
-            const aiQuestions = JSON.parse(content);
-            const questionsArray = Array.isArray(aiQuestions) ? aiQuestions : (aiQuestions.questions || aiQuestions.quiz || []);
+            const content = response.choices[0].message.content;
+            if (!content) throw new Error("AI engine failed to output data.");
+            const aiQuestions = safeParse<any>(content, null);
+            const questionsArray = Array.isArray(aiQuestions) ? aiQuestions : (aiQuestions?.questions || aiQuestions?.quiz || []);
+            if (questionsArray.length === 0) throw new Error("No questions generated.");
             startTest(questionsArray, 15 * 60, 'ai', topic);
         } catch (e) { showNotification("AI engine busy.", "error"); setView('configure'); }
     };
@@ -202,14 +207,13 @@ const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTi
         setView('loading');
         try {
             const apiKey = process.env.GROQ_API_KEY || "";
-            const client = new OpenAI({
+            const groq = new Groq({
                 apiKey: apiKey,
                 dangerouslyAllowBrowser: true,
-                baseURL: "https://api.groq.com/openai/v1",
             });
             const prompt = `Generate professional university study notes on: "${topic}". Use Markdown.`;
-            const response = await client.chat.completions.create({
-                model: "llama-3.3-70b-versatile",
+            const response = await groq.chat.completions.create({
+                model: "llama-3.1-8b-instant",
                 messages: [{ role: "user", content: prompt }],
             });
             trackAiUsage();
@@ -275,7 +279,7 @@ const GameScreen: React.FC<any> = ({ questions, timeLeft, setTimeLeft, reset, us
     const endTest = async () => {
         const finalScore = calculateScore(questions, userAnswers);
         if (auth?.user) {
-            localStorage.setItem('lastTestResults', JSON.stringify({ questions, userAnswers, score: finalScore }));
+            localStorage.setItem('lastTestResults', safeStringify({ questions, userAnswers, score: finalScore }));
             await addDoc(collection(db, 'test_results'), { userId: auth.user.id, score: finalScore, date: new Date().toISOString(), totalQuestions: questions.length, level: auth.user.level });
             const userRef = doc(db, 'users', auth.user.id);
             const points = Math.round(finalScore / 10);
@@ -284,7 +288,7 @@ const GameScreen: React.FC<any> = ({ questions, timeLeft, setTimeLeft, reset, us
                 auth.updateUser({ contributionPoints: (auth.user.contributionPoints || 0) + points });
             }
         } else {
-            localStorage.setItem('lastTestResults', JSON.stringify({ questions, userAnswers, score: finalScore }));
+            localStorage.setItem('lastTestResults', safeStringify({ questions, userAnswers, score: finalScore }));
         }
         setView('results');
     };
@@ -359,7 +363,7 @@ const ResultsScreen: React.FC<any> = ({ onRestart }) => {
     const [results, setResults] = useState<any>(null);
     useEffect(() => {
         const data = localStorage.getItem('lastTestResults');
-        if (data) { try { setResults(JSON.parse(data)); } catch (e) {} }
+        if (data) { try { setResults(safeParse<any>(data, null)); } catch (e) {} }
     }, []);
     if (!results) return <LoadingScreen />;
     const { score } = results;

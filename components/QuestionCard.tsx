@@ -160,6 +160,21 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
             </p>
         )}
 
+        <div className="flex flex-wrap gap-2 mb-4">
+            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
+                question.difficulty === 'Advanced' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400' :
+                question.difficulty === 'Intermediate' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' :
+                'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+            }`}>
+                {question.difficulty || 'Beginner'}
+            </span>
+            {question.tags?.map(tag => (
+                <span key={tag} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-[9px] font-black uppercase tracking-wider rounded">
+                    #{tag}
+                </span>
+            ))}
+        </div>
+
         <div className="flex gap-2 mt-auto pt-2 border-t border-slate-50 dark:border-slate-700">
             <button onClick={handlePreview} className="flex-1 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700 rounded hover:bg-white dark:hover:bg-slate-600 hover:text-indigo-600 dark:hover:text-indigo-300 hover:shadow-sm border border-transparent hover:border-slate-200 transition flex items-center justify-center gap-1">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>

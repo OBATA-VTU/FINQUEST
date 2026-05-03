@@ -1,10 +1,62 @@
-import { db, storage } from '../firebase';
+import { db, storage, auth } from '../firebase';
 import { doc, setDoc, increment, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || "a4aa97ad337019899bb59b4e94b149e0";
 
 export const trackAiUsage = async () => {
+    const path = 'system_stats/ai_usage';
     try {
         const today = new Date().toISOString().split('T')[0];
         await setDoc(doc(db, 'system_stats', 'ai_usage'), { 
@@ -12,7 +64,9 @@ export const trackAiUsage = async () => {
             [`daily_${today}`]: increment(1),
             last_updated: new Date().toISOString()
         }, { merge: true });
-    } catch (e) {}
+    } catch (e) {
+        handleFirestoreError(e, OperationType.WRITE, path);
+    }
 };
 
 export const forceDownload = async (url: string, filename: string) => {
@@ -36,22 +90,36 @@ export const forceDownload = async (url: string, filename: string) => {
 };
 
 export const uploadFileToFirebase = async (file: File, folder: string = 'materials', onProgress?: (progress: number) => void): Promise<{ url: string, path: string }> => {
-    const storageRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    try {
+        const storageRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
 
-    return new Promise((resolve, reject) => {
-        uploadTask.on('state_changed', 
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                onProgress?.(progress);
-            }, 
-            (error) => reject(error), 
-            async () => {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                resolve({ url: downloadURL, path: uploadTask.snapshot.ref.fullPath });
-            }
-        );
-    });
+        return new Promise((resolve, reject) => {
+            uploadTask.on('state_changed', 
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / (snapshot.totalBytes || 1)) * 100;
+                    console.log(`Upload progress: ${progress}%`);
+                    onProgress?.(progress);
+                }, 
+                (error) => {
+                    console.error("Firebase Storage Upload Error:", error);
+                    reject(error);
+                }, 
+                async () => {
+                    try {
+                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                        resolve({ url: downloadURL, path: uploadTask.snapshot.ref.fullPath });
+                    } catch (e) {
+                        console.error("Failed to get download URL:", e);
+                        reject(e);
+                    }
+                }
+            );
+        });
+    } catch (error) {
+        console.error("Failed to initiate upload task:", error);
+        throw error;
+    }
 };
 
 export const uploadDocument = async (file: File, folder: string = 'materials', onProgress?: (progress: number) => void): Promise<{ url: string, path: string }> => {
