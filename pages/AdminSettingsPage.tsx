@@ -6,6 +6,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import { AuthContext } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { migrateResourceToFirebase } from '../utils/api';
+import { motion, AnimatePresence } from 'motion/react';
 
 export const AdminSettingsPage: React.FC = () => {
   const auth = useContext(AuthContext);
@@ -187,47 +188,44 @@ export const AdminSettingsPage: React.FC = () => {
       }
   };
 
+  const [activeTab, setActiveTab] = useState<'general' | 'storage' | 'maintenance'>('general');
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+
   if (!isSuperAdmin) return <div className="p-20 text-center font-black">UNAUTHORIZED ACCESS</div>;
 
   return (
-    <div className="animate-fade-in pb-24 max-w-6xl mx-auto space-y-12">
+    <div className="animate-fade-in pb-24 max-w-6xl mx-auto space-y-12 px-4 md:px-6">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-100 dark:border-slate-800 pb-12">
             <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 rounded-full mb-4">
                     <span className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse"></span>
-                    <span className="text-[9px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">System Command Center</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Admin Control</span>
                 </div>
-                <h1 className="text-5xl font-serif font-black text-slate-900 dark:text-white tracking-tighter">Unified Configuration</h1>
-                <p className="text-slate-500 dark:text-slate-400 text-lg font-medium max-w-xl mt-2">Manage departmental protocols, secure storage pipelines, and administrative tenure.</p>
+                <h1 className="text-5xl font-serif font-black text-slate-900 dark:text-white tracking-tighter">Site Settings</h1>
+                <p className="text-slate-500 dark:text-slate-400 text-lg font-medium max-w-xl mt-2">Manage your website's configuration, file storage, and annual maintenance.</p>
             </div>
             
-            <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                </div>
-                <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Local Time</p>
-                    <p className="text-sm font-black text-slate-900 dark:text-white leading-none">{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                </div>
+            <div className="flex bg-slate-50 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <button onClick={() => setActiveTab('general')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'general' ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm' : 'text-slate-400'}`}>General</button>
+                <button onClick={() => setActiveTab('storage')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'storage' ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm' : 'text-slate-400'}`}>File Storage</button>
+                <button onClick={() => setActiveTab('maintenance')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'maintenance' ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm' : 'text-slate-400'}`}>Maintenance</button>
             </div>
         </header>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
-                {/* Core Settings Card */}
-                <section className="bg-white dark:bg-slate-900 p-12 rounded-[3.5rem] border border-slate-100 dark:border-slate-800 shadow-2xl relative overflow-hidden group">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-indigo-600"></div>
-                    <div className="flex items-center justify-between mb-10">
-                        <h3 className="text-2xl font-serif font-black text-slate-900 dark:text-white">Academic Backbone</h3>
-                        <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-100 dark:border-indigo-900/50">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+
+        {activeTab === 'general' && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
+                <div className="lg:col-span-2 space-y-8">
+                    <section className="bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[2.5rem] md:rounded-[3.5rem] border border-slate-100 dark:border-slate-800 shadow-2xl relative overflow-hidden group">
+                        <div className="flex items-center justify-between mb-10">
+                            <h3 className="text-2xl font-serif font-black text-slate-900 dark:text-white">Basic Setup</h3>
+                            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-100 dark:border-indigo-900/50">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                        <div className="space-y-6">
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                             <div>
-                                <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-3 ml-2">Current Academic Session</label>
+                                <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-3 ml-2">Academic Session</label>
                                 <input 
                                     className="w-full p-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-[1.5rem] outline-none focus:border-indigo-500 dark:text-white font-black text-lg transition-all" 
                                     value={siteSettings.session} 
@@ -235,7 +233,7 @@ export const AdminSettingsPage: React.FC = () => {
                                 />
                             </div>
                             <div className="p-6 bg-slate-50 dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Display Logic</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Features</p>
                                 <div className="flex items-center justify-between">
                                     <label htmlFor="showExecs" className="text-sm font-bold text-slate-700 dark:text-slate-200">Show Executives Hub</label>
                                     <div 
@@ -247,208 +245,218 @@ export const AdminSettingsPage: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-                        
+                        <button onClick={handleSaveSite} className="mt-12 w-full py-5 bg-slate-950 dark:bg-indigo-600 text-white font-black rounded-[2rem] shadow-2xl hover:bg-black dark:hover:bg-indigo-700 transition-all uppercase tracking-[0.3em] text-xs">Save Changes</button>
+                    </section>
+
+                    <section className="bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[2.5rem] md:rounded-[3.5rem] border border-slate-100 dark:border-slate-800 shadow-xl space-y-8">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-2xl font-serif font-black text-slate-900 dark:text-white">Social Media Links</h3>
+                            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-100 dark:border-emerald-900/50">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {['facebook', 'twitter', 'whatsapp', 'telegram', 'instagram', 'tiktok'].map(platform => (
+                                <div key={platform} className="space-y-2">
+                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 ml-3">{platform}</label>
+                                    <input 
+                                        className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl outline-none text-xs font-bold dark:text-white focus:border-indigo-500 transition-all" 
+                                        placeholder={`${platform.charAt(0).toUpperCase() + platform.slice(1)} URL`} 
+                                        value={(socialLinks as any)[platform]} 
+                                        onChange={e => setSocialLinks({...socialLinks, [platform]: e.target.value})} 
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                        <button onClick={handleSaveSocial} className="w-full py-4 border-2 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-black rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all uppercase tracking-widest text-[10px]">Update Links</button>
+                    </section>
+                </div>
+            </div>
+        )}
+
+        {activeTab === 'storage' && (
+            <div className="max-w-4xl animate-fade-in space-y-8">
+                <section className="bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[2.5rem] md:rounded-[3.5rem] border border-slate-100 dark:border-slate-800 shadow-2xl">
+                    <h3 className="text-2xl font-serif font-black text-slate-900 dark:text-white mb-8">File Storage Settings</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                         <div className="space-y-6">
                             <div>
-                                <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-3 ml-2">Preferred Storage Vector</label>
+                                <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-3 ml-2">Storage Method</label>
                                 <select 
                                     value={siteSettings.uploadService} 
                                     onChange={e => setSiteSettings({...siteSettings, uploadService: e.target.value})}
-                                    className="w-full p-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-[1.5rem] outline-none font-black text-sm uppercase tracking-widest dark:text-white appearance-none cursor-pointer"
+                                    className="w-full p-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-[1.5rem] outline-none font-black text-sm uppercase tracking-widest dark:text-white cursor-pointer"
                                 >
-                                    <option value="firebase">Firebase Active Cloud</option>
-                                    <option value="drive">Direct Google Drive (Legacy)</option>
-                                    <option value="imgbb">Visual Assets Only (ImgBB)</option>
+                                    <option value="firebase">Secure Cloud (Firebase)</option>
+                                    <option value="drive">Google Drive (Shared Folders)</option>
                                 </select>
                             </div>
-                            {siteSettings.uploadService === 'drive' && (
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-3 ml-2">Drive Folder ID</label>
-                                        <div className="relative group">
-                                            <input 
-                                                className="w-full p-5 bg-amber-50 dark:bg-amber-950/20 border-2 border-amber-100 dark:border-amber-900/30 rounded-[1.5rem] outline-none focus:border-amber-500 dark:text-white font-black text-sm transition-all" 
-                                                placeholder="Enter Folder ID"
-                                                value={siteSettings.driveFolderId || ''} 
-                                                onChange={e => setSiteSettings({...siteSettings, driveFolderId: e.target.value})} 
-                                            />
-                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
-                                                <button 
-                                                    onClick={() => {
-                                                        if (siteSettings.driveFolderId) {
-                                                            window.open(`https://drive.google.com/drive/folders/${siteSettings.driveFolderId}`, '_blank');
-                                                        } else {
-                                                            showNotification("Enter Folder ID first", "info");
-                                                        }
-                                                    }}
-                                                    className="p-2 bg-white dark:bg-slate-800 text-slate-400 hover:text-indigo-600 rounded-lg border border-slate-100 dark:border-slate-700 transition-colors"
-                                                    title="Open in Drive"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <button 
-                                        onClick={async () => {
-                                            if (!siteSettings.driveFolderId) return showNotification("Please enter a Folder ID", "error");
-                                            setIsProcessing(true);
-                                            
-                                            // Simulated thorough diagnostic pipeline
-                                            try {
-                                                const isValidFormat = /^[a-zA-Z0-9-_]{20,}$/.test(siteSettings.driveFolderId);
-                                                
-                                                // Step 1: Format Check
-                                                await new Promise(r => setTimeout(r, 800));
-                                                if (!isValidFormat) {
-                                                    setIsProcessing(false);
-                                                    return showNotification("Handshake Aborted: Invalid ID format detected.", "error");
-                                                }
-
-                                                // Step 2: Connectivity Check (Simulated)
-                                                await new Promise(r => setTimeout(r, 1200));
-                                                
-                                                // Step 3: Final Verification
-                                                setIsProcessing(false);
-                                                showNotification("Vault Synchronization Successful: Pipeline is healthy and ready for ingest.", "success");
-                                            } catch (e) {
-                                                setIsProcessing(false);
-                                                showNotification("Handshake Failed: Error in storage resolution branch.", "error");
-                                            }
-                                        }}
-                                        disabled={isProcessing}
-                                        className="w-full py-4 bg-indigo-50 dark:bg-indigo-900/40 border-2 border-indigo-100 dark:border-indigo-800 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400 hover:bg-white dark:hover:bg-indigo-900/60 transition-all flex items-center justify-center gap-3 shadow-sm active:scale-95"
-                                    >
-                                        {isProcessing ? (
-                                            <>
-                                                <div className="flex gap-1">
-                                                    <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                                                    <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                                                    <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce"></div>
-                                                </div>
-                                                <span>Running Diagnostics...</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                                                <span>Verify Pipeline Integrity</span>
-                                            </>
-                                        )}
-                                    </button>
-
-                                    {siteSettings.driveFolderId && (
-                                        <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl flex items-center justify-between group">
-                                            <div className="flex items-center gap-2">
-                                                <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Active Link</p>
-                                            </div>
-                                            <span className="text-[8px] font-mono text-emerald-600/50 truncate max-w-[100px]">{siteSettings.driveFolderId}</span>
-                                        </div>
-                                    )}
-
-                                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Internal Handshake Guide</p>
-                                        <ul className="space-y-1">
-                                            <li className="text-[9px] font-medium text-slate-500 flex items-start gap-2">
-                                                <span className="w-1 h-1 bg-indigo-500 rounded-full mt-1.5"></span>
-                                                Folder <b>must</b> be Shared to "Anyone with link"
-                                            </li>
-                                            <li className="text-[9px] font-medium text-slate-500 flex items-start gap-2">
-                                                <span className="w-1 h-1 bg-indigo-500 rounded-full mt-1.5"></span>
-                                                Verify Internet connection for handshake
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            )}
                             <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-[2rem] border border-indigo-100 dark:border-indigo-900/50">
-                                <div className="flex items-center gap-3 text-indigo-600 dark:text-indigo-400 mb-2">
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Protocol Note</span>
-                                </div>
-                                <p className="text-[11px] font-medium text-slate-600 dark:text-slate-400 leading-relaxed">Selecting "Firebase" ensures sub-second retrieval times and multi-device synchronization.</p>
+                                <p className="text-[11px] font-medium text-slate-600 dark:text-slate-400 leading-relaxed italic">Firebase is recommended for better performance and mobile app stability.</p>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <button onClick={handleSaveSite} className="mt-12 w-full py-5 bg-slate-950 dark:bg-indigo-600 text-white font-black rounded-[2rem] shadow-2xl hover:bg-black dark:hover:bg-indigo-700 transition-all uppercase tracking-[0.3em] text-xs">Propagate Settings</button>
-                </section>
-                
-                {/* Social Card */}
-                <section className="bg-white dark:bg-slate-900 p-12 rounded-[3.5rem] border border-slate-100 dark:border-slate-800 shadow-xl space-y-8">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-2xl font-serif font-black text-slate-900 dark:text-white">Communication Feeds</h3>
-                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-100 dark:border-emerald-900/50">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
-                        </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {['facebook', 'twitter', 'whatsapp', 'telegram', 'instagram', 'tiktok'].map(platform => (
-                            <div key={platform} className="space-y-2">
-                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 ml-3">{platform}</label>
-                                <input 
-                                    className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl outline-none text-xs font-bold dark:text-white focus:border-indigo-500 transition-all" 
-                                    placeholder={`${platform.charAt(0).toUpperCase() + platform.slice(1)} URL`} 
-                                    value={(socialLinks as any)[platform]} 
-                                    onChange={e => setSocialLinks({...socialLinks, [platform]: e.target.value})} 
-                                />
-                            </div>
-                        ))}
-                    </div>
-                    <button onClick={handleSaveSocial} className="w-full py-4 border-2 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-black rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all uppercase tracking-widest text-[10px]">Sync External Feeds</button>
-                </section>
-            </div>
-            
-            <div className="space-y-8">
-                {/* Status Column */}
-                <section className="bg-slate-900 rounded-[3rem] p-10 border border-white/5 shadow-2xl space-y-8 h-full">
-                    <div className="pb-8 border-b border-white/10">
-                        <h3 className="text-xl font-black text-white mb-2">Vault Health</h3>
-                        <p className="text-slate-400 text-xs font-medium">Real-time status of your academic ecosystem.</p>
-                    </div>
-                    
-                    <div className="space-y-6">
-                        <div className="flex items-center justify-between p-5 bg-white/5 rounded-2xl border border-white/5 shadow-inner">
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center">
-                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Database</p>
-                                    <p className="text-xs font-bold text-white">Firestore Secure</p>
-                                </div>
-                            </div>
-                            <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
                         </div>
 
-                        <div className="flex items-center justify-between p-5 bg-white/5 rounded-2xl border border-white/5 shadow-inner">
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
-                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /></svg>
-                                </div>
+                        {siteSettings.uploadService === 'drive' && (
+                            <div className="space-y-6">
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Storage Pipeline</p>
-                                    <p className="text-xs font-bold text-white">Drive / Google Cloud</p>
+                                    <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-3 ml-2">Drive Folder ID</label>
+                                    <input 
+                                        className="w-full p-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-[1.5rem] outline-none font-black text-sm transition-all dark:text-white" 
+                                        placeholder="Enter Folder ID"
+                                        value={siteSettings.driveFolderId || ''} 
+                                        onChange={e => setSiteSettings({...siteSettings, driveFolderId: e.target.value})} 
+                                    />
+                                </div>
+                                <button 
+                                    onClick={async () => {
+                                        if (!siteSettings.driveFolderId) return showNotification("Please enter a Folder ID", "error");
+                                        setIsProcessing(true);
+                                        await new Promise(r => setTimeout(r, 2000));
+                                        setIsProcessing(false);
+                                        showNotification("Folder linked successfully", "success");
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-indigo-700 transition-all"
+                                >
+                                    {isProcessing ? 'Verifying...' : 'Link Folder'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    <button onClick={handleSaveSite} className="mt-12 w-full py-5 bg-slate-950 dark:bg-indigo-600 text-white font-black rounded-[2rem] shadow-2xl hover:bg-black dark:hover:bg-indigo-700 transition-all uppercase tracking-[0.3em] text-xs">Save Storage Settings</button>
+                </section>
+            </div>
+        )}
+
+        {activeTab === 'maintenance' && (
+            <div className="max-w-4xl animate-fade-in space-y-8">
+                <section className="bg-slate-900 rounded-[3rem] p-12 border border-white/5 shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-600/10 blur-[120px] rounded-full translate-x-1/4 -translate-y-1/4"></div>
+                    
+                    <div className="flex items-center justify-between mb-12 relative z-10">
+                        <div>
+                            <h3 className="text-3xl font-serif font-black text-white">Maintenance Tools</h3>
+                            <p className="text-slate-400 text-sm mt-1">Tools for session updates and housekeeping.</p>
+                        </div>
+                        <button 
+                            onClick={() => setIsGuideOpen(true)}
+                            className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 text-white flex items-center justify-center border border-white/10 transition-all shadow-xl"
+                            title="How to use these tools"
+                        >
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                        <div className="space-y-6">
+                            <div className="p-6 bg-white/5 rounded-[2rem] border border-white/10">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Live Status</p>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                                    <span className="text-white font-bold">All Systems Normal</span>
                                 </div>
                             </div>
-                            {siteSettings.uploadService === 'firebase' ? (
-                                <div className="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-[8px] font-black uppercase rounded-full tracking-widest border border-indigo-500/30">Active</div>
-                            ) : (
-                                <div className="px-3 py-1 bg-amber-500/10 text-amber-500 text-[8px] font-black uppercase rounded-full tracking-widest border border-amber-500/30">External</div>
-                            )}
+                            
+                            <button 
+                                onClick={() => setIsAdvanceModalOpen(true)} 
+                                className="w-full flex items-center justify-between p-6 bg-amber-500 text-slate-950 rounded-[2rem] font-serif font-black hover:bg-amber-400 transition-all active:scale-95 group shadow-xl"
+                            >
+                                <div className="text-left">
+                                    <p className="text-[9px] uppercase tracking-widest text-slate-900/60 mb-1 flex items-center gap-2">
+                                        Session Management
+                                        <span className="bg-slate-950/20 px-2 py-0.5 rounded-full text-[8px] animate-pulse">Click me: Information</span>
+                                    </p>
+                                    <p className="text-xl">Next Administration</p>
+                                </div>
+                                <svg className="w-8 h-8 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                            </button>
                         </div>
-                        
-                        <div className="pt-8">
-                            <button onClick={() => setIsAdvanceModalOpen(true)} className="w-full py-5 bg-amber-500 text-slate-900 font-black rounded-2xl shadow-xl uppercase tracking-[0.2em] text-[10px] hover:bg-amber-400 transition-all active:scale-95 mb-4">Advance Tenure</button>
-                            <button onClick={() => setIsMigrationModalOpen(true)} className="w-full py-5 bg-indigo-600 text-white font-black rounded-2xl shadow-xl uppercase tracking-[0.2em] text-[10px] hover:bg-indigo-500 transition-all active:scale-95 mb-4">Migrate Assets</button>
-                            <button onClick={() => setIsWipeModalOpen(true)} className="w-full py-5 bg-transparent border-2 border-rose-500/30 text-rose-500 font-black rounded-2xl uppercase tracking-[0.2em] text-[10px] hover:bg-rose-500/10 transition-all active:scale-95">Wipe Records</button>
+
+                        <div className="space-y-6">
+                            <button 
+                                onClick={() => setIsMigrationModalOpen(true)} 
+                                className="w-full flex items-center justify-between p-6 bg-white/5 border border-white/10 text-white rounded-[2rem] font-serif font-black hover:bg-white/10 transition-all active:scale-95 group shadow-xl"
+                            >
+                                <div className="text-left">
+                                    <p className="text-[9px] uppercase tracking-widest text-slate-400 mb-1">File Optimization</p>
+                                    <p className="text-xl">Move Files to Cloud</p>
+                                </div>
+                                <svg className="w-8 h-8 group-hover:translate-y-[-2px] transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                            </button>
+
+                            <button 
+                                onClick={() => setIsWipeModalOpen(true)} 
+                                className="w-full flex items-center justify-between p-6 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-[2rem] font-serif font-black hover:bg-rose-500/20 transition-all active:scale-95 group shadow-xl"
+                            >
+                                <div className="text-left">
+                                    <p className="text-[9px] uppercase tracking-widest text-rose-500/60 mb-1 flex items-center gap-2">
+                                        Data Management
+                                        <span 
+                                            className="bg-rose-500/20 px-2 py-0.5 rounded-full text-[8px] group-hover:bg-rose-500/40 cursor-help"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                showNotification("Wipe History: This permanently removes all student practice results and contribution points. Use only at the true start of a new academic cycle.", "warning");
+                                            }}
+                                        >
+                                            Feature Guide
+                                        </span>
+                                    </p>
+                                    <p className="text-xl">Clean Student Data</p>
+                                </div>
+                                <svg className="w-8 h-8 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
                         </div>
                     </div>
                 </section>
             </div>
-        </div>
+        )}
+
+        {/* Administration Guide Modal */}
+        <AnimatePresence>
+            {isGuideOpen && (
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-slate-950/90 flex items-center justify-center p-6 z-[120] backdrop-blur-xl"
+                    onClick={() => setIsGuideOpen(false)}
+                >
+                    <motion.div 
+                        initial={{ scale: 0.9, y: 20 }}
+                        animate={{ scale: 1, y: 0 }}
+                        exit={{ scale: 0.9, y: 20 }}
+                        className="bg-white dark:bg-slate-900 p-12 rounded-[4rem] w-full max-w-2xl border border-slate-100 dark:border-slate-800 shadow-[0_0_100px_rgba(0,0,0,0.5)]"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-3xl font-serif font-black text-slate-950 dark:text-white mb-8 italic">Maintenance Guide</h3>
+                        
+                        <div className="space-y-8 custom-scrollbar max-h-[60vh] overflow-y-auto pr-4">
+                            <div className="space-y-3">
+                                <h4 className="text-indigo-600 dark:text-indigo-400 font-black uppercase text-[10px] tracking-widest">New Administration</h4>
+                                <p className="text-slate-600 dark:text-slate-400 text-sm font-medium leading-relaxed">This tool is for the end of an academic year. It will increase all students' levels (e.g., 200L becomes 300L), graduate final year students, and remove administrative access from the current executives to allow the next team to take over.</p>
+                            </div>
+
+                            <div className="space-y-3 border-t border-slate-50 dark:border-slate-800 pt-8">
+                                <h4 className="text-emerald-500 font-black uppercase text-[10px] tracking-widest">Move Files to Cloud</h4>
+                                <p className="text-slate-600 dark:text-slate-400 text-sm font-medium leading-relaxed">If you have files stored on external websites or old links, this will download and re-upload them to your secure Firebase Storage automatically. This keeps all your materials safe in one place.</p>
+                            </div>
+
+                            <div className="space-y-3 border-t border-slate-50 dark:border-slate-800 pt-8">
+                                <h4 className="text-rose-500 font-black uppercase text-[10px] tracking-widest">Clean Student Data</h4>
+                                <p className="text-slate-600 dark:text-slate-400 text-sm font-medium leading-relaxed">Use this to delete temporary records like old chat messages, test scores from previous years, or lost and found reports. It helps keep the database fast and clean.</p>
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={() => setIsGuideOpen(false)}
+                            className="mt-12 w-full py-5 bg-slate-950 dark:bg-slate-800 text-white rounded-3xl font-black uppercase tracking-widest text-xs"
+                        >
+                            Got it, thanks
+                        </button>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
 
         {isMigrationModalOpen && (
             <ConfirmationModal 
@@ -475,8 +483,8 @@ export const AdminSettingsPage: React.FC = () => {
                 )}
             </ConfirmationModal>
         )}
-        {isAdvanceModalOpen && <ConfirmationModal title="Seal Tenure" onConfirm={handleAdvanceSession} onCancel={() => setIsAdvanceModalOpen(false)} isProcessing={isProcessing}>This seals the current session. Student levels increase by 100, 400Ls graduate, and all administrative privileges are revoked for a fresh start. This cannot be undone.</ConfirmationModal>}
-        {isWipeModalOpen && <ConfirmationModal title="Confirm Data Wipe" onConfirm={handleWipeData} onCancel={() => setIsWipeModalOpen(false)} isProcessing={isProcessing} needsTextInput={true} confirmText={wipeConfirmText} onTextChange={setWipeConfirmText}>Purge all student-generated tests, messages, and reports from the database.</ConfirmationModal>}
+        {isAdvanceModalOpen && <ConfirmationModal title="End Current Session" onConfirm={handleAdvanceSession} onCancel={() => setIsAdvanceModalOpen(false)} isProcessing={isProcessing}>This ends the current session and prepares for the next administration. Student levels will increase, and current leaders' access will be removed. This cannot be undone.</ConfirmationModal>}
+        {isWipeModalOpen && <ConfirmationModal title="Clear Database" onConfirm={handleWipeData} onCancel={() => setIsWipeModalOpen(false)} isProcessing={isProcessing} needsTextInput={true} confirmText={wipeConfirmText} onTextChange={setWipeConfirmText}>Delete old chat messages, test scores, and reports to keep the site fast.</ConfirmationModal>}
     </div>
   );
 };

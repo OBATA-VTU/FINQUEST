@@ -71,6 +71,7 @@ export interface Announcement {
   content: string;
   author: string;
   imageUrl?: string;
+  targetUserId?: string; // Optional: for single user announcements
 }
 
 export interface Task {

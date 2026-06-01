@@ -14,19 +14,21 @@ const NavItem: React.FC<NavItemProps> = ({ to, label, icon, onClose }) => (
     <NavLink
         to={to}
         onClick={onClose}
-        className={({ isActive }) => `w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300 group relative ${
+        className={({ isActive }) => `w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 group relative ${
             isActive
-                ? 'bg-white/10 text-white shadow-inner border-l-2 border-indigo-400'
-                : 'text-indigo-200 hover:bg-white/5 hover:text-white'
+                ? 'bg-white/10 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] border border-white/5'
+                : 'text-indigo-200/70 hover:bg-white/5 hover:text-white'
         }`}
     >
         {({ isActive }) => (
             <>
-                <div className={`${isActive ? 'text-indigo-400' : 'text-indigo-300 group-hover:text-white'} transition-colors`}>
+                <div className={`${isActive ? 'text-indigo-400 opacity-100 scale-110' : 'text-indigo-300 group-hover:text-white opacity-50'} transition-all duration-300`}>
                     {React.cloneElement(icon, { className: "w-4 h-4" })}
                 </div>
-                <span className={`font-semibold text-xs tracking-wide ${isActive ? 'font-bold' : ''}`}>{label}</span>
-                {isActive && <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-transparent rounded-lg pointer-events-none"></div>}
+                <span className={`font-bold text-[11px] uppercase tracking-wider ${isActive ? 'text-white' : ''} transition-colors`}>{label}</span>
+                {isActive && (
+                    <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></div>
+                )}
             </>
         )}
     </NavLink>
@@ -41,21 +43,22 @@ interface NavSectionProps {
 
 const NavSection: React.FC<NavSectionProps> = ({ title, children, isExpanded, onToggle }) => {
     return (
-        <div className="mb-4">
+        <div className="mb-6">
             <button
                 onClick={onToggle}
-                className="w-full flex items-center justify-between px-3 py-1.5 text-[9px] font-black text-indigo-400 uppercase tracking-[0.2em] hover:text-white transition-colors group focus:outline-none mb-1 opacity-80 hover:opacity-100"
+                className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-black text-indigo-400/50 uppercase tracking-[0.3em] hover:text-indigo-300 transition-colors group focus:outline-none mb-2"
             >
                 <span>{title}</span>
+                <div className="h-[1px] flex-1 mx-3 bg-indigo-500/10 group-hover:bg-indigo-500/20"></div>
                 <svg
-                    className={`w-3 h-3 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                    className={`w-3 h-3 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
                     fill="none" viewBox="0 0 24 24" stroke="currentColor"
                 >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
-            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                <div className="space-y-0.5">
+            <div className={`overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div className="space-y-1">
                     {children}
                 </div>
             </div>
@@ -163,14 +166,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     />
                     <NavItem 
                         to="/questions" 
-                        label="Materials Library" 
+                        label="Past Question" 
                         icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>}
-                        onClose={onClose}
-                    />
-                    <NavItem 
-                        to="/library" 
-                        label="Book Vault" 
-                        icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v20c0 4.418 7.163 8 16 8 1.38 0 2.721-.087 4-.252V22C26.721 22.165 25.38 22.252 24 22.252c-8.837 0-16-3.582-16-8z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14c0 4.418 7.163 8 16 8s16-3.582 16-8-7.163-8-16-8-16 3.582-16 8z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M40 14v20c0 4.418-7.163 8-16 8-1.38 0-2.721-.087-4-.252V22c1.279.165 2.62.252 4 .252 8.837 0 16-3.582 16-8z" /></svg>}
                         onClose={onClose}
                     />
                     <NavItem 

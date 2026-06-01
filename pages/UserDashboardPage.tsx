@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { TestResult, Announcement, PastQuestion } from '../types';
@@ -27,8 +28,9 @@ export const UserDashboardPage: React.FC = () => {
 
   // Safety Check: If RequireAuth hasn't finished its job yet
   if (!user) return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 gap-4">
           <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-black uppercase tracking-widest text-slate-400 animate-pulse">Loading Identity...</p>
       </div>
   );
 
@@ -93,9 +95,11 @@ export const UserDashboardPage: React.FC = () => {
                   setAvgScore(Math.round(total / tests.length));
               }
 
-              const newsQ = query(collection(db, 'announcements'), limit(5));
+              const newsQ = query(collection(db, 'announcements'));
               const newsSnap = await getDocs(newsQ);
               let news = newsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement));
+              // Filter targeted news
+              news = news.filter(a => !a.targetUserId || a.targetUserId === user.id);
               news.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
               setRecentNews(news.slice(0, 3));
 
@@ -213,7 +217,7 @@ export const UserDashboardPage: React.FC = () => {
               <div className="md:col-span-2 lg:col-span-2 bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-sm animate-slide-in-up">
                   <h3 className="font-black text-slate-900 dark:text-white mb-8 flex items-center gap-3 uppercase tracking-widest text-xs">
                     <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
-                    Operational Hub
+                    Quick Actions
                   </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                       <button onClick={() => navigate('/test')} className="flex flex-col items-center justify-center p-6 rounded-[2rem] bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all group animate-slide-in-up border border-indigo-100/50 dark:border-indigo-800/30">
@@ -222,7 +226,7 @@ export const UserDashboardPage: React.FC = () => {
                       </button>
                       <button onClick={() => navigate('/questions')} className="flex flex-col items-center justify-center p-6 rounded-[2rem] bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all group animate-slide-in-up border border-emerald-100/50 dark:border-emerald-800/30">
                           <div className="w-12 h-12 bg-white dark:bg-emerald-900 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-300 shadow-lg mb-4 group-hover:scale-110 transition-transform"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg></div>
-                          <span className="text-xs font-black text-slate-700 dark:text-slate-300 tracking-widest uppercase">Archives</span>
+                          <span className="text-xs font-black text-slate-700 dark:text-slate-300 tracking-widest uppercase">Past Question</span>
                       </button>
                       <button onClick={() => navigate('/community')} className="flex flex-col items-center justify-center p-6 rounded-[2rem] bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-all group animate-slide-in-up border border-rose-100/50 dark:border-rose-800/30">
                           <div className="w-12 h-12 bg-white dark:bg-rose-900 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-300 shadow-lg mb-4 group-hover:scale-110 transition-transform"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg></div>
@@ -241,7 +245,7 @@ export const UserDashboardPage: React.FC = () => {
                       <svg className="w-full h-full transform -rotate-90"><circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth={12} fill="transparent" className="text-slate-100 dark:text-slate-800" /><circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth={12} fill="transparent" strokeDasharray={351.8} strokeDashoffset={351.8 - (351.8 * avgScore) / 100} className={`text-indigo-600 dark:text-indigo-500 transition-all duration-1000 ease-out`} /></svg>
                       <span className="absolute text-3xl font-black text-slate-900 dark:text-white">{loading ? '...' : `${avgScore}%`}</span>
                   </div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Proficiency Index</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Average Practice Score</p>
               </div>
 
               <div className="md:col-span-3 lg:col-span-1 bg-slate-900 rounded-[2.5rem] p-8 shadow-2xl flex flex-col animate-slide-in-up border border-white/5">
@@ -304,7 +308,7 @@ export const UserDashboardPage: React.FC = () => {
                               <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/30 rounded-[1.25rem] flex flex-col items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-300"><span className="text-xl font-black leading-none">{new Date(news.date).getDate()}</span><span className="text-[9px] uppercase font-black">{new Date(news.date).toLocaleDateString(undefined, {month:'short'})}</span></div>
                               <div className="flex-1"><h4 className="font-bold text-base text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors line-clamp-1">{news.title}</h4><p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1 leading-relaxed">{news.content}</p></div>
                           </div>
-                      )) : <p className="text-sm text-slate-400 italic py-10 text-center">Informatics systems are currently idle.</p>}
+                      )) : <p className="text-sm text-slate-400 italic py-10 text-center">No news updates at the moment.</p>}
                   </div>
               </div>
           </div>

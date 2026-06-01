@@ -68,12 +68,26 @@ export const AdminLayout: React.FC = () => {
     const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     
+    const [isGuideOpen, setIsGuideOpen] = useState(false);
+    
     // Collapsible Sections State
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
         overview: true,
         management: true,
         system: true
     });
+
+    // ... existing roles logic ...
+
+    const guideContent = [
+        { label: 'Admin Dashboard', desc: 'See how many students are using the app and what they are doing in real-time.' },
+        { label: 'Review Uploads', desc: 'Check new documents sent by students and decide which ones to show on the app.' },
+        { label: 'Past Question Vault', desc: 'See and manage all the study materials and past questions students can download.' },
+        { label: 'Post News', desc: 'Write and share important information or news updates for all students to see.' },
+        { label: 'Directory Manager', desc: 'Update the list of department student leaders and staff members.' },
+        { label: 'Social Groups', desc: 'Update the links for Department WhatsApp groups and Telegram channels.' },
+        { label: 'System Settings', desc: 'Change where files are saved (Google Drive or Firebase) and manage the AI helper.' }
+    ];
 
     // Determine roles
     const role = auth?.user?.role || 'student';
@@ -159,38 +173,28 @@ export const AdminLayout: React.FC = () => {
                 {/* Nav Links */}
                 <nav className="flex-1 px-3 py-6 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-800">
                     
-                    <AdminNavSection title="Overview" isExpanded={expandedSections.overview} onToggle={() => toggleSection('overview')}>
+                    <AdminNavSection title="Management Hub" isExpanded={true} onToggle={() => {}}>
                         <AdminNavItem 
                             to="/admin/dashboard" 
-                            label="Dashboard" 
+                            label="Dashboard Overview" 
                             icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>}
                             onClick={closeSidebar}
                         />
-                    </AdminNavSection>
-
-                    <AdminNavSection title="Content Management" isExpanded={expandedSections.management} onToggle={() => toggleSection('management')}>
                         {canSee('approvals') && <AdminNavItem to="/admin/approvals" label="Pending Approvals" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} onClick={closeSidebar} />}
-                        {canSee('materials') && <AdminNavItem to="/admin/materials" label="Materials" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>} onClick={closeSidebar} />}
-                        {canSee('news') && <AdminNavItem to="/admin/news" label="News" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>} onClick={closeSidebar} />}
+                        {canSee('materials') && <AdminNavItem to="/admin/materials" label="Past Question" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>} onClick={closeSidebar} />}
+                        {canSee('news') && <AdminNavItem to="/admin/news" label="Bulletins & News" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>} onClick={closeSidebar} />}
                         {canSee('executives') && <AdminNavItem to="/admin/executives" label="Executives" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>} onClick={closeSidebar} />}
                         {canSee('lecturers') && <AdminNavItem to="/admin/lecturers" label="Lecturers" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>} onClick={closeSidebar} />}
-                        {canSee('community') && <AdminNavItem to="/admin/community" label="Community Groups" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>} onClick={closeSidebar} />}
+                        {canSee('community') && <AdminNavItem to="/admin/community" label="Community Links" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>} onClick={closeSidebar} />}
                         {canSee('gallery') && <AdminNavItem to="/admin/gallery" label="Gallery" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} onClick={closeSidebar} />}
-                    </AdminNavSection>
-
-                    <AdminNavSection title="System" isExpanded={expandedSections.system} onToggle={() => toggleSection('system')}>
+                        
                         <AdminNavItem 
                             to="/admin/users" 
-                            label={isSuperAdmin || isSupplement ? "All Users" : "User Directory"} 
+                            label="Student List" 
                             icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
                             onClick={closeSidebar}
                         />
-                         <AdminNavItem 
-                            to="/admin/active-users" 
-                            label="Active Users" 
-                            icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
-                            onClick={closeSidebar}
-                        />
+
                         {isSuperAdmin && (
                             <AdminNavItem 
                                 to="/admin/settings" 
@@ -199,8 +203,47 @@ export const AdminLayout: React.FC = () => {
                                 onClick={closeSidebar}
                             />
                         )}
+                        
+                        <button 
+                            onClick={() => { setIsGuideOpen(true); closeSidebar(); }}
+                            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-amber-300 hover:bg-white/5 hover:text-white group"
+                        >
+                            <svg className="w-5 h-5 text-amber-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <span className="font-bold text-sm tracking-wide">Operations Guide</span>
+                        </button>
                     </AdminNavSection>
                 </nav>
+
+                {/* Guide Modal */}
+                {isGuideOpen && (
+                    <div className="fixed inset-0 bg-slate-950/90 z-[200] flex items-center justify-center p-6 backdrop-blur-md" onClick={() => setIsGuideOpen(false)}>
+                        <div className="bg-white dark:bg-slate-900 rounded-[3rem] w-full max-w-2xl overflow-hidden shadow-2xl border border-white/10 animate-pop-in flex flex-col" onClick={e => e.stopPropagation()}>
+                            <div className="p-8 border-b dark:border-slate-800 flex justify-between items-center bg-indigo-950 text-white">
+                                <div>
+                                    <h3 className="font-serif font-black text-2xl leading-none mb-1">Operations Handbook</h3>
+                                    <p className="text-[10px] uppercase font-black tracking-widest text-indigo-300">Administrative Protocol & Functionality</p>
+                                </div>
+                                <button onClick={() => setIsGuideOpen(false)} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">✕</button>
+                            </div>
+                            <div className="p-10 space-y-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
+                                {guideContent.map((item, idx) => (
+                                    <div key={idx} className="flex gap-6 group">
+                                        <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-black text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                            {idx + 1}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-black text-slate-900 dark:text-white uppercase tracking-wider text-sm mb-1">{item.label}</h4>
+                                            <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">{item.desc}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="p-8 bg-slate-50 dark:bg-slate-800/50 border-t dark:border-slate-800">
+                                <button onClick={() => setIsGuideOpen(false)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-[10px] hover:bg-indigo-700 transition-all">Understood</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Footer Controls */}
                 <div className="p-4 border-t border-indigo-800 bg-indigo-900 shrink-0 flex gap-2">

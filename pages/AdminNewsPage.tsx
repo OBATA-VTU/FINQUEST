@@ -19,7 +19,20 @@ export const AdminNewsPage: React.FC = () => {
   const [hodData, setHodData] = useState({ name: '', title: '', message: '', imageUrl: '' });
   const [hodImageFile, setHodImageFile] = useState<File | null>(null);
 
-  useEffect(() => { fetchContent(); }, []);
+  const [users, setUsers] = useState<any[]>([]);
+  const [targetType, setTargetType] = useState<'all' | 'single'>('all');
+
+  useEffect(() => { 
+    fetchContent(); 
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+        const snap = await getDocs(collection(db, 'users'));
+        setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (e) { console.error(e); }
+  };
 
   const fetchContent = async () => {
       setLoading(true);
@@ -67,13 +80,32 @@ export const AdminNewsPage: React.FC = () => {
           if (formFile) payload.imageUrl = await uploadToImgBB(formFile);
           if (!editingItem) payload.date = new Date().toISOString();
 
-          if (editingItem) await updateDoc(doc(db, 'announcements', editingItem.id), payload);
-          else await addDoc(collection(db, 'announcements'), payload);
+          // Standard Announcement
+          if (editingItem) {
+              await updateDoc(doc(db, 'announcements', editingItem.id), payload);
+          } else {
+              await addDoc(collection(db, 'announcements'), payload);
+              
+              // If targeted to a single user, send a Notification as well
+              if (targetType === 'single' && formData.targetUserId) {
+                  await addDoc(collection(db, 'notifications'), {
+                      userId: formData.targetUserId,
+                      title: "Direct Admin Dispatch",
+                      message: `A private bulletin has been issued for you: ${formData.title}`,
+                      type: 'info',
+                      read: false,
+                      createdAt: new Date().toISOString()
+                  });
+              }
+          }
           
           setIsModalOpen(false);
           fetchContent();
-          showNotification("Report Published.", "success");
-      } catch (e: any) { showNotification("Intel upload failed.", "error"); }
+          showNotification(targetType === 'single' ? "Direct Intel Dispatched." : "Report Published.", "success");
+      } catch (e: any) { 
+          console.error(e);
+          showNotification("Intel upload failed.", "error"); 
+      }
       finally { setIsSubmitting(false); }
   };
 
@@ -148,6 +180,43 @@ export const AdminNewsPage: React.FC = () => {
                         <button onClick={() => setIsModalOpen(false)} className="p-2 bg-white dark:bg-slate-700 rounded-full text-slate-400 hover:text-rose-500 transition-colors shadow-sm">✕</button>
                     </div>
                     <form onSubmit={handleFormSubmit} className="p-8 space-y-5 overflow-y-auto custom-scrollbar">
+                        <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 ml-1">Dispatch Target</label>
+                            <div className="flex gap-2 p-1 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
+                                <button 
+                                    type="button"
+                                    onClick={() => setTargetType('all')}
+                                    className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${targetType === 'all' ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-400'}`}
+                                >
+                                    All Students
+                                </button>
+                                <button 
+                                    type="button"
+                                    onClick={() => setTargetType('single')}
+                                    className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${targetType === 'single' ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-400'}`}
+                                >
+                                    Single User
+                                </button>
+                            </div>
+                        </div>
+
+                        {targetType === 'single' && (
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Recipient Selection</label>
+                                <select 
+                                    className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold dark:text-white text-xs"
+                                    value={formData.targetUserId || ''}
+                                    onChange={e => setFormData({...formData, targetUserId: e.target.value})}
+                                    required
+                                >
+                                    <option value="">Select User...</option>
+                                    {users.map(u => (
+                                        <option key={u.id} value={u.id}>{u.name} ({u.matricNumber || u.email})</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
                         <div>
                             <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Intel Heading</label>
                             <input className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold dark:text-white" value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} required />

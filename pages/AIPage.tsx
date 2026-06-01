@@ -306,7 +306,7 @@ export const AIPage: React.FC = () => {
                 </div>
                 <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-4 uppercase tracking-tighter">CREDITS EXHAUSTED</h1>
                 <p className="text-slate-600 dark:text-slate-400 max-w-sm mx-auto leading-relaxed font-bold uppercase tracking-[0.2em] text-sm mb-12">
-                    The AI engine has reached its maximum daily capacity. 
+                    The portal has reached its daily AI limit. 
                 </p>
                 <div className="space-y-6">
                     <div className="px-12 py-8 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-200 dark:border-slate-800 shadow-2xl inline-block transition-transform hover:scale-105">
@@ -342,7 +342,7 @@ export const AIPage: React.FC = () => {
                 {messages.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full text-center opacity-30 px-10">
                         <BeeIcon className="w-12 h-12 text-slate-400 mb-4" />
-                        <p className="font-bold text-slate-500 uppercase tracking-[0.2em] text-[10px]">Academic Intelligence Online. Ask anything.</p>
+                        <p className="font-bold text-slate-500 uppercase tracking-[0.2em] text-[10px]">Assistant Online. Ask me anything.</p>
                     </div>
                 )}
                 {messages.map((msg, i) => (

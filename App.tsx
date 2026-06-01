@@ -9,7 +9,8 @@ import { Layout } from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
 import { NotificationHandler } from './components/NotificationHandler';
 import { SEOMetadataUpdater } from './components/SEOMetadataUpdater';
-import { doc, getDoc } from 'firebase/firestore';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { doc, getDoc, collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { db } from './firebase';
 
 // Synchronous Import for the Landing Page to ensure "Immediate First Load"
@@ -36,7 +37,6 @@ const SessionWrapPage = lazy(() => import('./pages/SessionWrapPage').then(m => (
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then(m => ({ default: m.LeaderboardPage })));
 const LostFoundPage = lazy(() => import('./pages/LostFoundPage').then(m => ({ default: m.LostFoundPage })));
 const FAQPage = lazy(() => import('./pages/FAQPage').then(m => ({ default: m.FAQPage })));
-const ELibraryPage = lazy(() => import('./pages/ELibraryPage').then(m => ({ default: m.ELibraryPage })));
 const DownloadAppPage = lazy(() => import('./pages/DownloadAppPage').then(m => ({ default: m.DownloadAppPage })));
 const AIPage = lazy(() => import('./pages/AIPage').then(m => ({ default: m.AIPage })));
 
@@ -60,11 +60,11 @@ const AdminSettingsPage = lazy(() => import('./pages/AdminSettingsPage').then(m 
 const PageLoader = () => (
     <div className="h-[60vh] w-full flex flex-col items-center justify-center bg-transparent animate-fade-in">
         <div className="relative w-12 h-12">
-            <div className="absolute inset-0 border-4 border-indigo-200 dark:border-indigo-900 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-indigo-200 dark:border-indigo-900/30 rounded-full"></div>
             <div className="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
-        <p className="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-indigo-500 animate-pulse">
-            loading page please wait...
+        <p className="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-400 animate-pulse">
+            Loading...
         </p>
     </div>
 );
@@ -92,6 +92,34 @@ const AppContent: React.FC = () => {
       loader.classList.add('fade-out');
       setTimeout(() => loader.remove(), 600);
     }
+
+    // Request Browser Notification Permissions for PWA support
+    if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+    }
+  }, []);
+
+  // Monitor for global alerts/announcements to trigger PWA Browser Notifications
+  useEffect(() => {
+      const q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'), limit(1));
+      let initialLoad = true;
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+          if (initialLoad) {
+              initialLoad = false;
+              return;
+          }
+          
+          if (!snapshot.empty && Notification.permission === "granted") {
+              const data = snapshot.docs[0].data();
+              new Notification("FINSA Official Update", {
+                  body: data.title || "A new announcement has been posted.",
+                  icon: "/icons/icon-192x192.png"
+              });
+          }
+      });
+      
+      return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -120,7 +148,7 @@ const AppContent: React.FC = () => {
   if (sessionWrapInfo) return <Suspense fallback={<PageLoader />}><SessionWrapPage info={sessionWrapInfo} onFinish={() => setSessionWrapInfo(null)} /></Suspense>;
   
   return (
-    <>
+    <ErrorBoundary>
         <ScrollToTop />
         <NotificationHandler />
         <SEOMetadataUpdater />
@@ -142,7 +170,6 @@ const AppContent: React.FC = () => {
                         <Route path="/gallery" element={<Suspense fallback={<PageLoader />}><GalleryPage /></Suspense>} />
                         <Route path="/faq" element={<Suspense fallback={<PageLoader />}><FAQPage /></Suspense>} />
                         <Route path="/download-app" element={<Suspense fallback={<PageLoader />}><DownloadAppPage /></Suspense>} />
-                        <Route path="/library" element={<Suspense fallback={<PageLoader />}><ELibraryPage /></Suspense>} />
                         <Route path="/lost-and-found" element={<Suspense fallback={<PageLoader />}><LostFoundPage /></Suspense>} />
                         
                         {/* Authenticated Routes */}
@@ -183,7 +210,7 @@ const AppContent: React.FC = () => {
                 </Routes>
             </motion.div>
         </AnimatePresence>
-    </>
+    </ErrorBoundary>
   );
 };
 

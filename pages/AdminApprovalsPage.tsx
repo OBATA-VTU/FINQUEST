@@ -8,6 +8,7 @@ import { PastQuestion, User } from '../types';
 import { AuthContext } from '../contexts/AuthContext';
 import { checkAndAwardBadges } from '../utils/badges';
 import { handleFirestoreError, OperationType } from '../utils/api';
+import { PDFViewerModal } from '../components/PDFViewerModal';
 
 export const AdminApprovalsPage: React.FC = () => {
   const auth = useContext(AuthContext);
@@ -17,10 +18,13 @@ export const AdminApprovalsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { showNotification } = useNotification();
   
-  // Modal states
-  const [previewContent, setPreviewContent] = useState<PastQuestion | null>(null);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectingItem, setRejectingItem] = useState<PastQuestion | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [previewContent, setPreviewContent] = useState<PastQuestion | null>(null);
+  
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [itemToPreview, setItemToPreview] = useState<PastQuestion | null>(null);
 
   useEffect(() => {
     fetchPending();
@@ -37,11 +41,26 @@ export const AdminApprovalsPage: React.FC = () => {
 
   const handlePreview = (item: PastQuestion) => {
       if (item.textContent) {
-          setPreviewContent(item); // Open text preview modal
+          setPreviewContent(item);
       } else if (item.fileUrl) {
-          window.open(item.fileUrl, '_blank', 'noreferrer'); // Open link for files/images
+          // If it is a Google Drive link, open it in a new tab immediately for best experience
+          if (item.fileUrl.includes('drive.google.com')) {
+              let fileId = '';
+              const idMatch = item.fileUrl.match(/\/file\/d\/([a-zA-Z0-9-_]+)/) || 
+                              item.fileUrl.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+              
+              if (idMatch) {
+                  fileId = idMatch[1];
+                  window.open(`https://drive.google.com/file/d/${fileId}/preview`, '_blank');
+              } else {
+                  window.open(item.fileUrl, '_blank');
+              }
+              return;
+          }
+          setItemToPreview(item);
+          setIsPreviewModalOpen(true);
       } else {
-          showNotification("No preview available for this item.", "info");
+          showNotification("No file available for preview.", "info");
       }
   };
 
@@ -193,6 +212,17 @@ export const AdminApprovalsPage: React.FC = () => {
                 </div>
             </div>
         </div>
+    )}
+
+    {/* File Preview Modal */}
+    {itemToPreview && (
+        <PDFViewerModal 
+            isOpen={isPreviewModalOpen}
+            onClose={() => setIsPreviewModalOpen(false)}
+            fileUrl={itemToPreview.fileUrl!}
+            title={`${itemToPreview.courseCode} - ${itemToPreview.courseTitle}`}
+            pages={itemToPreview.pages}
+        />
     )}
     </>
   );

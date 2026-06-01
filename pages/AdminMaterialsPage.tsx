@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc, getDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
 import { uploadDocument, deleteDocument, handleFirestoreError, OperationType } from '../utils/api';
 import { LEVELS } from '../constants';
@@ -21,7 +21,24 @@ export const AdminMaterialsPage: React.FC = () => {
   const [isAiMode, setIsAiMode] = useState(false);
   const [isLinkMode, setIsLinkMode] = useState(false);
 
-  useEffect(() => { fetchContent(); }, []);
+  const [uploadService, setUploadService] = useState('firebase');
+  const [driveFolderId, setDriveFolderId] = useState('');
+
+  useEffect(() => { 
+    fetchContent(); 
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+        const sSetDoc = await getDoc(doc(db, 'content', 'site_settings'));
+        if (sSetDoc.exists()) {
+            const data = sSetDoc.data();
+            setUploadService(data.uploadService || 'firebase');
+            setDriveFolderId(data.driveFolderId || '');
+        }
+    } catch (e) {}
+  };
 
   const fetchContent = async () => {
       setLoading(true);
@@ -84,7 +101,7 @@ export const AdminMaterialsPage: React.FC = () => {
               payload.textContent = null;
           } else {
               if (formFile) {
-                  const { url, path } = await uploadDocument(formFile, 'firebase', 'past_questions');
+                  const { url, path } = await uploadDocument(formFile, uploadService, driveFolderId);
                   payload.fileUrl = url;
                   payload.storagePath = path;
               }
@@ -118,16 +135,16 @@ export const AdminMaterialsPage: React.FC = () => {
     <div className="animate-fade-in space-y-10 pb-20 max-w-7xl mx-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
             <div>
-                <h1 className="text-3xl font-black text-slate-900 dark:text-white">Uploaded Materials</h1>
-                <p className="text-slate-500 dark:text-slate-400 font-medium">Manage all files and documents that have been uploaded.</p>
+                <h1 className="text-3xl font-black text-slate-900 dark:text-white">Past Question Vault</h1>
+                <p className="text-slate-500 dark:text-slate-400 font-medium">Manage all documents and academic materials in the digital library.</p>
             </div>
             <button onClick={() => openModal()} className="px-10 py-4 bg-indigo-600 text-white font-black rounded-3xl hover:bg-indigo-700 shadow-2xl shadow-indigo-500/20 transition-all active:scale-95 uppercase tracking-widest text-[10px] flex items-center gap-3">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 4v16m8-8H4" /></svg>
-                Upload New File
+                Upload New Material
             </button>
         </header>
 
-        {loading ? <div className="text-center py-20 font-black uppercase text-slate-400 tracking-[0.3em]">Decoding Archives...</div> : (
+        {loading ? <div className="text-center py-20 font-black uppercase text-slate-400 tracking-[0.3em]">Loading Files...</div> : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {contentItems.map(item => (
                     <div key={item.id} className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col group relative">
@@ -139,6 +156,29 @@ export const AdminMaterialsPage: React.FC = () => {
                         <h4 className="font-black text-lg text-slate-900 dark:text-white line-clamp-2 leading-tight mb-2 group-hover:text-indigo-600 transition-colors font-serif">{item.courseTitle}</h4>
                         <p className="text-[10px] font-black uppercase text-slate-400 mb-8 tracking-widest">{item.category}</p>
                         <div className="mt-auto flex gap-2 pt-6 border-t border-slate-50 dark:border-slate-800">
+                            <button 
+                                onClick={() => {
+                                    if (item.fileUrl && item.fileUrl.includes('drive.google.com')) {
+                                        let fileId = '';
+                                        const idMatch = item.fileUrl.match(/\/file\/d\/([a-zA-Z0-9-_]+)/) || 
+                                                        item.fileUrl.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+                                        if (idMatch) {
+                                            fileId = idMatch[1];
+                                            window.open(`https://drive.google.com/file/d/${fileId}/preview`, '_blank');
+                                        } else {
+                                            window.open(item.fileUrl, '_blank');
+                                        }
+                                    } else if (item.fileUrl) {
+                                        window.open(item.fileUrl, '_blank');
+                                    } else if (item.textContent) {
+                                        openModal(item);
+                                    }
+                                }} 
+                                className="px-4 py-3 text-slate-400 bg-slate-50 dark:bg-slate-800 rounded-2xl hover:bg-slate-900 hover:text-white transition-all shadow-sm"
+                                title="Quick Preview"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                            </button>
                             <button onClick={() => openModal(item)} className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl hover:bg-indigo-100 transition-all">Edit</button>
                             <button onClick={() => handleDeleteContent(item)} className="px-4 py-3 text-rose-500 bg-rose-50 dark:bg-rose-900/30 rounded-2xl hover:bg-rose-500 hover:text-white transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
                         </div>

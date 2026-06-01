@@ -48,7 +48,6 @@ export const PrivacyPage: React.FC = () => {
             <ul className="list-disc pl-5 mt-2 space-y-1">
               <li><strong>Firebase (by Google):</strong> Used for authentication, database storage (Firestore), file storage (Firebase Storage), and hosting.</li>
               <li><strong>Grok AI (by xAI):</strong> Used for generating AI-powered test questions and notes. Prompts containing academic topics may be sent to xAI for processing.</li>
-              <li><strong>Adsterra:</strong> Used to display advertisements. Adsterra may use cookies and other tracking technologies to serve personalized ads. The platform does not share your personal identification information with Adsterra.</li>
             </ul>
           </section>
 

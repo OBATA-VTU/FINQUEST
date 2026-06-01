@@ -12,7 +12,7 @@ const faqs: FAQItem[] = [
   { category: 'General', question: "What is the FINSA Portal?", answer: "FINSA (Finance Students' Association) is the official digital portal for the Finance Department of Adekunle Ajasin University. It serves as a centralized hub for academic resources, news, and student interaction." },
   { category: 'General', question: "How do I install the app on my phone?", answer: "On most Android devices, your browser will prompt you to 'Add to Home Screen'. On iOS (iPhone/iPad), tap the 'Share' button in Safari, then scroll down and select 'Add to Home Screen'." },
   { category: 'General', question: "Who developed this portal?", answer: "The portal was developed by OBA, the Public Relations Officer (PRO) of the Finance Department for the 2025/2026 academic session." },
-  { category: 'Academic', question: "How do I access past questions?", answer: "Navigate to the 'Resources Archives' page from the sidebar. You can then filter materials by your level, category (e.g., Past Question, Lecture Note), or search by course code and title." },
+  { category: 'Academic', question: "How do I access past questions?", answer: "Navigate to the 'Past Questions' page from the sidebar. You can then filter materials by your level, category (e.g., Past Question, Lecture Note), or search by course code and title." },
   { category: 'Academic', question: "What is the CBT Practice Center?", answer: "The Practice Center allows you to take AI-powered mock exams, generate custom quizzes on any topic, or play educational arcade games to test your knowledge." },
   { category: 'Account', question: "How do I earn badges?", answer: "Badges are awarded automatically for various activities on the portal, such as contributing materials, scoring high on tests, and participating in the community." },
   { category: 'Community', question: "Why can't I send messages in the Student Lounge?", answer: "If you're unable to send messages, you may be temporarily muted for use of inappropriate language to maintain a respectful environment." }
@@ -61,7 +61,7 @@ export const FAQPage: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-indigo-950/60 to-transparent"></div>
         <div className="container mx-auto px-4 relative z-10">
           <span className="inline-block py-2 px-6 border border-indigo-400/30 rounded-full bg-indigo-900/40 backdrop-blur-md text-indigo-300 text-[10px] font-black tracking-[0.5em] uppercase mb-8 shadow-2xl">
-              Knowledge Repository
+              Knowledge Hub
           </span>
           <h1 className="text-5xl md:text-8xl font-serif font-black mb-6 tracking-tighter leading-none">
             Registry <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-white to-indigo-200">Intelligence</span>
@@ -82,7 +82,7 @@ export const FAQPage: React.FC = () => {
                 <div className="bg-white dark:bg-slate-900 p-8 rounded-[3.5rem] border border-slate-100 dark:border-slate-800 shadow-2xl">
                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 px-2 flex items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
-                        Topic Sectors
+                        Categories
                     </h3>
                     <ul className="space-y-2">
                         {CATEGORIES.map(cat => (
@@ -105,9 +105,9 @@ export const FAQPage: React.FC = () => {
                         <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6 text-indigo-300">
                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
                         </div>
-                        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] mb-3">Concierge Support</h4>
-                        <h3 className="text-2xl font-serif font-black mb-4">The PRO Desk</h3>
-                        <p className="text-xs text-indigo-100/60 mb-8 leading-relaxed font-medium">Direct administrative link for strategic inquiries and technical clearance.</p>
+                        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] mb-3">Help Center</h4>
+                        <h3 className="text-2xl font-serif font-black mb-4">Direct Support</h3>
+                        <p className="text-xs text-indigo-100/60 mb-8 leading-relaxed font-medium">Chat directly with the PRO for help with the app or department issues.</p>
                         
                         <a 
                             href={proWhatsAppUrl} 
@@ -128,7 +128,7 @@ export const FAQPage: React.FC = () => {
             <div className="relative mb-12">
               <input 
                   type="text" 
-                  placeholder="Query the registry intelligence..." 
+                  placeholder="Search for answers..." 
                   className="w-full pl-16 pr-8 py-8 bg-white dark:bg-slate-900 rounded-[3.5rem] border border-slate-100 dark:border-slate-800 shadow-2xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white font-black transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
@@ -159,7 +159,7 @@ export const FAQPage: React.FC = () => {
                 </div>
               )) : (
                   <div className="text-center py-40 bg-white dark:bg-slate-900/50 rounded-[4rem] border-2 border-dashed border-slate-200 dark:border-slate-800 shadow-inner">
-                      <p className="text-slate-300 font-black uppercase tracking-[0.5em] text-xs">Registry Archive Empty</p>
+                      <p className="text-slate-300 font-black uppercase tracking-[0.5em] text-xs">No Results Found</p>
                   </div>
               )}
             </div>

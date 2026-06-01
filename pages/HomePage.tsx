@@ -2,8 +2,7 @@ import React, { useEffect, useState, useRef, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Announcement, GalleryItem } from '../types';
 import { db } from '../firebase';
-import { collection, query, orderBy, limit, getDocs, doc, getDoc, getCountFromServer, where } from 'firebase/firestore';
-import { AdBanner } from '../components/AdBanner';
+import { getDocs, query, orderBy, limit, getDoc, doc, getCountFromServer, where, collection } from 'firebase/firestore';
 import { AuthContext } from '../contexts/AuthContext';
 
 export const HomePage: React.FC = () => {
@@ -141,7 +140,7 @@ export const HomePage: React.FC = () => {
         <div className="flex animate-marquee whitespace-nowrap">
             {[0, 1, 2, 3].map((_, i) => (
                 <React.Fragment key={i}> 
-                    <span className="text-[10px] font-black text-indigo-300 mx-8 uppercase tracking-widest flex items-center gap-2"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" strokeWidth={3}/></svg> Verified Archives</span>
+                    <span className="text-[10px] font-black text-indigo-300 mx-8 uppercase tracking-widest flex items-center gap-2"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" strokeWidth={3}/></svg> Past Question</span>
                     <span className="text-[10px] font-black text-indigo-300 mx-8 uppercase tracking-widest flex items-center gap-2"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth={3}/></svg> CBT Practice</span>
                     <span className="text-[10px] font-black text-indigo-300 mx-8 uppercase tracking-widest flex items-center gap-2"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" strokeWidth={2}/></svg> Community Support</span>
                 </React.Fragment>
@@ -152,7 +151,7 @@ export const HomePage: React.FC = () => {
       {/* Pillars of Excellence Section */}
       <section className="py-24 bg-white dark:bg-slate-950 transition-colors reveal">
           <div className="container mx-auto px-4">
-              <div className="text-center max-w-3xl mx-auto mb-16">
+              <div className="text-center max-w-3xl mx-auto mb-16 mt-16">
                   <span className="text-indigo-600 font-bold tracking-widest text-[10px] uppercase block mb-3">Our Core Mandate</span>
                   <h2 className="text-3xl md:text-5xl font-serif font-black text-slate-900 dark:text-white mb-6 leading-tight">Pillars of Academic Integrity</h2>
                   <p className="text-slate-600 dark:text-slate-400 text-lg">We define the future of Nigerian finance through three primary pillars.</p>
@@ -250,10 +249,10 @@ export const HomePage: React.FC = () => {
           <div className="container mx-auto px-4">
               <div className="flex flex-col lg:flex-row gap-16 items-center">
                   <div className="lg:w-2/5 animate-slide-in-up">
-                      <h2 className="text-4xl md:text-5xl font-serif font-black text-slate-900 dark:text-white mb-8">Departmental Intelligence</h2>
+                      <h2 className="text-4xl md:text-5xl font-serif font-black text-slate-900 dark:text-white mb-8">Department News</h2>
                       <p className="text-slate-600 dark:text-slate-400 text-lg mb-10 leading-relaxed">Stay updated with official bulletins, exam schedules, and strategic scholarship opportunities.</p>
                       <button onClick={() => navigate('/announcements')} className="group inline-flex items-center justify-center gap-4 px-10 py-5 bg-indigo-950 text-white font-bold rounded-full shadow-2xl hover:bg-indigo-900 transition uppercase tracking-widest text-[10px]">
-                          <span>View All Intelligence</span>
+                          <span>View All News</span>
                           <svg className="w-4 h-4 transition-transform group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                       </button>
                   </div>
@@ -273,7 +272,7 @@ export const HomePage: React.FC = () => {
                                   </div>
                               ))
                           ) : (
-                              <div className="text-slate-400 italic p-12 border border-dashed border-slate-200 dark:border-slate-800 text-center rounded-3xl">No recent intelligence reports found.</div>
+                              <div className="text-slate-400 italic p-12 border border-dashed border-slate-200 dark:border-slate-800 text-center rounded-3xl">No recent news updates found.</div>
                           )}
                       </div>
                   </div>

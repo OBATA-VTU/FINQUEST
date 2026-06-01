@@ -1,5 +1,35 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", serif;
+  
+  --color-indigo-950: #1e1b4b;
+  
+  --animate-shine: shine 3s infinite linear;
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-reveal-blur: reveal-blur 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+  --animate-pop-in: pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animate-shimmer: shimmer 1s infinite linear;
+  
+  @keyframes reveal-blur {
+    0% { filter: blur(6px); opacity: 0.4; transform: scale(0.96); }
+    100% { filter: blur(0px); opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes pop-in {
+    0% { opacity: 0; transform: scale(0.9); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+  }
+}
+
+@variant dark (&:where(.dark, .dark *));
+
 :root {
   --bg-primary: #f8fafc;
   --bg-secondary: #ffffff;
@@ -14,22 +44,6 @@
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --brand-color: #818cf8;
-}
-
-@theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Playfair Display", serif;
-  
-  --color-indigo-950: #1e1b4b;
-  
-  --animate-shine: shine 3s infinite linear;
-  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  --animate-reveal-blur: reveal-blur 2s ease-in-out infinite alternate;
-  
-  @keyframes reveal-blur {
-    0% { filter: blur(12px); opacity: 0.2; transform: scale(0.85); }
-    100% { filter: blur(0px); opacity: 1; transform: scale(1); }
-  }
 }
 
 /* Base styles from index.html */
@@ -80,7 +94,7 @@ body {
 .loader-logo {
   width: 100px;
   height: 100px;
-  animation: reveal-blur 1.8s ease-in-out infinite alternate;
+  animation: reveal-blur 1s ease-in-out infinite alternate;
   will-change: filter, opacity, transform;
 }
 
@@ -95,7 +109,7 @@ body {
 }
 
 @keyframes reveal-blur {
-  0% { filter: blur(10px); opacity: 0.2; transform: scale(0.9); }
+  0% { filter: blur(8px); opacity: 0.3; transform: scale(0.95); }
   100% { filter: blur(0px); opacity: 1; transform: scale(1); }
 }
 

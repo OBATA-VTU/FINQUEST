@@ -34,27 +34,48 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
       e.preventDefault();
       e.stopPropagation();
       
-      let url = '';
-      
-      if (question.textContent) {
-          try {
-            const doc = generatePDF(question.courseTitle, question.textContent, question.courseCode, question.year);
-            const pdfBlob = doc.output('blob');
-            url = URL.createObjectURL(pdfBlob);
-          } catch (err) {
-              showNotification("Rendering pipeline failed.", "error");
+      try {
+          if (question.fileUrl && question.fileUrl.includes('drive.google.com')) {
+              if (question.fileUrl.includes('/drive/folders/')) {
+                  showNotification("This materials link is a Folder, not a specific file. Showing entire folder contents.", "info");
+                  window.open(question.fileUrl, '_blank');
+                  return;
+              }
+              // Extract file ID for specific preview
+              let fileId = '';
+              if (question.fileUrl.includes('/file/d/')) {
+                  fileId = question.fileUrl.split('/file/d/')[1].split('/')[0];
+              } else if (question.fileUrl.includes('id=')) {
+                  fileId = question.fileUrl.split('id=')[1].split('&')[0];
+              }
+              
+              if (fileId) {
+                 window.open(`https://drive.google.com/file/d/${fileId}/preview`, '_blank', 'noopener,noreferrer');
+              } else {
+                 window.open(question.fileUrl, '_blank', 'noopener,noreferrer');
+              }
               return;
           }
-      } else if (question.fileUrl) {
-          url = question.fileUrl;
-      } else {
-          showNotification("No preview assets located.", "info");
-          return;
-      }
-      
-      if (url) {
-        setPreviewUrl(url);
-        setIsPreviewOpen(true);
+
+          let url = '';
+          if (question.textContent) {
+                const doc = generatePDF(question.courseTitle, question.textContent, question.courseCode, question.year);
+                const pdfBlob = doc.output('blob');
+                url = URL.createObjectURL(pdfBlob);
+          } else if (question.fileUrl) {
+              url = question.fileUrl;
+          } else {
+              showNotification("No study material found for this item.", "info");
+              return;
+          }
+          
+          if (url) {
+            setPreviewUrl(url);
+            setIsPreviewOpen(true);
+          }
+      } catch (err) {
+          console.error("Preview error:", err);
+          showNotification("Could not open the preview. Please try downloading instead.", "error");
       }
   };
 
@@ -68,27 +89,20 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
     try {
         if (question.textContent) {
             downloadPDF(question.courseTitle, question.textContent, question.courseCode, question.year);
+            showNotification("Download started.", "success");
             return;
         }
 
         if (question.fileUrl) {
-            const url = question.fileUrl;
-            
-            if (url.includes('drive.google.com')) {
-                 // Try to force direct download for Google Drive
-                 const dlUrl = url.replace('file/d/', 'uc?export=download&id=').replace('/view?usp=sharing', '').replace('/view', '');
-                 window.open(dlUrl, '_blank');
-            } else {
-                 try {
-                     const ext = url.split('.').pop()?.split('?')[0] || 'jpg';
-                     const filename = `${question.courseCode}_${question.year}_FINSA.${ext}`;
-                     showNotification("Extracting document...", "info");
-                     await forceDownload(url, filename);
-                 } catch (err) {
-                     window.open(url, '_blank');
-                 }
-            }
+            const filename = `${question.courseCode}_${question.year}_FINSA`;
+            await forceDownload(question.fileUrl, filename);
+            showNotification("Download started.", "success");
+        } else {
+            showNotification("No downloadable file found.", "error");
         }
+    } catch (err) {
+        console.error("Download error:", err);
+        showNotification("Download failed. The server might be busy.", "error");
     } finally {
         setIsDownloading(false);
     }

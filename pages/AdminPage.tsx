@@ -122,7 +122,7 @@ export const AdminPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard title="Total Students" value={stats.users} sub="Registered Profiles" link="/admin/users" />
             <StatCard title="Active Now" value={stats.activeUsers} sub="Active in last 24h" link="/admin/active-users" color="text-emerald-500" />
-            <StatCard title="Study Materials" value={stats.materials} sub="Total approved items" link="/admin/materials" />
+            <StatCard title="Past Question" value={stats.materials} sub="Total approved items" link="/admin/materials" />
             <StatCard title="Pending Approvals" value={stats.pendingMaterials} sub="Action required" link="/admin/approvals" color={stats.pendingMaterials > 0 ? 'text-rose-500' : ''} />
         </div>
 

@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { AdBanner } from '../components/AdBanner';
 import { db } from '../firebase';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { Announcement } from '../types';
@@ -24,7 +23,17 @@ export const AnnouncementsPage: React.FC = () => {
           try {
               const q = query(collection(db, 'announcements'), orderBy('date', 'desc'));
               const snap = await getDocs(q);
-              setAnnouncements(snap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement)));
+              let items = snap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement));
+              
+              // Filter targeted news
+              if (auth?.user) {
+                  items = items.filter(a => !a.targetUserId || a.targetUserId === auth.user.id);
+              } else {
+                  // If not logged in, only show public ones
+                  items = items.filter(a => !a.targetUserId);
+              }
+              
+              setAnnouncements(items);
           } catch(e) {
               console.error(e);
           } finally {
@@ -182,8 +191,6 @@ export const AnnouncementsPage: React.FC = () => {
                                 </button>
                             </form>
                         </div>
-                        
-                        <AdBanner />
                     </div>
                 </div>
             </>

@@ -72,14 +72,21 @@ export const trackAiUsage = async () => {
 
 export const forceDownload = async (url: string, filename: string) => {
   try {
-    // If it's a Drive link, we unfortunately usually must use window.open due to strict CORS
+    // Better Google Drive direct link extraction
     if (url.includes('drive.google.com')) {
-        const dlUrl = url.replace('/view', '/download').replace('/preview', '/download');
+        let dlUrl = url;
+        if (url.includes('/file/d/')) {
+            const id = url.split('/file/d/')[1].split('/')[0];
+            dlUrl = `https://drive.google.com/uc?export=download&id=${id}`;
+        } else if (url.includes('id=')) {
+            const id = url.split('id=')[1].split('&')[0];
+            dlUrl = `https://drive.google.com/uc?export=download&id=${id}`;
+        }
         window.open(dlUrl, '_blank');
         return;
     }
 
-    // For Firebase and other direct links, try to fetch as blob for "True Download"
+    // For other links, try blob download for better UI experience
     const response = await fetch(url);
     if (!response.ok) throw new Error("Network response was not ok");
     
@@ -94,12 +101,14 @@ export const forceDownload = async (url: string, filename: string) => {
     window.URL.revokeObjectURL(blobUrl);
   } catch (error) {
     console.warn("Blob download failed, falling back to window.open", error);
-    window.open(url, '_blank');
+    // Final fallback
+    const fallbackUrl = url.includes('drive.google.com') ? url : url;
+    window.open(fallbackUrl, '_blank');
   }
 };
 
 export const uploadFileToFirebase = async (file: File, folder: string = 'materials', onProgress?: (progress: number) => void): Promise<{ url: string, path: string }> => {
-    console.log(`Initiating upload for ${file.name} to folder ${folder}`);
+    console.log(`[Firebase] Initiating upload for ${file.name}`);
     try {
         const timestamp = Date.now();
         const safeName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
@@ -110,68 +119,50 @@ export const uploadFileToFirebase = async (file: File, folder: string = 'materia
             uploadTask.on('state_changed', 
                 (snapshot) => {
                     const progress = (snapshot.bytesTransferred / (snapshot.totalBytes || 1)) * 100;
-                    console.log(`[Storage] ${file.name} Progress: ${progress.toFixed(2)}% | Status: ${snapshot.state}`);
-                    // Ensure minimum progress to show activity
                     onProgress?.(Math.max(progress, 5));
                 }, 
-                (error) => {
-                    console.error("[Storage] Upload Critical Error:", error);
-                    reject(error);
-                }, 
+                (error) => reject(error), 
                 async () => {
                     try {
                         const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                        console.log(`[Storage] Upload Complete: ${downloadURL}`);
                         resolve({ url: downloadURL, path: uploadTask.snapshot.ref.fullPath });
                     } catch (e) {
-                        console.error("[Storage] Failed to resolve download URL:", e);
                         reject(e);
                     }
                 }
             );
         });
     } catch (error) {
-        console.error("[Storage] Initialization Error:", error);
         throw error;
     }
 };
 
 /**
- * Handles Google Drive uploads by providing a simulated progress 
- * as direct Drive API uploads from client are complex without proxy.
+ * Enhanced Drive Upload with proper link formatting
  */
 export const uploadFileToDrive = async (file: File, folderId: string, onProgress?: (p: number) => void): Promise<{ url: string, path: string }> => {
-    console.log(`[Drive] Initiating simulated upload to folder ${folderId}`);
-    return new Promise((resolve) => {
-        let p = 5;
-        onProgress?.(p);
-        
-        const interval = setInterval(() => {
-            // Incremental progress with some randomness for realism
-            const inc = Math.floor(Math.random() * 10) + 2;
-            p += inc;
-            
-            if (p >= 90) {
-                clearInterval(interval);
-                onProgress?.(100);
-                setTimeout(() => {
-                    console.log(`[Drive] Simulated upload complete for ${file.name}`);
-                    resolve({ 
-                        url: `https://drive.google.com/drive/folders/${folderId}`, 
-                        path: `drive://${folderId}/${file.name}` 
-                    });
-                }, 500);
-            } else {
-                onProgress?.(Math.min(p, 99));
-            }
-        }, 500); // Decent pace
-    });
+    // REALITY: Direct Drive upload is not possible from client without proxy.
+    // ACTION: We upload to Firebase Secure Storage but mark it with Drive metadata.
+    // This ensures the admin CAN actually see and preview the document.
+    console.log(`[Drive Pipeline] Redirecting to Secure Storage branch for folder ${folderId}`);
+    try {
+        const result = await uploadFileToFirebase(file, `drive_managed/${folderId}`, onProgress);
+        return {
+            ...result,
+            path: `drive://${folderId}/${result.path}`
+        };
+    } catch (error) {
+        console.error("[Drive Pipeline] Ingest failure:", error);
+        throw error;
+    }
 };
 
 export const uploadDocument = async (file: File, service: string = 'firebase', folderId?: string, onProgress?: (p: number) => void): Promise<{ url: string, path: string }> => {
+    // If service is Drive and we have a target folder, use the drive-managed branch
     if (service === 'drive' && folderId) {
         return await uploadFileToDrive(file, folderId, onProgress);
     }
+    // Default to standard Firebase materials storage
     return await uploadFileToFirebase(file, 'materials', onProgress);
 };
 
