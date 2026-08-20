@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useRef, useMemo, useCallback } from 'react';
 import { User, Level } from '../types';
 import { auth, db } from '../firebase';
 import { 
@@ -7,31 +7,25 @@ import {
   createUserWithEmailAndPassword, 
   signOut, 
   onAuthStateChanged,
-  GoogleAuthProvider,
-  signInWithPopup,
   updateProfile,
   setPersistence,
   browserLocalPersistence,
   linkWithCredential,
-  linkWithPopup,
   EmailAuthProvider
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, getDocFromServer } from 'firebase/firestore';
 import { useNotification } from './NotificationContext';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, pass: string) => Promise<void>;
-  loginWithGoogle: () => Promise<{ needsProfileCompletion: boolean; googleUser?: any }>;
-  signup: (data: { name: string; email: string; pass?: string; level: Level; username: string; matricNumber: string; avatarUrl?: string; googleUid?: string }) => Promise<void>;
+  signup: (data: { name: string; email: string; pass: string; level: Level; username: string; matricNumber: string; avatarUrl?: string }) => Promise<void>;
   logout: () => Promise<void>;
   toggleBookmark: (questionId: string) => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
   isPasswordAccount: boolean;
-  isGoogleAccount: boolean;
   addPassword: (password: string) => Promise<void>;
-  linkGoogleAccount: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -101,7 +95,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [user?.id]);
 
   const isPasswordAccount = auth.currentUser?.providerData.some(p => p.providerId === 'password') || false;
-  const isGoogleAccount = auth.currentUser?.providerData.some(p => p.providerId === 'google.com') || false;
 
   const checkAndRefreshCredits = async (currentUser: User) => {
     const today = new Date().toLocaleDateString('en-CA'); 
@@ -111,11 +104,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const userRef = doc(db, 'users', currentUser.id);
         await updateDoc(userRef, updates);
         setUser(prev => prev && prev.id === currentUser.id ? { ...prev, ...updates } : prev);
-      } catch (e) {
-        console.error("Failed to refresh credits:", e);
+      } catch (e: any) {
+        console.error("Failed to refresh credits:", e.message || "Unknown error");
       }
     }
   };
+
+  useEffect(() => {
+    const testConnection = async () => {
+      try {
+        await getDocFromServer(doc(db, 'config', 'health_check'));
+      } catch (error: any) {
+        if (error.message?.includes('the client is offline')) {
+          console.error("Firebase connection failed. Please ensure Firestore is provisioned.");
+        }
+      }
+    };
+    testConnection();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -126,6 +132,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           let userData = userDoc.data() as User;
           const fullUser = { ...userData, id: firebaseUser.uid };
           setUser(fullUser);
+
+          // Bootstrap Admin
+          if (firebaseUser.email === 'ayubaboluwatife246@gmail.com') {
+            await setDoc(doc(db, 'admins', firebaseUser.uid), { email: firebaseUser.email }, { merge: true });
+            if (userData.role !== 'admin') {
+              await updateDoc(userDocRef, { role: 'admin' });
+              userData.role = 'admin';
+            }
+          }
           
           // Parallelize background updates
           const updates: any = { lastActive: new Date().toISOString() };
@@ -134,8 +149,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
           
           // Fire and forget updates to avoid blocking UI
-          updateDoc(userDocRef, updates).catch(e => console.error("Background update failed", e));
-          checkAndRefreshCredits(fullUser).catch(e => console.error("Credit refresh failed", e));
+          updateDoc(userDocRef, updates).catch(e => console.error("Background update failed", e.message || "Unknown error"));
+          checkAndRefreshCredits(fullUser).catch(e => console.error("Credit refresh failed", e.message || "Unknown error"));
         }
       } else {
         setUser(null);
@@ -151,32 +166,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => clearInterval(interval);
   }, [user?.id, user?.lastCreditRefreshDate]);
 
-  const login = async (email: string, pass: string) => {
+  const login = useCallback(async (email: string, pass: string) => {
     await signInWithEmailAndPassword(auth, email, pass);
-  };
+  }, []);
 
-  const loginWithGoogle = async () => {
-    if (isSigningIn.current) throw new Error("Auth in progress");
-    isSigningIn.current = true;
-    try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const userDoc = await getDoc(doc(db, 'users', result.user.uid));
-      return { needsProfileCompletion: !userDoc.exists(), googleUser: result.user };
-    } finally {
-      isSigningIn.current = false;
-    }
-  };
+  const signup = useCallback(async (data: { name: string; email: string; pass: string; level: Level; username: string; matricNumber: string; avatarUrl?: string }) => {
+    const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, data.email, data.pass);
+    const uid = firebaseUser.uid;
 
-  const signup = async (data: { name: string; email: string; pass?: string; level: Level; username: string; matricNumber: string; avatarUrl?: string; googleUid?: string }) => {
-    let uid = data.googleUid;
-    if (!uid && data.pass) {
-        const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, data.email, data.pass);
-        uid = firebaseUser.uid;
-    }
-    if (!uid) throw new Error("Authentication failed.");
-
-    // Verification Logic: Auto-verify if matric number starts with 230602
     const isAutoVerified = data.matricNumber.trim().startsWith('230602');
 
     const userData: User = {
@@ -203,45 +200,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (isAutoVerified) {
         showNotification("Identity verified automatically based on departmental records!", "success");
     }
-  };
+  }, [showNotification]);
 
-  const logout = async () => { await signOut(auth); setUser(null); };
+  const logout = useCallback(async () => { await signOut(auth); setUser(null); }, []);
 
-  const addPassword = async (password: string) => {
+  const addPassword = useCallback(async (password: string) => {
     if (!auth.currentUser) return;
     const credential = EmailAuthProvider.credential(auth.currentUser.email!, password);
     await linkWithCredential(auth.currentUser, credential);
-  };
+  }, []);
 
-  const linkGoogleAccount = async () => {
-    if (!auth.currentUser) return;
-    const provider = new GoogleAuthProvider();
-    await linkWithPopup(auth.currentUser, provider);
-  };
-
-  const toggleBookmark = async (questionId: string) => {
+  const toggleBookmark = useCallback(async (questionId: string) => {
     if (!user) return;
     const isBookmarked = user.savedQuestions?.includes(questionId);
     const userRef = doc(db, 'users', user.id);
     if (isBookmarked) {
       await updateDoc(userRef, { savedQuestions: arrayRemove(questionId) });
-      setUser({ ...user, savedQuestions: user.savedQuestions?.filter(id => id !== questionId) });
+      setUser(prev => prev ? ({ ...prev, savedQuestions: prev.savedQuestions?.filter(id => id !== questionId) }) : null);
     } else {
       await updateDoc(userRef, { savedQuestions: arrayUnion(questionId) });
-      setUser({ ...user, savedQuestions: [...(user.savedQuestions || []), questionId] });
+      setUser(prev => prev ? ({ ...prev, savedQuestions: [...(prev.savedQuestions || []), questionId] }) : null);
     }
-  };
+  }, [user]);
 
-  const updateUser = (updates: Partial<User>) => {
+  const updateUser = useCallback((updates: Partial<User>) => {
     setUser(prev => prev ? { ...prev, ...updates } : null);
-  };
+  }, []);
+
+  const value = useMemo(() => ({ 
+    user, loading, login, signup, logout, 
+    toggleBookmark, updateUser, isPasswordAccount,
+    addPassword
+  }), [user, loading, login, signup, logout, 
+       toggleBookmark, updateUser, isPasswordAccount,
+       addPassword]);
 
   return (
-    <AuthContext.Provider value={{ 
-      user, loading, login, loginWithGoogle, signup, logout, 
-      toggleBookmark, updateUser, isPasswordAccount, isGoogleAccount,
-      addPassword, linkGoogleAccount
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

@@ -2,7 +2,7 @@
   "entities": {
     "User": {
       "title": "User",
-      "description": "User profile information",
+      "description": "User profile and statistics",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -18,78 +18,226 @@
         "createdAt": { "type": "string", "format": "date-time" },
         "lastActive": { "type": "string", "format": "date-time" },
         "isVerified": { "type": "boolean" },
+        "isBanned": { "type": "boolean" },
+        "banUntil": { "type": "string" },
         "aiCredits": { "type": "number" },
-        "lastCreditRefreshDate": { "type": "string" }
+        "lastCreditRefreshDate": { "type": "string" },
+        "aiImageCount": { "type": "number" },
+        "lastAiImageDate": { "type": "string" },
+        "badges": { "type": "array", "items": { "type": "string" } },
+        "viewedSessionWrapTimestamp": { "type": "string" },
+        "infractionCount": { "type": "number" },
+        "chatBanUntil": { "type": "string" }
       },
-      "required": ["id", "email", "name", "username", "role"]
+      "required": ["email", "name", "username", "role"]
     },
-    "Question": {
-      "title": "Material",
-      "description": "Academic material or question",
+    "Executive": {
+      "title": "Executive",
+      "description": "Departmental executive or HOD",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "courseTitle": { "type": "string" },
-        "courseCode": { "type": "string" },
-        "category": { "type": "string" },
+        "name": { "type": "string" },
+        "position": { "type": "string" },
+        "level": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "quote": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["name", "position"]
+    },
+    "Lecturer": {
+      "title": "Lecturer",
+      "description": "Departmental lecturer",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "title": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "specialization": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["name", "title"]
+    },
+    "GalleryItem": {
+      "title": "Gallery Item",
+      "description": "Photo or image in the gallery",
+      "type": "object",
+      "properties": {
+        "imageUrl": { "type": "string" },
+        "caption": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["imageUrl", "caption", "date"]
+    },
+    "Question": {
+      "title": "Question",
+      "description": "Past questions, lecture notes, etc.",
+      "type": "object",
+      "properties": {
         "level": { "type": "string" },
-        "semester": { "type": "string" },
+        "courseCode": { "type": "string" },
+        "courseTitle": { "type": "string" },
         "year": { "type": "number" },
+        "semester": { "type": "number" },
+        "lecturer": { "type": "string" },
         "fileUrl": { "type": "string" },
         "storagePath": { "type": "string" },
+        "pages": { "type": "array", "items": { "type": "string" } },
         "textContent": { "type": "string" },
-        "status": { "type": "string", "enum": ["pending", "approved"] },
         "uploadedBy": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "uploadedByEmail": { "type": "string" },
+        "uploadedByName": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved"] },
+        "createdAt": { "type": "string" },
+        "category": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "difficulty": { "type": "string" }
       },
-      "required": ["courseTitle", "category", "level", "year"]
+      "required": ["courseCode", "courseTitle", "status"]
+    },
+    "TestResult": {
+      "title": "Test Result",
+      "description": "CBT practice test results",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "score": { "type": "number" },
+        "totalQuestions": { "type": "number" },
+        "level": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["userId", "score", "totalQuestions", "date"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "Departmental news or announcement",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "content": { "type": "string" },
+        "author": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "targetUserId": { "type": "string" }
+      },
+      "required": ["title", "content", "date"]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "Personal student notes",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "courseCode": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "title", "content"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notification",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "success", "warning", "error"] },
+        "createdAt": { "type": "string" },
+        "read": { "type": "boolean" },
+        "title": { "type": "string" },
+        "link": { "type": "string" }
+      },
+      "required": ["userId", "message", "type", "createdAt", "read"]
+    },
+    "CommunityGroup": {
+      "title": "Community Group",
+      "description": "External group links (WhatsApp, etc.)",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "platform": { "type": "string" },
+        "link": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["name", "platform", "link"]
     },
     "CommunityMessage": {
       "title": "Community Message",
-      "description": "Message in the student lounge",
+      "description": "Message in the global or group chat",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "text": { "type": "string" },
-        "imageUrl": { "type": "string" },
         "senderId": { "type": "string" },
         "senderName": { "type": "string" },
-        "senderRole": { "type": "string" },
-        "isVerified": { "type": "boolean" },
-        "avatarUrl": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "text": { "type": "string" },
+        "createdAt": { "type": "string" }
       },
-      "required": ["text", "senderId", "senderName", "createdAt"]
+      "required": ["senderId", "senderName", "text", "createdAt"]
+    },
+    "AiSettings": {
+      "title": "AI Settings",
+      "description": "Configuration for AI features",
+      "type": "object",
+      "properties": {
+        "isAvailable": { "type": "boolean" },
+        "shutdownReason": { "type": "string" },
+        "lastExhaustionDate": { "type": "string" }
+      },
+      "required": ["isAvailable"]
+    },
+    "SystemStats": {
+      "title": "System Stats",
+      "description": "Global statistics like AI usage",
+      "type": "object",
+      "properties": {
+        "count": { "type": "number" },
+        "lastUpdated": { "type": "string" }
+      }
+    },
+    "SocialLinks": {
+      "title": "Social Links",
+      "description": "Departmental social media links",
+      "type": "object",
+      "properties": {
+        "facebook": { "type": "string" },
+        "twitter": { "type": "string" },
+        "instagram": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "telegram": { "type": "string" },
+        "tiktok": { "type": "string" }
+      }
+    },
+    "SiteSettings": {
+      "title": "Site Settings",
+      "description": "Global site configuration",
+      "type": "object",
+      "properties": {
+        "session": { "type": "string" },
+        "showExecutives": { "type": "boolean" },
+        "uploadService": { "type": "string" },
+        "driveFolderId": { "type": "string" }
+      }
     }
   },
   "firestore": {
-    "users/{userId}": {
-      "schema": "User",
-      "description": "User profiles"
-    },
-    "questions/{questionId}": {
-      "schema": "Question",
-      "description": "Academic materials"
-    },
-    "community_messages/{messageId}": {
-      "schema": "CommunityMessage",
-      "description": "Community chat messages"
-    },
-    "announcements/{id}": {
-      "schema": { "title": "Announcement", "type": "object", "properties": { "title": { "type": "string" } } },
-      "description": "Finsa announcements"
-    },
-    "lecturers/{id}": {
-      "schema": { "title": "Lecturer", "type": "object", "properties": { "name": { "type": "string" } } },
-      "description": "Lecturer profiles"
-    },
-    "executives/{id}": {
-      "schema": { "title": "Executive", "type": "object", "properties": { "name": { "type": "string" } } },
-      "description": "Executive profiles"
-    },
-    "marketplace/{id}": {
-      "schema": { "title": "MarketplaceItem", "type": "object", "properties": { "title": { "type": "string" } } },
-      "description": "Marketplace listings"
-    }
+    "users/{userId}": { "schema": "User", "description": "User profiles" },
+    "executives/{execId}": { "schema": "Executive", "description": "HOD and executives" },
+    "lecturers/{lecturerId}": { "schema": "Lecturer", "description": "Lecturers" },
+    "gallery/{itemId}": { "schema": "GalleryItem", "description": "Gallery images" },
+    "questions/{questionId}": { "schema": "Question", "description": "Academic materials" },
+    "test_results/{resultId}": { "schema": "TestResult", "description": "Practice test results" },
+    "announcements/{announcementId}": { "schema": "Announcement", "description": "News and announcements" },
+    "notes/{noteId}": { "schema": "Note", "description": "User personal notes" },
+    "notifications/{notificationId}": { "schema": "Notification", "description": "User notifications" },
+    "groups/{groupId}": { "schema": "CommunityGroup", "description": "Community group links" },
+    "community_messages/{messageId}": { "schema": "CommunityMessage", "description": "Global chat messages" },
+    "config/ai_settings": { "schema": "AiSettings", "description": "AI feature configuration" },
+    "system_stats/ai_usage": { "schema": "SystemStats", "description": "AI usage tracker" },
+    "content/social_links": { "schema": "SocialLinks", "description": "Social media links" },
+    "content/site_settings": { "schema": "SiteSettings", "description": "General site settings" },
+    "content/impression_poll": { "schema": { "title": "Poll", "type": "object", "properties": { "results": { "type": "object" } } }, "description": "Quick poll results" }
   }
 }

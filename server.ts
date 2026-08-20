@@ -4,7 +4,7 @@ import cors from 'cors';
 import { createServer as createViteServer } from 'vite';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { Groq } from 'groq-sdk';
+import { GoogleGenAI } from '@google/genai';
 
 async function startServer() {
     const app = express();
@@ -13,38 +13,149 @@ async function startServer() {
     app.use(cors());
     app.use(express.json());
 
-    const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
-    const groq = new Groq({ apiKey: GROQ_API_KEY });
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+    const ai = new GoogleGenAI({
+        apiKey: GEMINI_API_KEY,
+        httpOptions: {
+            headers: {
+                'User-Agent': 'aistudio-build',
+            }
+        }
+    });
 
     // AI Generation Endpoint
     app.post('/api/ai/generate', async (req, res) => {
         try {
-            const { prompt, model = "llama-3.1-8b-instant" } = req.body;
-            if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY not configured on server.");
+            const { prompt, systemPrompt, stream = false } = req.body;
+            if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured on server.");
 
-            const response = await groq.chat.completions.create({
-                model: model,
-                messages: [{ role: "user", content: prompt }],
-            });
+            const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
 
-            res.json({ content: response.choices[0].message.content });
+            if (stream) {
+                const result = await ai.models.generateContentStream({
+                    model: 'gemini-3.7-flash',
+                    contents: fullPrompt
+                });
+                res.setHeader('Content-Type', 'text/event-stream');
+                res.setHeader('Cache-Control', 'no-cache');
+                res.setHeader('Connection', 'keep-alive');
+
+                for await (const chunk of result) {
+                    const chunkText = chunk.text;
+                    if (chunkText) {
+                        res.write(`data: ${JSON.stringify({ content: chunkText })}\n\n`);
+                    }
+                }
+                res.write('data: [DONE]\n\n');
+                res.end();
+            } else {
+                const result = await ai.models.generateContent({
+                    model: 'gemini-3.7-flash',
+                    contents: fullPrompt
+                });
+                res.json({ content: result.text });
+            }
         } catch (error: any) {
             console.error("AI Error:", error);
-            res.status(500).json({ error: error.message });
+            if (!res.headersSent) {
+                res.status(500).json({ error: error.message });
+            } else {
+                res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+                res.end();
+            }
         }
     });
 
     // Daily Quote Endpoint
     app.get('/api/ai/quote', async (req, res) => {
         try {
-            if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY not configured.");
-
-            const response = await groq.chat.completions.create({
-                model: "llama-3.1-8b-instant",
-                messages: [{ role: "user", content: "Generate a single, unique, and insightful quote about finance, investing, or wealth. Concise (under 25 words). Do not include author." }],
+            if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured.");
+            const result = await ai.models.generateContent({
+                model: 'gemini-3.7-flash',
+                contents: "Generate a single, unique, and insightful quote about finance, investing, or wealth. Concise (under 25 words). Do not include author."
             });
+            res.json({ quote: (result.text || "").trim().replace(/^"|"$/g, '') });
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    });
 
-            res.json({ quote: response.choices[0].message.content?.trim().replace(/^"|"$/g, '') });
+    // Specialized CBT Intelligence Endpoint
+    app.post('/api/ai/cbt-analyze', async (req, res) => {
+        try {
+            const { questions, userAnswers, score } = req.body;
+            if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured.");
+
+            const prompt = `
+                I just finished a Finance CBT practice test.
+                My score was ${score}%.
+                
+                Here is a summary of the questions and my answers (0-indexed):
+                ${questions.map((q: any, i: number) => `Q${i+1}: ${q.text}\nCorrect: ${q.options[q.correctAnswer]}\nMy Answer: ${q.options[userAnswers[i]] || 'Skipped'}`).join('\n\n')}
+                
+                Please provide:
+                1. A breakdown of my strengths and weaknesses based on these questions.
+                2. Specific academic topics I should study more.
+                3. A motivational but professional closing advice.
+                Format the response in clean Markdown.
+            `;
+
+            const result = await ai.models.generateContent({
+                model: 'gemini-3.1-pro-preview',
+                contents: prompt
+            });
+            res.json({ analysis: result.text });
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    });
+
+    // Explain Question Endpoint
+    app.post('/api/ai/explain', async (req, res) => {
+        try {
+            const { question, selectedOption, correctOption, options } = req.body;
+            if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured.");
+
+            const prompt = `
+                Explain this finance question and why the correct answer is what it is.
+                Question: ${question}
+                Options: ${options.join(', ')}
+                Correct Answer: ${options[correctOption]}
+                User Selected: ${options[selectedOption] || 'None'}
+                
+                Provide a clear, concise academic explanation suitable for a university student.
+            `;
+
+            const result = await ai.models.generateContent({
+                model: 'gemini-3.7-flash',
+                contents: prompt
+            });
+            res.json({ explanation: result.text });
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    });
+
+    // Smart Hint/Tip Endpoint
+    app.post('/api/ai/tip', async (req, res) => {
+        try {
+            const { question, options } = req.body;
+            if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured.");
+
+            const prompt = `
+                Provide a very short, subtle hint (max 15 words) for this finance question WITHOUT giving away the correct answer directly.
+                
+                Question: ${question}
+                Options: ${options.join(', ')}
+                
+                Keep it professional and encouraging.
+            `;
+
+            const result = await ai.models.generateContent({
+                model: 'gemini-3.7-flash',
+                contents: prompt
+            });
+            res.json({ tip: result.text?.trim() });
         } catch (error: any) {
             res.status(500).json({ error: error.message });
         }

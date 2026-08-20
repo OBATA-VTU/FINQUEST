@@ -7,7 +7,6 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { PastQuestion, TestResult } from '../types';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { getBadge } from '../utils/badges';
-import { AddPasswordModal } from '../components/AddPasswordModal';
 import { useNavigate } from 'react-router-dom';
 
 export const ProfilePage: React.FC = () => {
@@ -18,7 +17,6 @@ export const ProfilePage: React.FC = () => {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isAddPasswordModalOpen, setIsAddPasswordModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -136,16 +134,6 @@ export const ProfilePage: React.FC = () => {
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                     Edit Profile
                 </button>
-                
-                {!auth?.isPasswordAccount && (
-                    <button 
-                        onClick={() => setIsAddPasswordModalOpen(true)} 
-                        className="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-full hover:bg-emerald-700 transition-all hover:-translate-y-1 shadow-md flex items-center gap-2 text-sm"
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2v5a2 2 0 01-2 2H9a2 2 0 01-2-2V9a2 2 0 012-2h6zM21 11a1 1 0 01-1 1h-3a1 1 0 01-1-1V9a1 1 0 011-1h3a1 1 0 011 1v2zm-2 5a2 2 0 012 2v1a2 2 0 01-2 2H7a2 2 0 01-2-2v-1a2 2 0 012-2h10z" /></svg>
-                        Add Password
-                    </button>
-                )}
 
                 <button 
                     onClick={handleLogout}
@@ -237,13 +225,6 @@ export const ProfilePage: React.FC = () => {
         isOpen={isEditModalOpen} 
         onClose={() => setIsEditModalOpen(false)} 
       />
-      {/* Add Password Modal */}
-      {isAddPasswordModalOpen && (
-          <AddPasswordModal
-              isOpen={isAddPasswordModalOpen}
-              onClose={() => setIsAddPasswordModalOpen(false)}
-          />
-      )}
     </div>
   );
 };

@@ -1,12 +1,12 @@
 {
-  "projectId": "spartan-tempo-xlcf1",
-  "appId": "1:777143304098:web:9d5ab3273b575a54553cfb",
-  "apiKey": "AIzaSyB4mz94xJKVqLuTC-UcIXMlAjbn-3UQu0A",
-  "authDomain": "spartan-tempo-xlcf1.firebaseapp.com",
+  "projectId": "gen-lang-client-0568775717",
+  "appId": "1:332531062341:web:3220d456fce65a9266752c",
+  "apiKey": "AIzaSyCzM2tgmHdpeiXnweOox4DDqjdBNuVe4rY",
+  "authDomain": "gen-lang-client-0568775717.firebaseapp.com",
   "firestoreDatabaseId": "ai-studio-finsaaauaportal-7a0ca2f8-2041-40b1-b19f-a967c8b96f88",
-  "storageBucket": "spartan-tempo-xlcf1.firebasestorage.app",
-  "messagingSenderId": "777143304098",
+  "storageBucket": "gen-lang-client-0568775717.firebasestorage.app",
+  "messagingSenderId": "332531062341",
   "measurementId": "",
-  "oAuthClientId": "777143304098-3rl8pdbaas0saq5rn02ukmitrl7oo78a.apps.googleusercontent.com",
+  "oAuthClientId": "332531062341-s14hcoi30v8ese2is88me1eschnsvljg.apps.googleusercontent.com",
   "recaptchaSiteKey": ""
 }

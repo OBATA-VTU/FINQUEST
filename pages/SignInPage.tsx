@@ -67,21 +67,6 @@ export const SignInPage: React.FC = () => {
         }
     };
 
-    const handleGoogleLogin = async () => {
-        if (loading) return;
-        setLoading(true);
-        try {
-            const result = await authCtx!.loginWithGoogle();
-            if (result?.needsProfileCompletion) {
-                navigate('/signup', { state: { googleUser: result.googleUser } });
-            } else {
-                navigate('/dashboard', { replace: true });
-            }
-        } catch (err) {
-            setLoading(false);
-        }
-    };
-
     const handleResetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email) {
@@ -182,18 +167,6 @@ export const SignInPage: React.FC = () => {
                             {loading ? "Signing in..." : "Sign In"}
                         </button>
                     </form>
-                    <div className="relative py-2">
-                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100 dark:border-slate-800"></div></div>
-                        <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest"><span className="bg-white dark:bg-slate-900 px-3 text-slate-400">Or use socials</span></div>
-                    </div>
-                    <button 
-                        onClick={handleGoogleLogin}
-                        disabled={loading}
-                        className="w-full py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-700 dark:text-white flex items-center justify-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm active:scale-95"
-                    >
-                        <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
-                        Continue with Google
-                    </button>
                 </div>
                 <div className="p-6 bg-slate-50/50 dark:bg-slate-800/30 text-center border-t border-slate-100 dark:border-slate-800">
                     <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">

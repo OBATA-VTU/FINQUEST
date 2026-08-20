@@ -5,6 +5,7 @@ import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch, del
 import { useNotification } from '../contexts/NotificationContext';
 import { AuthContext } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { useDrive } from '../contexts/DriveContext';
 import { migrateResourceToFirebase } from '../utils/api';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -12,9 +13,10 @@ export const AdminSettingsPage: React.FC = () => {
   const auth = useContext(AuthContext);
   const isSuperAdmin = auth?.user?.role === 'admin';
   const { showNotification } = useNotification();
+  const { isConnected, connect, disconnect } = useDrive();
 
   const [socialLinks, setSocialLinks] = useState({ facebook: '', twitter: '', instagram: '', whatsapp: '', telegram: '', tiktok: '' });
-  const [siteSettings, setSiteSettings] = useState({ session: '2025/2026', showExecutives: true, uploadService: 'firebase', driveFolderId: '' });
+  const [siteSettings, setSiteSettings] = useState({ session: '2025/2026', showExecutives: true, uploadService: 'drive', driveFolderId: '' });
   
   const [isWipeModalOpen, setIsWipeModalOpen] = useState(false);
   const [wipeConfirmText, setWipeConfirmText] = useState('');
@@ -37,7 +39,7 @@ export const AdminSettingsPage: React.FC = () => {
                 setSiteSettings({
                     session: data.session || '2025/2026',
                     showExecutives: data.showExecutives !== undefined ? data.showExecutives : true,
-                    uploadService: data.uploadService || 'firebase',
+                    uploadService: 'drive',
                     driveFolderId: data.driveFolderId || ''
                 });
             }
@@ -58,7 +60,7 @@ export const AdminSettingsPage: React.FC = () => {
           await updateDoc(doc(db, 'content', 'site_settings'), {
               session: siteSettings.session,
               showExecutives: siteSettings.showExecutives,
-              uploadService: siteSettings.uploadService,
+              uploadService: 'drive',
               driveFolderId: siteSettings.driveFolderId || ''
           });
           showNotification("Site settings updated", "success");
@@ -282,17 +284,32 @@ export const AdminSettingsPage: React.FC = () => {
                         <div className="space-y-6">
                             <div>
                                 <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-3 ml-2">Storage Method</label>
-                                <select 
-                                    value={siteSettings.uploadService} 
-                                    onChange={e => setSiteSettings({...siteSettings, uploadService: e.target.value})}
-                                    className="w-full p-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-[1.5rem] outline-none font-black text-sm uppercase tracking-widest dark:text-white cursor-pointer"
-                                >
-                                    <option value="firebase">Secure Cloud (Firebase)</option>
-                                    <option value="drive">Google Drive (Shared Folders)</option>
-                                </select>
-                            </div>
-                            <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-[2rem] border border-indigo-100 dark:border-indigo-900/50">
-                                <p className="text-[11px] font-medium text-slate-600 dark:text-slate-400 leading-relaxed italic">Firebase is recommended for better performance and mobile app stability.</p>
+                                <div className="w-full p-5 bg-indigo-600 border-2 border-indigo-500 rounded-[1.5rem] text-white font-black text-sm uppercase tracking-widest flex items-center justify-between">
+                                    <span>Google Drive (One & Only)</span>
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M5 13l4 4L19 7" /></svg>
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-2 ml-2 italic">Legacy storage methods (Firebase/ImgBB) have been decommissioned.</p>
+                                
+                                <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                                    <p className="text-[10px] font-black uppercase text-slate-400 mb-4 ml-2">Authentication Status</p>
+                                    {isConnected ? (
+                                        <div className="flex items-center justify-between p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-100 dark:border-emerald-900/50">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                                                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">Drive API Authorized</span>
+                                            </div>
+                                            <button onClick={disconnect} className="text-[10px] font-black uppercase text-rose-500 hover:text-rose-600">Disconnect</button>
+                                        </div>
+                                    ) : (
+                                        <button 
+                                            onClick={connect}
+                                            className="w-full py-4 bg-slate-900 dark:bg-slate-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center justify-center gap-3"
+                                        >
+                                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5,2L20.42,15.74L17.5,20.83L9.58,20.83L6.67,15.74L14.58,2L12.5,2M9.42,4L3.17,14.83L6.08,19.92L12.33,9.08L9.42,4M15,9.08L12.08,14.17L15,19.25L17.92,14.17L15,9.08Z" /></svg>
+                                            Authorize Google Drive
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
 

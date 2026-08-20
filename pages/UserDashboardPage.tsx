@@ -24,7 +24,6 @@ export const UserDashboardPage: React.FC = () => {
   const [quote, setQuote] = useState('Loading daily quote...');
   const [recentNews, setRecentNews] = useState<Announcement[]>([]);
   const [recommendedQuestions, setRecommendedQuestions] = useState<PastQuestion[]>([]);
-  const [showLinkBanner, setShowLinkBanner] = useState(true);
 
   // Safety Check: If RequireAuth hasn't finished its job yet
   if (!user) return (
@@ -127,7 +126,6 @@ export const UserDashboardPage: React.FC = () => {
       fetchData();
   }, [user?.id, user?.level]);
 
-  const { isPasswordAccount, isGoogleAccount, linkGoogleAccount } = auth;
   const topBadge = (user.badges || []).map(getBadge).filter(b => b).sort((a, b) => b!.rank - a!.rank)[0];
 
   return (
@@ -150,20 +148,6 @@ export const UserDashboardPage: React.FC = () => {
                 </div>
                 <Link to="/profile" className="relative z-10 px-6 py-3 bg-white text-indigo-600 text-xs font-black rounded-xl hover:bg-indigo-50 transition-all uppercase tracking-widest shadow-lg transform hover:scale-105 active:scale-95">Update Photo</Link>
             </div>
-          )}
-
-          {isPasswordAccount && !isGoogleAccount && showLinkBanner && (
-              <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 relative animate-fade-in-down">
-                  <button onClick={() => setShowLinkBanner(false)} className="absolute top-3 right-3 text-emerald-700/50 hover:text-emerald-700 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-                  <div className="flex items-center gap-3">
-                      <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-6 h-6" alt="Google" />
-                      <div>
-                          <h4 className="font-bold text-emerald-800 dark:text-emerald-300">Secure Access</h4>
-                          <p className="text-xs text-emerald-600 dark:text-emerald-400">Link your Google account for faster, one-click sign-in.</p>
-                      </div>
-                  </div>
-                  <button onClick={linkGoogleAccount} className="px-5 py-2.5 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-all">Link Now</button>
-              </div>
           )}
 
           <div className="rounded-[2.5rem] overflow-hidden relative shadow-2xl bg-indigo-900 text-white min-h-[250px] flex flex-col justify-center p-8 md:p-12 animate-fade-in-down border border-white/10">

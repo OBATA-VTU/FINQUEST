@@ -1,109 +1,139 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
 
-    // --- HELPER FUNCTIONS ---
-    
-    function isAuthenticated() {
+    // --- Helper Functions ---
+    function isSignedIn() {
       return request.auth != null;
     }
 
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
     function isAdmin() {
-      return isAuthenticated() &&
-        (request.auth.token.email == "ayubaboluwatife246@gmail.com" || 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'librarian', 'vice_president', 'supplement']);
-    }
-    
-    // --- SECURE CONFIGURATION ---
-    match /config/{docId} {
-      // Required for regular users to retrieve shared tokens for departmental uploads
-      allow read: if isAuthenticated();
-      allow write: if isAdmin(); 
+      // Accessing a dedicated admins collection for role-based check
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    // --- USERS COLLECTION ---
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Validation Blueprints ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'name', 'username', 'role']) &&
+             data.email is string && data.email.size() > 0 &&
+             data.name is string && data.name.size() > 0 &&
+             data.username is string && data.username.size() > 0 &&
+             data.role in ['student', 'executive', 'lecturer', 'admin', 'librarian', 'vice_president', 'supplement', 'alumni'];
+    }
+
+    function isValidQuestion(data) {
+      return data.keys().hasAll(['courseCode', 'courseTitle', 'status']) &&
+             data.courseCode is string && data.courseCode.size() > 0 &&
+             data.courseTitle is string && data.courseTitle.size() > 0 &&
+             data.status in ['pending', 'approved'];
+    }
+
+    // --- Collection Rules ---
+
+    match /admins/{userId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only manageable via console or specialized tool
+    }
+
     match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if true; // Allow anyone to check username availability and for counts
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if (isOwner(userId) || isAdmin()) && (
+        // Action: Profile Update
+        (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'username', 'avatarUrl', 'level', 'matricNumber', 'savedQuestions', 'lastActive', 'viewedSessionWrapTimestamp'])) ||
+        // Action: Admin Stats/Points Update
+        (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['role', 'contributionPoints', 'isVerified', 'isBanned', 'banUntil', 'aiCredits', 'lastCreditRefreshDate', 'aiImageCount', 'lastAiImageDate', 'badges', 'infractionCount', 'chatBanUntil']))
+      );
+    }
+
+    match /executives/{execId} {
       allow read: if true;
-      allow create: if isOwner(userId) && request.resource.data.role == 'student';
-      allow update: if (isOwner(userId) && request.writeFields.hasOnly(['name', 'level', 'matricNumber', 'avatarUrl', 'username', 'savedQuestions', 'lastActive', 'badges', 'viewedSessionWrapTimestamp', 'aiCredits', 'lastCreditRefreshDate'])) || isAdmin();
-      allow delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
-    // --- NOTIFICATIONS ---
-    match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.userId == 'all');
-      allow create: if isAdmin();
-      allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
-      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+    match /lecturers/{lecturerId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
-    // --- PAST QUESTIONS (ARCHIVES) ---
+    match /gallery/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /questions/{questionId} {
-      allow read: if resource.data.status == 'approved' || isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update, delete: if isAdmin();
-    }
-
-    // --- COMMUNITY CHAT ---
-    match /community_messages/{messageId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
-      allow delete: if isAdmin() || (isAuthenticated() && resource.data.senderId == request.auth.uid);
-    }
-
-    // --- TEST RESULTS (History) ---
-    match /test_results/{resultId} {
-      allow read: if true; 
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAdmin();
-    }
-
-    // --- LEADERBOARD (Best Scores) ---
-    match /leaderboard/{userId} {
       allow read: if true;
-      allow write: if isOwner(userId) || isAdmin();
-    }
-    
-    // --- PRIVATE NOTES ---
-    match /notes/{noteId} {
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow read, update, delete: if (isAuthenticated() && request.resource.data.userId == request.auth.uid) || isAdmin();
-    }
-
-    // --- SYSTEM STATS ---
-    match /system_stats/{docId} {
-      allow read: if isAdmin();
-      allow write: if docId == 'ai_usage' && isAuthenticated();
-    }
-
-    // --- LOST & FOUND ---
-    match /lost_items/{itemId} {
-      allow read: if resource.data.status == 'approved' || resource.data.status == 'recovered' || isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.status == 'approved';
-      allow update: if (isAuthenticated() && resource.data.finderId == request.auth.uid && request.resource.data.status == 'recovered') || isAdmin();
+      allow create: if isSignedIn() && isValidQuestion(incoming()) && incoming().status == 'pending';
+      allow update: if isAdmin();
       allow delete: if isAdmin();
     }
-    
-    // --- MARKETPLACE ---
-    match /marketplace/{itemId} {
-        allow read: if isAuthenticated();
-        allow create: if isAuthenticated() && request.resource.data.sellerId == request.auth.uid;
-        allow update, delete: if (isAuthenticated() && resource.data.sellerId == request.auth.uid) || isAdmin();
+
+    match /test_results/{resultId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
     }
 
-    // --- PUBLIC CONTENT (Managed by Admin) ---
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /notes/{noteId} {
+      allow read, write: if isSignedIn() && (incoming().userId == request.auth.uid || existing().userId == request.auth.uid);
+    }
+
+    match /notifications/{notificationId} {
+      allow read, update: if isOwner(existing().userId);
+      allow create: if isAdmin();
+      allow delete: if isAdmin() || isOwner(existing().userId);
+    }
+
+    match /groups/{groupId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /community_messages/{messageId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    match /config/ai_settings {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /system_stats/ai_usage {
+      allow read: if true;
+      allow write: if isSignedIn(); // Users increment this
+    }
+
     match /content/{docId} {
       allow read: if true;
-      allow write: if isAdmin() || docId == 'impression_poll';
+      allow write: if isAdmin();
     }
-    match /announcements/{docId} { allow read: if true; allow write: if isAdmin(); }
-    match /gallery/{docId} { allow read: if true; allow write: if isAdmin(); }
-    match /executives/{docId} { allow read: if true; allow write: if isAdmin(); }
-    match /lecturers/{docId} { allow read: if true; allow write: if isAdmin(); }
-    match /groups/{docId} { allow read: if true; allow write: if isAdmin(); }
   }
 }

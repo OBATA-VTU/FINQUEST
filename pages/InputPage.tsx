@@ -4,10 +4,12 @@ import { db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { useDrive } from '../contexts/DriveContext';
 
 export const InputPage: React.FC = () => {
     const auth = useContext(AuthContext);
     const { showNotification } = useNotification();
+    const { accessToken } = useDrive();
 
     const [courseCode, setCourseCode] = useState('');
     const [courseTitle, setCourseTitle] = useState('');
@@ -39,7 +41,7 @@ export const InputPage: React.FC = () => {
 
         try {
             // Using firebase service and default materials folder for this test page
-            const { url, path } = await uploadDocument(file, 'firebase', 'materials', setUploadProgress);
+            const { url, path } = await uploadDocument(file, 'firebase', 'materials', accessToken, setUploadProgress);
 
             const questionData = {
                 courseCode: courseCode.toUpperCase(),

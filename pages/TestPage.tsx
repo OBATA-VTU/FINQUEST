@@ -1,7 +1,6 @@
 
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
-import { Groq } from 'groq-sdk';
 import { useNotification } from '../contexts/NotificationContext';
 import { db } from '../firebase';
 import { collection, addDoc, doc, updateDoc, increment, getDoc } from 'firebase/firestore';
@@ -14,6 +13,7 @@ import { fallbackQuestions } from '../utils/fallbackQuestions';
 import { checkAndAwardBadges } from '../utils/badges';
 import { useNavigate } from 'react-router-dom';
 import { safeStringify, safeParse } from '../utils/serialization';
+import ReactMarkdown from 'react-markdown';
 
 interface Question {
   id: number;
@@ -143,7 +143,6 @@ const ModeSelection: React.FC<{ setView: Function, setMode: Function, navigate: 
 
 const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTimeLeft, setAiNotes, level, setLevel, topic, setTopic }) => {
     const { showNotification } = useNotification();
-    const [showAiChoice, setShowAiChoice] = useState(false);
 
     const startTest = (questions: Question[], time: number, mode: TestMode, currentTopic: string) => {
         const endTime = Date.now() + time * 1000;
@@ -156,22 +155,21 @@ const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTi
     const startMock = async () => {
         setView('loading');
         try {
-            const apiKey = process.env.GROQ_API_KEY || "";
-            if (!apiKey) throw new Error("AI helper is unavailable.");
-            const groq = new Groq({
-                apiKey: apiKey,
-                dangerouslyAllowBrowser: true,
+            const prompt = `Generate exactly 30 high-quality, university-level multiple-choice finance questions for level ${level}. Return as a JSON array of objects with "id", "text", "options" (4 strings), "correctAnswer" (0-3 index). Ensure it's valid JSON.`;
+            const response = await fetch('/api/ai/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt, systemPrompt: "You are an expert Finance Professor. Always output valid JSON." })
             });
-            const prompt = `Generate exactly 30 high-quality, university-level multiple-choice finance questions for level ${level}. Return as a JSON array of objects with "id", "text", "options" (4 strings), "correctAnswer" (0-3 index).`;
-            const response = await groq.chat.completions.create({
-                model: "llama-3.1-8b-instant",
-                messages: [{ role: "user", content: prompt }],
-                response_format: { type: "json_object" }
-            });
+            const data = await response.json();
             trackAiUsage();
-            const content = response.choices[0].message.content;
+            const content = data.content;
             if (!content) throw new Error("AI engine failed to output data.");
-            const aiQuestions = safeParse<any>(content, null);
+            
+            // Extract JSON from potential markdown code blocks
+            const jsonStr = content.includes('```json') ? content.split('```json')[1].split('```')[0] : (content.includes('```') ? content.split('```')[1].split('```')[0] : content);
+            
+            const aiQuestions = safeParse<any>(jsonStr, null);
             const questionsArray = Array.isArray(aiQuestions) ? aiQuestions : (aiQuestions?.questions || aiQuestions?.test || []);
             if (questionsArray.length === 0) throw new Error("No questions generated.");
             startTest(questionsArray, 40 * 60, 'mock', '');
@@ -183,22 +181,20 @@ const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTi
     const generateAiQuiz = async () => {
         setView('loading');
         try {
-            const apiKey = process.env.GROQ_API_KEY || "";
-            if (!apiKey) throw new Error("AI helper is unavailable.");
-            const groq = new Groq({
-                apiKey: apiKey,
-                dangerouslyAllowBrowser: true,
+            const prompt = `Generate exactly 10 high-quality finance questions for the topic: "${topic}". Return as a JSON array of objects with "id", "text", "options", "correctAnswer". Ensure it's valid JSON.`;
+            const response = await fetch('/api/ai/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt, systemPrompt: "You are an expert Finance Professor. Always output valid JSON." })
             });
-            const prompt = `Generate exactly 10 high-quality finance questions for the topic: "${topic}". Return as a JSON array of objects with "id", "text", "options", "correctAnswer".`;
-            const response = await groq.chat.completions.create({
-                model: "llama-3.1-8b-instant",
-                messages: [{ role: "user", content: prompt }],
-                response_format: { type: "json_object" }
-            });
+            const data = await response.json();
             trackAiUsage();
-            const content = response.choices[0].message.content;
+            const content = data.content;
             if (!content) throw new Error("AI engine failed to output data.");
-            const aiQuestions = safeParse<any>(content, null);
+            
+            const jsonStr = content.includes('```json') ? content.split('```json')[1].split('```')[0] : (content.includes('```') ? content.split('```')[1].split('```')[0] : content);
+
+            const aiQuestions = safeParse<any>(jsonStr, null);
             const questionsArray = Array.isArray(aiQuestions) ? aiQuestions : (aiQuestions?.questions || aiQuestions?.quiz || []);
             if (questionsArray.length === 0) throw new Error("No questions generated.");
             startTest(questionsArray, 15 * 60, 'ai', topic);
@@ -208,19 +204,15 @@ const ConfigurationScreen: React.FC<any> = ({ mode, setView, setQuestions, setTi
     const generateAiNotes = async () => {
         setView('loading');
         try {
-            const apiKey = process.env.GROQ_API_KEY || "";
-            if (!apiKey) throw new Error("AI helper is unavailable.");
-            const groq = new Groq({
-                apiKey: apiKey,
-                dangerouslyAllowBrowser: true,
-            });
             const prompt = `Generate professional university study notes on: "${topic}". Use Markdown.`;
-            const response = await groq.chat.completions.create({
-                model: "llama-3.1-8b-instant",
-                messages: [{ role: "user", content: prompt }],
+            const response = await fetch('/api/ai/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt })
             });
+            const data = await response.json();
             trackAiUsage();
-            setAiNotes(response.choices[0].message.content || "");
+            setAiNotes(data.content || "");
             setView('notes');
         } catch (e) { showNotification("AI engine busy.", "error"); setView('configure'); }
     };
@@ -266,10 +258,10 @@ const LoadingScreen: React.FC = () => (
         <div className="w-24 h-24 relative mb-10">
             <div className="absolute inset-0 border-8 border-indigo-100 dark:border-slate-800 rounded-full"></div>
             <div className="absolute inset-0 border-8 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-            <div className="absolute inset-0 flex items-center justify-center font-black text-indigo-600 animate-pulse">AI</div>
+            <div className="absolute inset-0 flex items-center justify-center font-black text-indigo-600 animate-pulse text-xs tracking-tighter">FINSA</div>
         </div>
-        <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2">Starting AI Helper</h2>
-        <p className="text-slate-500 dark:text-slate-400 font-medium text-center max-w-xs uppercase tracking-widest text-[10px]">Processing questions and materials...</p>
+        <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2 font-serif">Intelligence Processing</h2>
+        <p className="text-slate-500 dark:text-slate-400 font-medium text-center max-w-xs uppercase tracking-[0.3em] text-[10px]">Analyzing materials & forging quiz...</p>
     </div>
 );
 
@@ -277,7 +269,46 @@ const GameScreen: React.FC<any> = ({ questions, timeLeft, setTimeLeft, reset, us
     const auth = useContext(AuthContext);
     const { showNotification } = useNotification();
     const [showCalculator, setShowCalculator] = useState(false);
+    const [explanation, setExplanation] = useState<string | null>(null);
+    const [isExplaining, setIsExplaining] = useState(false);
+    const [isFocusMode, setIsFocusMode] = useState(false);
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [tip, setTip] = useState<string | null>(null);
+    const [isThinkingTip, setIsThinkingTip] = useState(false);
     const timerRef = useRef<any>();
+
+    const speakQuestion = () => {
+        if (isSpeaking) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+            return;
+        }
+        
+        const q = questions[currentQuestionIndex];
+        const utterance = new SpeechSynthesisUtterance(`Question ${currentQuestionIndex + 1}: ${q.text}. Options are: ${q.options.map((o, i) => `${String.fromCharCode(65+i)}: ${o}`).join('. ')}`);
+        utterance.onend = () => setIsSpeaking(false);
+        setIsSpeaking(true);
+        window.speechSynthesis.speak(utterance);
+    };
+
+    const getSmartTip = async () => {
+        if (isThinkingTip) return;
+        setIsThinkingTip(true);
+        try {
+            const q = questions[currentQuestionIndex];
+            const response = await fetch('/api/ai/tip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: q.text, options: q.options })
+            });
+            const data = await response.json();
+            setTip(data.tip);
+        } catch (e) {
+            showNotification("AI is busy.", "error");
+        } finally {
+            setIsThinkingTip(false);
+        }
+    };
 
     const endTest = async () => {
         const finalScore = calculateScore(questions, userAnswers);
@@ -294,6 +325,30 @@ const GameScreen: React.FC<any> = ({ questions, timeLeft, setTimeLeft, reset, us
             localStorage.setItem('lastTestResults', safeStringify({ questions, userAnswers, score: finalScore }));
         }
         setView('results');
+    };
+
+    const explainQuestion = async () => {
+        if (isExplaining) return;
+        setIsExplaining(true);
+        try {
+            const q = questions[currentQuestionIndex];
+            const response = await fetch('/api/ai/explain', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    question: q.text,
+                    options: q.options,
+                    correctOption: q.correctAnswer,
+                    selectedOption: userAnswers[currentQuestionIndex]
+                })
+            });
+            const data = await response.json();
+            setExplanation(data.explanation);
+        } catch (e) {
+            showNotification("AI is currently offline.", "error");
+        } finally {
+            setIsExplaining(false);
+        }
     };
 
     useEffect(() => {
@@ -313,33 +368,75 @@ const GameScreen: React.FC<any> = ({ questions, timeLeft, setTimeLeft, reset, us
         <div className="min-h-screen bg-slate-100 dark:bg-slate-950 p-4 md:p-10 flex flex-col h-screen overflow-hidden">
             {showCalculator && <Calculator onClose={() => setShowCalculator(false)} />}
             
-            <div className="flex justify-between items-center mb-8 shrink-0">
+            {explanation && (
+                <div className="fixed inset-0 bg-slate-950/90 z-[100] flex items-center justify-center p-6 backdrop-blur-md" onClick={() => setExplanation(null)}>
+                    <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-10 max-w-2xl w-full border border-white/10 shadow-2xl animate-pop-in" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-black text-xl text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Intelligence Insight</h3>
+                            <button onClick={() => setExplanation(null)} className="text-slate-400 hover:text-rose-500 transition-colors">✕</button>
+                        </div>
+                        <div className="prose prose-slate dark:prose-invert max-h-[60vh] overflow-y-auto pr-4 custom-scrollbar">
+                            <ReactMarkdown>{explanation}</ReactMarkdown>
+                        </div>
+                        <button onClick={() => setExplanation(null)} className="mt-8 w-full py-4 bg-indigo-600 text-white font-black rounded-2xl uppercase tracking-widest text-xs">Understood</button>
+                    </div>
+                </div>
+            )}
+
+            {tip && (
+                <div className="fixed top-32 right-10 w-64 bg-amber-50 dark:bg-amber-950/50 p-6 rounded-3xl border border-amber-200 dark:border-amber-800 shadow-2xl animate-slide-in-right z-[50]">
+                    <div className="flex justify-between items-center mb-3">
+                        <span className="text-[10px] font-black uppercase text-amber-600 tracking-widest flex items-center gap-2">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                            AI Smart Tip
+                        </span>
+                        <button onClick={() => setTip(null)} className="text-amber-400">✕</button>
+                    </div>
+                    <p className="text-sm font-medium text-amber-900 dark:text-amber-200 italic leading-relaxed">"{tip}"</p>
+                </div>
+            )}
+
+            <div className={`flex justify-between items-center mb-8 shrink-0 ${isFocusMode ? 'opacity-20 hover:opacity-100 transition-opacity' : ''}`}>
                 <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-black shadow-lg">Q</div>
-                    <div>
+                    <div className={isFocusMode ? 'hidden sm:block' : ''}>
                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Question Segment</p>
                         <p className="text-lg font-black dark:text-white leading-none">{currentQuestionIndex + 1} of {questions.length}</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2 md:gap-4">
+                    <button onClick={() => setIsFocusMode(!isFocusMode)} className={`p-3 rounded-2xl shadow-sm transition-all ${isFocusMode ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-900 text-slate-500 hover:text-indigo-600'}`} title="Focus Mode">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    </button>
+                    <button onClick={speakQuestion} className={`p-3 rounded-2xl shadow-sm transition-all ${isSpeaking ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-900 text-slate-500 hover:text-indigo-600'}`} title="Read Aloud">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                    </button>
+                    <button onClick={getSmartTip} disabled={isThinkingTip} className={`hidden sm:flex items-center gap-2 px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-600 hover:text-white shadow-lg shadow-amber-500/10`}>
+                        {isThinkingTip ? 'Wait...' : 'Get Hint'}
+                    </button>
+                    <button onClick={explainQuestion} disabled={isExplaining} className={`hidden lg:flex items-center gap-2 px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${isExplaining ? 'bg-slate-200 text-slate-400' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white shadow-lg shadow-emerald-500/10'}`}>
+                        {isExplaining ? 'Thinking...' : 'AI Explain'}
+                    </button>
                     <button onClick={() => setShowCalculator(true)} className="p-3 bg-white dark:bg-slate-900 rounded-2xl shadow-sm text-slate-500 hover:text-indigo-600 transition-colors">
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
                     </button>
-                    <div className="bg-white dark:bg-slate-900 px-6 py-3 rounded-[2rem] shadow-xl border border-rose-100 dark:border-rose-950 flex items-center gap-3">
+                    <div className={`bg-white dark:bg-slate-900 px-6 py-3 rounded-[2rem] shadow-xl border border-rose-100 dark:border-rose-950 flex items-center gap-3 ${isFocusMode ? 'opacity-40' : ''}`}>
                         <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse"></div>
                         <span className="font-mono text-2xl font-black text-rose-500">{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</span>
                     </div>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto pr-4 mb-8 custom-scrollbar">
-                <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full mb-10">
-                    <div className="bg-indigo-600 h-1.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
-                </div>
+            <div className="flex-1 overflow-y-auto pr-2 mb-8 custom-scrollbar">
+                {!isFocusMode && (
+                    <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full mb-10">
+                        <div className="bg-indigo-600 h-1.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                    </div>
+                )}
                 
-                <div className="bg-white dark:bg-slate-900 p-8 md:p-14 rounded-[3.5rem] shadow-2xl border border-slate-100 dark:border-slate-800">
-                    <h2 className="text-2xl md:text-4xl font-serif font-bold text-slate-900 dark:text-white leading-tight mb-12">{q?.text}</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className={`bg-white dark:bg-slate-900 p-8 md:p-14 rounded-[3.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 transition-all ${isFocusMode ? 'md:mx-20' : ''}`}>
+                    <h2 className={`font-serif font-bold text-slate-900 dark:text-white leading-tight mb-12 ${isFocusMode ? 'text-3xl md:text-5xl text-center' : 'text-2xl md:text-4xl'}`}>{q?.text}</h2>
+                    <div className={`grid grid-cols-1 gap-4 ${isFocusMode ? 'max-w-2xl mx-auto' : 'md:grid-cols-2'}`}>
                         {q?.options.map((opt, idx) => (
                             <button key={idx} onClick={() => setUserAnswers({...userAnswers, [currentQuestionIndex]: idx})} className={`group text-left p-6 rounded-[2rem] border-2 transition-all flex items-center gap-5 ${userAnswers[currentQuestionIndex] === idx ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/40' : 'border-slate-100 dark:border-slate-800 hover:border-indigo-300'}`}>
                                 <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 font-black text-xs transition-colors ${userAnswers[currentQuestionIndex] === idx ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 dark:border-slate-700 text-slate-400 group-hover:border-indigo-400'}`}>{String.fromCharCode(65+idx)}</div>
@@ -351,11 +448,11 @@ const GameScreen: React.FC<any> = ({ questions, timeLeft, setTimeLeft, reset, us
             </div>
 
             <div className="flex justify-between items-center py-6 border-t border-slate-200 dark:border-slate-800 shrink-0">
-                <button disabled={currentQuestionIndex === 0} onClick={() => setCurrentQuestionIndex((p: number) => p - 1)} className="px-10 py-4 font-black uppercase tracking-widest text-xs text-slate-500 disabled:opacity-30">Previous</button>
+                <button disabled={currentQuestionIndex === 0} onClick={() => setCurrentQuestionIndex((p: number) => p - 1)} className="px-10 py-4 font-black uppercase tracking-widest text-xs text-slate-500 disabled:opacity-30 transition-opacity">Previous</button>
                 {currentQuestionIndex === questions.length - 1 ? (
-                    <button onClick={endTest} className="px-12 py-5 bg-emerald-600 text-white font-black rounded-[2rem] shadow-xl uppercase tracking-widest text-xs hover:bg-emerald-700">Submit Exam</button>
+                    <button onClick={endTest} className="px-12 py-5 bg-emerald-600 text-white font-black rounded-[2rem] shadow-xl uppercase tracking-widest text-xs hover:bg-emerald-700 transition-all hover:scale-105 active:scale-95">Submit Exam</button>
                 ) : (
-                    <button onClick={() => setCurrentQuestionIndex((p: number) => p + 1)} className="px-12 py-5 bg-indigo-600 text-white font-black rounded-[2rem] shadow-xl uppercase tracking-widest text-xs hover:bg-indigo-700">Next Question</button>
+                    <button onClick={() => setCurrentQuestionIndex((p: number) => p + 1)} className="px-12 py-5 bg-indigo-600 text-white font-black rounded-[2rem] shadow-xl uppercase tracking-widest text-xs hover:bg-indigo-700 transition-all hover:scale-105 active:scale-95">Next Question</button>
                 )}
             </div>
         </div>
@@ -364,23 +461,75 @@ const GameScreen: React.FC<any> = ({ questions, timeLeft, setTimeLeft, reset, us
 
 const ResultsScreen: React.FC<any> = ({ onRestart }) => {
     const [results, setResults] = useState<any>(null);
+    const [analysis, setAnalysis] = useState<string | null>(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+
     useEffect(() => {
         const data = localStorage.getItem('lastTestResults');
         if (data) { try { setResults(safeParse<any>(data, null)); } catch (e) {} }
     }, []);
+
+    const performDeepAnalysis = async () => {
+        if (isAnalyzing || !results) return;
+        setIsAnalyzing(true);
+        try {
+            const response = await fetch('/api/ai/cbt-analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    questions: results.questions,
+                    userAnswers: results.userAnswers,
+                    score: results.score
+                })
+            });
+            const data = await response.json();
+            setAnalysis(data.analysis);
+        } catch (e) {
+            console.error("Analysis failed", e);
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
     if (!results) return <LoadingScreen />;
     const { score } = results;
+
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-white dark:bg-slate-900 p-12 rounded-[4rem] shadow-2xl text-center border border-slate-100 dark:border-slate-800 max-w-xl w-full">
-                <div className={`w-32 h-32 mx-auto rounded-full flex items-center justify-center mb-8 border-8 ${score >= 50 ? 'border-emerald-500 text-emerald-500' : 'border-rose-500 text-rose-500'}`}>
+        <div className="min-h-screen flex items-center justify-center p-4 animate-fade-in py-20 overflow-y-auto">
+            <div className="bg-white dark:bg-slate-900 p-8 md:p-16 rounded-[4rem] shadow-2xl text-center border border-slate-100 dark:border-slate-800 max-w-4xl w-full">
+                <div className={`w-32 h-32 mx-auto rounded-full flex items-center justify-center mb-8 border-8 ${score >= 50 ? 'border-emerald-500 text-emerald-500' : 'border-rose-500 text-rose-500'} shadow-2xl shadow-emerald-500/10`}>
                     <span className="text-4xl font-black">{score}%</span>
                 </div>
-                <h2 className="text-4xl font-serif font-black text-slate-900 dark:text-white mb-4">{score >= 50 ? 'Exam Passed' : 'Needs Revision'}</h2>
-                <p className="text-slate-500 dark:text-slate-400 mb-10 leading-relaxed">Your results have been encrypted and uploaded to the Global Leaderboard database.</p>
-                <div className="flex gap-4">
-                    <button onClick={onRestart} className="flex-1 py-5 bg-indigo-600 text-white font-black rounded-[2rem] shadow-lg uppercase tracking-widest text-xs">New Session</button>
-                    <button onClick={() => window.location.reload()} className="px-8 py-5 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white font-black rounded-[2rem] uppercase tracking-widest text-xs">Analysis</button>
+                <h2 className="text-4xl md:text-5xl font-serif font-black text-slate-900 dark:text-white mb-4">{score >= 50 ? 'Exam Passed' : 'Needs Revision'}</h2>
+                <p className="text-slate-500 dark:text-slate-400 mb-12 leading-relaxed max-w-md mx-auto">Your practice results have been cataloged in the department analytics database.</p>
+                
+                {analysis ? (
+                    <div className="text-left bg-slate-50 dark:bg-slate-950 p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 mb-12 animate-slide-in-up prose prose-slate dark:prose-invert max-w-none">
+                        <h3 className="font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest text-xs mb-6">Deep Performance Analysis</h3>
+                        <ReactMarkdown>{analysis}</ReactMarkdown>
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center gap-4 mb-12">
+                         <button onClick={performDeepAnalysis} disabled={isAnalyzing} className={`group flex items-center gap-3 px-10 py-5 rounded-[2rem] font-black uppercase tracking-widest text-xs transition-all ${isAnalyzing ? 'bg-slate-100 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-2xl shadow-emerald-500/20 active:scale-95'}`}>
+                            {isAnalyzing ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                    Syncing Neural Weights...
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                    Generate Deep Analysis
+                                </>
+                            )}
+                        </button>
+                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Powered by Gemini 3.7 Flash Intelligence</p>
+                    </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <button onClick={onRestart} className="flex-1 py-6 bg-indigo-600 text-white font-black rounded-[2rem] shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 uppercase tracking-widest text-xs transition-all active:scale-95">Restart Session</button>
+                    <button onClick={() => window.location.reload()} className="flex-1 py-6 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white font-black rounded-[2rem] uppercase tracking-widest text-xs hover:bg-slate-200 transition-all active:scale-95">Review Questions</button>
                 </div>
             </div>
         </div>
@@ -389,10 +538,10 @@ const ResultsScreen: React.FC<any> = ({ onRestart }) => {
 
 const NotesScreen: React.FC<any> = ({ notes, topic, onBack }) => (
     <div className="max-w-4xl mx-auto px-4 py-20 animate-fade-in">
-        <button onClick={onBack} className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 mb-8">&larr; Return to Dashboard</button>
+        <button onClick={onBack} className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 mb-8 flex items-center gap-2 transition-transform hover:-translate-x-2">&larr; Return to Dashboard</button>
         <div className="bg-white dark:bg-slate-900 p-12 rounded-[3.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 prose prose-slate dark:prose-invert max-w-none">
-            <h1 className="text-4xl font-serif font-black mb-8">Intelligence: {topic}</h1>
-            <div className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{notes}</div>
+            <h1 className="text-4xl font-serif font-black mb-10 text-indigo-900 dark:text-white">Intelligence: {topic}</h1>
+            <div className="text-slate-700 dark:text-slate-300 leading-relaxed"><ReactMarkdown>{notes}</ReactMarkdown></div>
         </div>
     </div>
 );

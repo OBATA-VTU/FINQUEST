@@ -17,20 +17,22 @@ export const HomePage: React.FC = () => {
   const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
-    observerRef.current = new IntersectionObserver((entries) => {
+    const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 entry.target.classList.add('active');
-                observerRef.current?.unobserve(entry.target);
+                observer.unobserve(entry.target);
             }
         });
     }, { threshold: 0.1, rootMargin: '0px' });
+    
+    observerRef.current = observer;
 
     const revealElements = document.querySelectorAll('.reveal');
-    revealElements.forEach(el => observerRef.current?.observe(el));
+    revealElements.forEach(el => observer.observe(el));
 
-    return () => observerRef.current?.disconnect();
-  }, [announcements, galleryImages, stats]); 
+    return () => observer.disconnect();
+  }, [announcements.length, galleryImages.length, loadingStats]); 
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -54,7 +56,7 @@ export const HomePage: React.FC = () => {
             });
             setLoadingStats(false);
         } catch (error: any) {
-            console.error("Failed to fetch homepage content:", error.message || error);
+            console.error("Failed to fetch homepage content:", error.message || "Unknown error");
             setLoadingStats(false);
         }
     };

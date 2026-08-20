@@ -2,12 +2,12 @@ import React, { useState, FormEvent, useRef, useEffect, useContext } from 'react
 import { Level } from '../types';
 import { LEVELS } from '../constants';
 import { useSettings } from '../contexts/SettingsContext';
+import { useDrive } from '../contexts/DriveContext';
 import { uploadFileToFirebase, uploadDocument, uploadToImgBB, trackAiUsage, handleFirestoreError, OperationType } from '../utils/api';
 import { db } from '../firebase';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { Groq } from 'groq-sdk';
 import { useNavigate } from 'react-router-dom';
 
 type UploadType = 'select' | 'document' | 'images' | 'text' | 'ai' | 'link';
@@ -18,6 +18,7 @@ export const UploadPage: React.FC = () => {
     const auth = useContext(AuthContext);
     const { showNotification } = useNotification();
     const { siteSettings } = useSettings();
+    const { accessToken, connect, isConnected } = useDrive();
     const navigate = useNavigate();
 
     const [uploadType, setUploadType] = useState<UploadType>('select');
@@ -129,7 +130,12 @@ export const UploadPage: React.FC = () => {
             if (uploadType === 'document') {
                 if (!file) throw new Error("Please pick a file first.");
                 setUploadStatus('Sending File...');
-                const { url, path } = await uploadDocument(file, siteSettings.uploadService, siteSettings.driveFolderId, setUploadProgress);
+                // Ensure Drive is connected if using Drive service
+                if ((siteSettings.uploadService === 'drive' || siteSettings.uploadService === 'google_drive') && !isConnected) {
+                    connect();
+                    throw new Error("Please connect your Google Drive to proceed with the upload.");
+                }
+                const { url, path } = await uploadDocument(file, siteSettings.uploadService, siteSettings.driveFolderId, accessToken, setUploadProgress);
                 questionData.fileUrl = url;
                 questionData.storagePath = path;
             } else if (uploadType === 'images') {

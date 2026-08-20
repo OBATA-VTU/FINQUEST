@@ -5,6 +5,7 @@ import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SettingsProvider } from './contexts/SettingsContext';
+import { DriveProvider } from './contexts/DriveContext';
 import { Layout } from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
 import { NotificationHandler } from './components/NotificationHandler';
@@ -17,6 +18,7 @@ import { db } from './firebase';
 import { HomePage } from './pages/HomePage';
 
 // Lazy Loaded Public/Student Pages
+// import { AIPage } from './pages/AIPage'; // Removed
 const UserDashboardPage = lazy(() => import('./pages/UserDashboardPage').then(m => ({ default: m.UserDashboardPage })));
 const PastQuestionsPage = lazy(() => import('./pages/PastQuestionsPage').then(m => ({ default: m.PastQuestionsPage })));
 const ELibraryPage = lazy(() => import('./pages/ELibraryPage').then(m => ({ default: m.ELibraryPage })));
@@ -39,7 +41,6 @@ const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then(m => (
 const LostFoundPage = lazy(() => import('./pages/LostFoundPage').then(m => ({ default: m.LostFoundPage })));
 const FAQPage = lazy(() => import('./pages/FAQPage').then(m => ({ default: m.FAQPage })));
 const DownloadAppPage = lazy(() => import('./pages/DownloadAppPage').then(m => ({ default: m.DownloadAppPage })));
-const AIPage = lazy(() => import('./pages/AIPage').then(m => ({ default: m.AIPage })));
 
 // Lazy Loaded Admin Components
 const AdminLayout = lazy(() => import('./components/AdminLayout').then(m => ({ default: m.AdminLayout })));
@@ -139,7 +140,9 @@ const AppContent: React.FC = () => {
               });
           }
         }
-      } catch (e) {}
+      } catch (e: any) {
+          console.error("Session wrap check failed:", e.message || "Unknown error");
+      }
     };
     checkSession();
   }, [auth?.user?.id]);
@@ -170,7 +173,6 @@ const AppContent: React.FC = () => {
                         
                         {/* Authenticated Routes */}
                         <Route path="/dashboard" element={<RequireAuth><Suspense fallback={<PageLoader />}><UserDashboardPage /></Suspense></RequireAuth>} />
-                        <Route path="/ai" element={<RequireAuth><Suspense fallback={<PageLoader />}><AIPage /></Suspense></RequireAuth>} />
                         <Route path="/questions" element={<RequireAuth><Suspense fallback={<PageLoader />}><PastQuestionsPage /></Suspense></RequireAuth>} />
                     <Route path="/library" element={<RequireAuth><Suspense fallback={<PageLoader />}><ELibraryPage /></Suspense></RequireAuth>} />
                         <Route path="/community" element={<RequireAuth><Suspense fallback={<PageLoader />}><CommunityPage /></Suspense></RequireAuth>} />
@@ -189,17 +191,17 @@ const AppContent: React.FC = () => {
                     {/* FIXED ADMIN ROUTING */}
                     <Route path="/admin" element={<RequireAuth adminOnly><Suspense fallback={<PageLoader />}><AdminLayout /></Suspense></RequireAuth>}>
                         <Route index element={<Navigate to="dashboard" replace />} />
-                        <Route path="dashboard" element={<AdminPage />} />
-                        <Route path="users" element={<AdminUsersPage />} />
-                        <Route path="active-users" element={<AdminActiveUsersPage />} />
-                        <Route path="materials" element={<AdminMaterialsPage />} />
-                        <Route path="news" element={<AdminNewsPage />} />
-                        <Route path="executives" element={<AdminExecutivesPage />} />
-                        <Route path="lecturers" element={<AdminLecturersPage />} />
-                        <Route path="community" element={<AdminCommunityPage />} />
-                        <Route path="gallery" element={<AdminGalleryPage />} />
-                        <Route path="approvals" element={<AdminApprovalsPage />} />
-                        <Route path="settings" element={<AdminSettingsPage />} />
+                        <Route path="dashboard" element={<Suspense fallback={<PageLoader />}><AdminPage /></Suspense>} />
+                        <Route path="users" element={<Suspense fallback={<PageLoader />}><AdminUsersPage /></Suspense>} />
+                        <Route path="active-users" element={<Suspense fallback={<PageLoader />}><AdminActiveUsersPage /></Suspense>} />
+                        <Route path="materials" element={<Suspense fallback={<PageLoader />}><AdminMaterialsPage /></Suspense>} />
+                        <Route path="news" element={<Suspense fallback={<PageLoader />}><AdminNewsPage /></Suspense>} />
+                        <Route path="executives" element={<Suspense fallback={<PageLoader />}><AdminExecutivesPage /></Suspense>} />
+                        <Route path="lecturers" element={<Suspense fallback={<PageLoader />}><AdminLecturersPage /></Suspense>} />
+                        <Route path="community" element={<Suspense fallback={<PageLoader />}><AdminCommunityPage /></Suspense>} />
+                        <Route path="gallery" element={<Suspense fallback={<PageLoader />}><AdminGalleryPage /></Suspense>} />
+                        <Route path="approvals" element={<Suspense fallback={<PageLoader />}><AdminApprovalsPage /></Suspense>} />
+                        <Route path="settings" element={<Suspense fallback={<PageLoader />}><AdminSettingsPage /></Suspense>} />
                         <Route path="*" element={<Navigate to="dashboard" replace />} />
                     </Route>
 
@@ -223,7 +225,9 @@ const App: React.FC = () => {
         <NotificationProvider>
           <AuthProvider>
             <SettingsProvider>
-              <AppContent />
+              <DriveProvider>
+                <AppContent />
+              </DriveProvider>
             </SettingsProvider>
           </AuthProvider>
         </NotificationProvider>

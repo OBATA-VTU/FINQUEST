@@ -11,7 +11,7 @@
     "start": "node dist/server.cjs"
   },
   "dependencies": {
-    "@google/genai": "latest",
+    "@google/genai": "^2.18.0",
     "@supabase/supabase-js": "^2.39.7",
     "@tailwindcss/vite": "^4.2.1",
     "@types/gapi.auth2": "^0.0.61",
@@ -29,6 +29,7 @@
     "openai": "^4.104.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^6.22.0",
     "tailwindcss": "^4.2.1",
     "tsx": "^4.22.4"

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc, getDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
+import { useDrive } from '../contexts/DriveContext';
 import { uploadDocument, deleteDocument, handleFirestoreError, OperationType } from '../utils/api';
 import { LEVELS } from '../constants';
-import { Groq } from 'groq-sdk';
 
 const CATEGORIES = ["Past Question", "Test Question", "Lecture Note", "Handout", "Textbook", "Other"];
 
@@ -12,6 +12,7 @@ export const AdminMaterialsPage: React.FC = () => {
   const [contentItems, setContentItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { showNotification } = useNotification();
+  const { accessToken, connect, isConnected } = useDrive();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
@@ -109,7 +110,12 @@ export const AdminMaterialsPage: React.FC = () => {
               payload.textContent = null;
           } else {
               if (formFile) {
-                  const { url, path } = await uploadDocument(formFile, uploadService, driveFolderId, setUploadProgress);
+                  // Ensure Drive is connected if using Drive service
+                  if ((uploadService === 'drive' || uploadService === 'google_drive') && !isConnected) {
+                      connect();
+                      throw new Error("Please connect your Google Drive to proceed with the upload.");
+                  }
+                  const { url, path } = await uploadDocument(formFile, uploadService, driveFolderId, accessToken, setUploadProgress);
                   payload.fileUrl = url;
                   payload.storagePath = path;
               }

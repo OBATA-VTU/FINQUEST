@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
 
 type NotificationType = 'success' | 'error' | 'info' | 'warning';
 
@@ -20,7 +20,7 @@ const NotificationContext = createContext<NotificationContextType | null>(null);
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const showNotification = (message: string, type: NotificationType = 'info') => {
+  const showNotification = useCallback((message: string, type: NotificationType = 'info') => {
     const id = Date.now();
     setNotifications((prev) => [...prev, { id, message, type }]);
     
@@ -29,14 +29,20 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     setTimeout(() => {
         removeNotification(id);
     }, duration);
-  };
+  }, []);
 
-  const removeNotification = (id: number) => {
+  const removeNotification = useCallback((id: number) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    notifications,
+    showNotification,
+    removeNotification
+  }), [notifications, showNotification, removeNotification]);
 
   return (
-    <NotificationContext.Provider value={{ notifications, showNotification, removeNotification }}>
+    <NotificationContext.Provider value={value}>
       {children}
       
       {/* Toast Container */}

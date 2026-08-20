@@ -14,12 +14,9 @@ export const SignUpPage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     
-    // Check if we arrived here from a Google login attempt on the SignIn page
-    const [googleAuthData, setGoogleAuthData] = useState<any>(location.state?.googleUser || null);
-
     const [formData, setFormData] = useState({
-        name: googleAuthData?.displayName || '',
-        email: googleAuthData?.email || '',
+        name: '',
+        email: '',
         username: '',
         matricNumber: '',
         password: '',
@@ -50,8 +47,8 @@ export const SignUpPage: React.FC = () => {
                 const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
                 const snapshot = await getDocs(q);
                 setUsernameStatus(snapshot.empty ? 'available' : 'taken');
-            } catch (err) {
-                console.error("Username check failed", err);
+            } catch (err: any) {
+                console.error("Username check failed:", err.message || "Unknown error");
             } finally {
                 setCheckingUsername(false);
             }
@@ -83,8 +80,7 @@ export const SignUpPage: React.FC = () => {
             await auth?.signup({
                 ...formData,
                 matricNumber: formData.matricNumber.toUpperCase().trim(),
-                pass: googleAuthData ? undefined : formData.password,
-                googleUid: googleAuthData?.uid
+                pass: formData.password
             });
             navigate('/dashboard', { replace: true });
         } catch (err: any) {
@@ -107,28 +103,6 @@ export const SignUpPage: React.FC = () => {
         }
     };
 
-    const handleGoogleSignUp = async () => {
-        if (loading) return;
-        setLoading(true);
-        try {
-            const result = await auth?.loginWithGoogle();
-            if (result?.needsProfileCompletion) {
-                setGoogleAuthData(result.googleUser);
-                setFormData(prev => ({
-                    ...prev,
-                    name: result.googleUser.displayName || prev.name,
-                    email: result.googleUser.email || prev.email,
-                }));
-            } else {
-                navigate('/dashboard', { replace: true });
-            }
-        } catch (err) {
-            // Handled by context notifications
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const isSubmitDisabled = loading || checkingUsername || usernameStatus === 'taken' || usernameStatus === 'short' || !isIdValid;
 
     return (
@@ -137,32 +111,14 @@ export const SignUpPage: React.FC = () => {
                 <div className="p-8 text-center border-b border-slate-100 dark:border-slate-800">
                     <Logo className="h-16 w-16 mx-auto mb-4" />
                     <h1 className="text-2xl font-serif font-bold text-slate-900 dark:text-white">
-                        {googleAuthData ? "Finish Setup" : "Create Account"}
+                        Create Account
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-                        {googleAuthData ? "Just a few more details to join FINSA." : "Join the official FINSA student portal."}
+                        Join the official FINSA student portal.
                     </p>
                 </div>
 
-                {!googleAuthData && (
-                    <div className="px-8 pt-8 pb-2 space-y-4">
-                        <button 
-                            type="button"
-                            onClick={handleGoogleSignUp}
-                            disabled={loading}
-                            className="w-full py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-white flex items-center justify-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm active:scale-95"
-                        >
-                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
-                            Sign up with Google
-                        </button>
-                        <div className="relative py-2">
-                            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100 dark:border-slate-800"></div></div>
-                            <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest"><span className="bg-white dark:bg-slate-900 px-3 text-slate-400">Or use email</span></div>
-                        </div>
-                    </div>
-                )}
-
-                <form onSubmit={handleSubmit} className={`px-8 pb-8 space-y-4 ${googleAuthData ? 'pt-8' : ''}`}>
+                <form onSubmit={handleSubmit} className="p-8 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Full Name</label>
@@ -215,10 +171,10 @@ export const SignUpPage: React.FC = () => {
                             <input 
                                 type="email" 
                                 required
-                                readOnly={!!googleAuthData}
                                 value={formData.email} 
                                 onChange={e => setFormData({...formData, email: e.target.value})}
-                                className={`w-full px-4 py-3 border rounded-xl outline-none dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all ${googleAuthData ? 'bg-slate-100 dark:bg-slate-700 cursor-not-allowed text-slate-400 border-transparent' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}
+                                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all"
+                                placeholder="name@student.aaua.edu.ng"
                             />
                         </div>
                         <div>
@@ -233,25 +189,23 @@ export const SignUpPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {!googleAuthData && (
-                        <div>
-                            <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Password</label>
-                            <input 
-                                type="password" 
-                                required
-                                value={formData.password} 
-                                onChange={e => setFormData({...formData, password: e.target.value})}
-                                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all"
-                                placeholder="Min 6 characters"
-                            />
-                        </div>
-                    )}
+                    <div>
+                        <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Password</label>
+                        <input 
+                            type="password" 
+                            required
+                            value={formData.password} 
+                            onChange={e => setFormData({...formData, password: e.target.value})}
+                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all"
+                            placeholder="Min 6 characters"
+                        />
+                    </div>
 
                     <button 
                         disabled={isSubmitDisabled}
                         className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 mt-4 active:scale-95"
                     >
-                        {loading ? "Processing..." : googleAuthData ? "Complete Setup" : "Create Account"}
+                        {loading ? "Processing..." : "Create Account"}
                     </button>
 
                     <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-4">

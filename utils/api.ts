@@ -160,31 +160,63 @@ export const uploadFileToFirebase = async (file: File, folder: string = 'materia
 };
 
 /**
- * Enhanced Drive Upload with proper link formatting
+ * Enhanced Drive Upload with proper Google Drive API integration
  */
-export const uploadFileToDrive = async (file: File, folderId: string, onProgress?: (p: number) => void): Promise<{ url: string, path: string }> => {
-    // REALITY: Direct Drive upload is not possible from client without proxy.
-    // ACTION: We upload to Firebase Secure Storage but mark it with Drive metadata.
-    // This ensures the admin CAN actually see and preview the document.
-    console.log(`[Drive Pipeline] Redirecting to Secure Storage branch for folder ${folderId}`);
+export const uploadFileToDrive = async (file: File, folderId: string, accessToken: string | null, onProgress?: (p: number) => void): Promise<{ url: string, path: string }> => {
+    if (!accessToken) {
+        throw new Error("Google Drive access is not authorized. Please connect your Drive in Settings.");
+    }
+
+    console.log(`[Drive Pipeline] Initiating Genuine Multipart Upload for ${file.name}`);
+    
     try {
-        const result = await uploadFileToFirebase(file, `drive_managed/${folderId}`, onProgress);
-        return {
-            ...result,
-            path: `drive://${folderId}/${result.path}`
+        const metadata = {
+            name: file.name,
+            parents: [folderId],
+            mimeType: file.type,
         };
-    } catch (error) {
+
+        const formData = new FormData();
+        formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        formData.append('file', file);
+
+        if (onProgress) onProgress(20);
+
+        const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+            body: formData,
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            console.error("[Drive API Error]", data);
+            throw new Error(data.error?.message || 'Google Drive Upload Failed');
+        }
+
+        if (onProgress) onProgress(100);
+
+        return {
+            url: data.webViewLink,
+            path: `drive://${data.id}`
+        };
+    } catch (error: any) {
         console.error("[Drive Pipeline] Ingest failure:", error);
         throw error;
     }
 };
 
-export const uploadDocument = async (file: File, service: string = 'firebase', folderId?: string, onProgress?: (p: number) => void): Promise<{ url: string, path: string }> => {
+export const uploadDocument = async (file: File, service: string = 'firebase', folderId?: string, accessToken?: string | null, onProgress?: (p: number) => void): Promise<{ url: string, path: string }> => {
     console.log(`[Upload Router] Service: ${service}, FolderID: ${folderId}`);
+    
     // Handle both 'drive' and 'google_drive' values from settings
     if ((service === 'drive' || service === 'google_drive') && folderId) {
-        return await uploadFileToDrive(file, folderId, onProgress);
+        return await uploadFileToDrive(file, folderId, accessToken || null, onProgress);
     }
+    
     // Default to standard Firebase materials storage
     return await uploadFileToFirebase(file, 'materials', onProgress);
 };
