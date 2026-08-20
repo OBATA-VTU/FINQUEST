@@ -14,8 +14,8 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'librarian', 'vice_president', 'supplement'] ||
-         (request.auth.token.email == "ayubaboluwatife246@gmail.com" && request.auth.token.email_verified == true));
+        (request.auth.token.email == "ayubaboluwatife246@gmail.com" || 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'librarian', 'vice_president', 'supplement']);
     }
     
     // --- SECURE CONFIGURATION ---
@@ -43,17 +43,16 @@ service cloud.firestore {
 
     // --- PAST QUESTIONS (ARCHIVES) ---
     match /questions/{questionId} {
-      allow read: if resource.data.status == 'approved' || isAdmin() || (isAuthenticated() && resource.data.uploadedBy == request.auth.uid);
+      allow read: if resource.data.status == 'approved' || isAuthenticated();
       allow create: if isAuthenticated();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow update, delete: if isAdmin();
     }
 
     // --- COMMUNITY CHAT ---
     match /community_messages/{messageId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
-      allow delete: if isAdmin() || (isAuthenticated() && request.resource.data.senderId == request.auth.uid);
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.senderId == request.auth.uid);
     }
 
     // --- TEST RESULTS (History) ---

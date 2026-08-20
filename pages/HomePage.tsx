@@ -53,8 +53,8 @@ export const HomePage: React.FC = () => {
                 tests: testCountSnap.data().count,
             });
             setLoadingStats(false);
-        } catch (error) {
-            console.error("Failed to fetch homepage content", error);
+        } catch (error: any) {
+            console.error("Failed to fetch homepage content:", error.message || error);
             setLoadingStats(false);
         }
     };
@@ -201,8 +201,15 @@ export const HomePage: React.FC = () => {
                       <div className="w-full lg:w-3/5 flex flex-col justify-center">
                           <div className="mb-8">
                               <span className="text-indigo-600 dark:text-indigo-400 font-black tracking-[0.3em] uppercase text-[10px] block mb-4">From the Desk of the H.O.D</span>
-                              <h2 className="text-4xl md:text-5xl font-serif font-black text-slate-900 dark:text-white mb-3">{hodData?.name || "Dr. A. A. Adebayo"}</h2>
-                              <p className="text-xl text-indigo-500 dark:text-indigo-400 font-bold">{hodData?.title || "Head of Department, Finance"}</p>
+                              <h2 className="text-4xl md:text-5xl font-serif font-black text-slate-900 dark:text-white mb-3">{hodData?.name || "Dr. C. T. AWOSUSI"}</h2>
+                              <div className="text-xl text-indigo-500 dark:text-indigo-400 font-bold leading-tight">
+                                {hodData?.title || (
+                                  <>
+                                    <p>CPO, CIPSMN, MNIM, MNSFR, MNIM, FPRIMN</p>
+                                    <p>Ag. Head, Department of Finance</p>
+                                  </>
+                                )}
+                              </div>
                           </div>
                           <div className="prose prose-xl text-slate-600 dark:text-slate-300 leading-relaxed italic border-l-8 border-indigo-200 dark:border-indigo-900 pl-10">
                             <p>"{hodData?.message || "Welcome to the Department of Finance at AAUA. Our curriculum is designed not just to teach market theories, but to instill the critical thinking and ethical grounding necessary for the modern financial landscape."}"</p>

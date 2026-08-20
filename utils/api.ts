@@ -108,31 +108,53 @@ export const forceDownload = async (url: string, filename: string) => {
 };
 
 export const uploadFileToFirebase = async (file: File, folder: string = 'materials', onProgress?: (progress: number) => void): Promise<{ url: string, path: string }> => {
-    console.log(`[Firebase] Initiating upload for ${file.name}`);
+    console.log(`[Firebase] Initiating upload for ${file.name} to ${folder}`);
     try {
         const timestamp = Date.now();
         const safeName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
         const storageRef = ref(storage, `${folder}/${timestamp}_${safeName}`);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
+        console.log(`[Firebase] Starting resumable upload for ${safeName}`);
+
         return new Promise((resolve, reject) => {
             uploadTask.on('state_changed', 
                 (snapshot) => {
                     const progress = (snapshot.bytesTransferred / (snapshot.totalBytes || 1)) * 100;
-                    onProgress?.(Math.max(progress, 5));
+                    console.log(`[Firebase] Upload Progress: ${Math.round(progress)}%`);
+                    onProgress?.(Math.max(progress, 2)); // Start at 2% to show immediate activity
                 }, 
-                (error) => reject(error), 
+                (error) => {
+                    console.error("[Firebase Storage] Upload Task failed:", {
+                        code: error.code,
+                        message: error.message,
+                        serverResponse: error.serverResponse,
+                        name: file.name,
+                        folder
+                    });
+                    
+                    if (error.code === 'storage/unauthorized') {
+                        reject(new Error("Storage Access Denied: You must be logged in to upload files. Please ensure you are authenticated."));
+                    } else if (error.code === 'storage/canceled') {
+                        reject(new Error("Upload was canceled."));
+                    } else {
+                        reject(new Error(`Storage Error (${error.code}): ${error.message}`));
+                    }
+                }, 
                 async () => {
                     try {
                         const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                        console.log("[Firebase Storage] Success:", downloadURL);
                         resolve({ url: downloadURL, path: uploadTask.snapshot.ref.fullPath });
                     } catch (e) {
+                        console.error("[Firebase Storage] Download URL retrieval failed:", e);
                         reject(e);
                     }
                 }
             );
         });
     } catch (error) {
+        console.error("[Firebase] Fatal error:", error);
         throw error;
     }
 };
@@ -158,8 +180,9 @@ export const uploadFileToDrive = async (file: File, folderId: string, onProgress
 };
 
 export const uploadDocument = async (file: File, service: string = 'firebase', folderId?: string, onProgress?: (p: number) => void): Promise<{ url: string, path: string }> => {
-    // If service is Drive and we have a target folder, use the drive-managed branch
-    if (service === 'drive' && folderId) {
+    console.log(`[Upload Router] Service: ${service}, FolderID: ${folderId}`);
+    // Handle both 'drive' and 'google_drive' values from settings
+    if ((service === 'drive' || service === 'google_drive') && folderId) {
         return await uploadFileToDrive(file, folderId, onProgress);
     }
     // Default to standard Firebase materials storage

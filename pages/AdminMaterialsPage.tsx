@@ -18,6 +18,7 @@ export const AdminMaterialsPage: React.FC = () => {
   const [formData, setFormData] = useState<any>({});
   const [formFile, setFormFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [isAiMode, setIsAiMode] = useState(false);
   const [isLinkMode, setIsLinkMode] = useState(false);
 
@@ -72,7 +73,12 @@ export const AdminMaterialsPage: React.FC = () => {
   const handleFormSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setIsSubmitting(true);
+      setUploadProgress(5); // Show immediate movement
       try {
+          // Size check for documents
+          if (formFile && formFile.size > 50 * 1024 * 1024) {
+             throw new Error("File is too large for server vault (max 50MB). Please compress it first.");
+          }
           const payload = { ...formData };
           payload.year = Number(payload.year);
           payload.level = payload.level === 'General' ? 'General' : Number(payload.level);
@@ -80,17 +86,19 @@ export const AdminMaterialsPage: React.FC = () => {
           payload.semester = payload.semester === 'N/A' ? 'N/A' : Number(payload.semester);
 
           if (isAiMode) {
-              const apiKey = process.env.GROQ_API_KEY || "";
-              const groq = new Groq({
-                  apiKey: apiKey,
-                  dangerouslyAllowBrowser: true,
-              });
+              setLoading(true);
               const prompt = `Generate comprehensive, university-level study notes/lecture material on the topic: "${payload.courseTitle}". Course Code: ${payload.courseCode}. Format in clean Markdown.`;
-              const response = await groq.chat.completions.create({
-                  model: "llama-3.1-8b-instant",
-                  messages: [{ role: "user", content: prompt }],
+              
+              const response = await fetch('/api/ai/generate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ prompt })
               });
-              const textContent = response.choices[0].message.content;
+              
+              const data = await response.json();
+              if (data.error) throw new Error(data.error);
+
+              const textContent = data.content;
               if (!textContent) throw new Error("AI engine failed to output data.");
               payload.textContent = textContent;
               payload.fileUrl = null;
@@ -101,7 +109,7 @@ export const AdminMaterialsPage: React.FC = () => {
               payload.textContent = null;
           } else {
               if (formFile) {
-                  const { url, path } = await uploadDocument(formFile, uploadService, driveFolderId);
+                  const { url, path } = await uploadDocument(formFile, uploadService, driveFolderId, setUploadProgress);
                   payload.fileUrl = url;
                   payload.storagePath = path;
               }
@@ -135,8 +143,8 @@ export const AdminMaterialsPage: React.FC = () => {
     <div className="animate-fade-in space-y-10 pb-20 max-w-7xl mx-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
             <div>
-                <h1 className="text-3xl font-black text-slate-900 dark:text-white">Past Question Vault</h1>
-                <p className="text-slate-500 dark:text-slate-400 font-medium">Manage all documents and academic materials in the digital library.</p>
+                <h1 className="text-3xl font-black text-slate-900 dark:text-white">Resource Vault Management</h1>
+                <p className="text-slate-500 dark:text-slate-400 font-medium">Manage all documents and academic materials in the department vault.</p>
             </div>
             <button onClick={() => openModal()} className="px-10 py-4 bg-indigo-600 text-white font-black rounded-3xl hover:bg-indigo-700 shadow-2xl shadow-indigo-500/20 transition-all active:scale-95 uppercase tracking-widest text-[10px] flex items-center gap-3">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 4v16m8-8H4" /></svg>
@@ -154,7 +162,12 @@ export const AdminMaterialsPage: React.FC = () => {
                             <span className="text-[10px] font-black text-slate-300 uppercase">{item.level}L • {item.year}</span>
                         </div>
                         <h4 className="font-black text-lg text-slate-900 dark:text-white line-clamp-2 leading-tight mb-2 group-hover:text-indigo-600 transition-colors font-serif">{item.courseTitle}</h4>
-                        <p className="text-[10px] font-black uppercase text-slate-400 mb-8 tracking-widest">{item.category}</p>
+                        <p className="text-[10px] font-black uppercase text-slate-400 mb-2 tracking-widest">{item.category}</p>
+                        <div className="flex flex-col gap-0.5 mb-8">
+                            <p className="text-[9px] font-black uppercase text-indigo-500/50 tracking-tighter">Vault Entry From</p>
+                            <p className="text-[11px] font-bold text-slate-500 truncate" title={item.uploadedByName || 'System'}>{item.uploadedByName || 'FINSA ADMIN'}</p>
+                            <p className="text-[9px] text-slate-400 font-mono italic">{item.uploadedByEmail || (item.uploadedBy ? `ID: ${item.uploadedBy.slice(-8)}` : 'PRE-LEGACY')}</p>
+                        </div>
                         <div className="mt-auto flex gap-2 pt-6 border-t border-slate-50 dark:border-slate-800">
                             <button 
                                 onClick={() => {
@@ -268,6 +281,18 @@ export const AdminMaterialsPage: React.FC = () => {
                                         onChange={e => setFormData({...formData, fileUrl: e.target.value})} 
                                         required 
                                     />
+                                </div>
+                            </div>
+                        )}
+
+                        {isSubmitting && !isAiMode && (
+                            <div className="space-y-2 mb-4">
+                                <div className="flex justify-between text-[10px] font-black uppercase text-indigo-600">
+                                    <span>Uploading File...</span>
+                                    <span>{Math.round(uploadProgress)}%</span>
+                                </div>
+                                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                    <div className="bg-indigo-600 h-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
                                 </div>
                             </div>
                         )}

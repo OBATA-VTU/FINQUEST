@@ -165,12 +165,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
                 <div className="absolute -right-2 -bottom-2 w-16 h-16 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full flex items-center justify-center -rotate-12 border border-emerald-500/20 opacity-0 group-hover/stamp:opacity-100 transition-opacity">
                     <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">VERIFIED</span>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-slate-100 dark:border-slate-600 shadow-sm">
-                    {question.uploadedByName?.charAt(0).toUpperCase() || 'U'}
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-slate-100 dark:border-slate-600 shadow-sm font-black text-xs">
+                    {(question.uploadedByName || question.uploadedBy || 'F').charAt(0).toUpperCase()}
                 </div>
-                <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Assigned Staff</p>
-                    <p className="text-[11px] font-black text-slate-950 dark:text-white truncate max-w-[140px] uppercase">{question.lecturer || 'DEPT. STAFF'}</p>
+                <div className="overflow-hidden">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Archived By</p>
+                    <p className="text-[11px] font-black text-slate-950 dark:text-white truncate max-w-[140px] uppercase">
+                        {question.uploadedByName || (question.uploadedBy ? `ID: ${question.uploadedBy.slice(-6)}` : null) || question.lecturer || 'FINSA VAULT'}
+                    </p>
                 </div>
             </div>
 

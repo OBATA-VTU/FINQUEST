@@ -1,9 +1,9 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
+// import { motion, AnimatePresence } from 'motion/react'; (Temporarily disabled due to hook issues)
 import { db } from '../firebase';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { TestResult, Announcement, PastQuestion } from '../types';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { getBadge } from '../utils/badges';
@@ -57,18 +57,9 @@ export const UserDashboardPage: React.FC = () => {
         } catch (e) {}
 
         try {
-            const apiKey = process.env.GROQ_API_KEY || "";
-            const groq = new Groq({
-                apiKey: apiKey,
-                dangerouslyAllowBrowser: true,
-            });
-            const prompt = "Generate a single, unique, and insightful quote about finance, investing, or wealth. Concise (under 25 words). Do not include author.";
-            const response = await groq.chat.completions.create({
-                model: "llama-3.1-8b-instant",
-                messages: [{ role: "user", content: prompt }],
-            });
-            const content = response.choices[0].message.content;
-            const newQuote = content ? content.trim().replace(/^"|"$/g, '') : null;
+            const response = await fetch('/api/ai/quote');
+            const data = await response.json();
+            const newQuote = data.quote;
             setQuote(newQuote || "The best investment you can make is in yourself.");
             localStorage.setItem('dailyQuote', safeStringify({ date: today, quote: newQuote || "The best investment you can make is in yourself." }));
         } catch (error) {
@@ -95,12 +86,11 @@ export const UserDashboardPage: React.FC = () => {
                   setAvgScore(Math.round(total / tests.length));
               }
 
-              const newsQ = query(collection(db, 'announcements'));
+              const newsQ = query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(10));
               const newsSnap = await getDocs(newsQ);
               let news = newsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement));
               // Filter targeted news
               news = news.filter(a => !a.targetUserId || a.targetUserId === user.id);
-              news.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
               setRecentNews(news.slice(0, 3));
 
               // Safe check for level before querying
@@ -226,7 +216,11 @@ export const UserDashboardPage: React.FC = () => {
                       </button>
                       <button onClick={() => navigate('/questions')} className="flex flex-col items-center justify-center p-6 rounded-[2rem] bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all group animate-slide-in-up border border-emerald-100/50 dark:border-emerald-800/30">
                           <div className="w-12 h-12 bg-white dark:bg-emerald-900 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-300 shadow-lg mb-4 group-hover:scale-110 transition-transform"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg></div>
-                          <span className="text-xs font-black text-slate-700 dark:text-slate-300 tracking-widest uppercase">Past Question</span>
+                          <span className="text-xs font-black text-slate-700 dark:text-slate-300 tracking-widest uppercase">Archive</span>
+                      </button>
+                      <button onClick={() => navigate('/library')} className="flex flex-col items-center justify-center p-6 rounded-[2rem] bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all group animate-slide-in-up border border-indigo-100/50 dark:border-indigo-800/30">
+                          <div className="w-12 h-12 bg-white dark:bg-indigo-900 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-300 shadow-lg mb-4 group-hover:scale-110 transition-transform"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg></div>
+                          <span className="text-xs font-black text-slate-700 dark:text-slate-300 tracking-widest uppercase">E-Library</span>
                       </button>
                       <button onClick={() => navigate('/community')} className="flex flex-col items-center justify-center p-6 rounded-[2rem] bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-all group animate-slide-in-up border border-rose-100/50 dark:border-rose-800/30">
                           <div className="w-12 h-12 bg-white dark:bg-rose-900 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-300 shadow-lg mb-4 group-hover:scale-110 transition-transform"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg></div>
@@ -263,7 +257,7 @@ export const UserDashboardPage: React.FC = () => {
                           </div>
                       )) : ( <div className="text-center py-8 opacity-40 text-xs text-white">Curating resources for your level...</div> )}
                   </div>
-                  <button onClick={() => navigate('/questions')} className="mt-8 w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg">Browse Vault</button>
+                  <button onClick={() => navigate('/questions')} className="mt-8 w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg">Visit E-Library</button>
               </div>
 
               <div className="md:col-span-2 bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-sm min-h-[350px] animate-slide-in-up">

@@ -1,0 +1,95 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "username": { "type": "string" },
+        "matricNumber": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "executive", "lecturer", "admin", "librarian", "vice_president", "supplement", "alumni"] },
+        "level": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "contributionPoints": { "type": "number" },
+        "savedQuestions": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastActive": { "type": "string", "format": "date-time" },
+        "isVerified": { "type": "boolean" },
+        "aiCredits": { "type": "number" },
+        "lastCreditRefreshDate": { "type": "string" }
+      },
+      "required": ["id", "email", "name", "username", "role"]
+    },
+    "Question": {
+      "title": "Material",
+      "description": "Academic material or question",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "courseTitle": { "type": "string" },
+        "courseCode": { "type": "string" },
+        "category": { "type": "string" },
+        "level": { "type": "string" },
+        "semester": { "type": "string" },
+        "year": { "type": "number" },
+        "fileUrl": { "type": "string" },
+        "storagePath": { "type": "string" },
+        "textContent": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved"] },
+        "uploadedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["courseTitle", "category", "level", "year"]
+    },
+    "CommunityMessage": {
+      "title": "Community Message",
+      "description": "Message in the student lounge",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "text": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderRole": { "type": "string" },
+        "isVerified": { "type": "boolean" },
+        "avatarUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["text", "senderId", "senderName", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "questions/{questionId}": {
+      "schema": "Question",
+      "description": "Academic materials"
+    },
+    "community_messages/{messageId}": {
+      "schema": "CommunityMessage",
+      "description": "Community chat messages"
+    },
+    "announcements/{id}": {
+      "schema": { "title": "Announcement", "type": "object", "properties": { "title": { "type": "string" } } },
+      "description": "Finsa announcements"
+    },
+    "lecturers/{id}": {
+      "schema": { "title": "Lecturer", "type": "object", "properties": { "name": { "type": "string" } } },
+      "description": "Lecturer profiles"
+    },
+    "executives/{id}": {
+      "schema": { "title": "Executive", "type": "object", "properties": { "name": { "type": "string" } } },
+      "description": "Executive profiles"
+    },
+    "marketplace/{id}": {
+      "schema": { "title": "MarketplaceItem", "type": "object", "properties": { "title": { "type": "string" } } },
+      "description": "Marketplace listings"
+    }
+  }
+}

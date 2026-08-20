@@ -1,6 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
+import { useNotification } from '../contexts/NotificationContext';
 import { Logo } from '../components/Logo';
 import { Level } from '../types';
 import { LEVELS } from '../constants';
@@ -9,6 +10,7 @@ import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 
 export const SignUpPage: React.FC = () => {
     const auth = useContext(AuthContext);
+    const { showNotification } = useNotification();
     const navigate = useNavigate();
     const location = useLocation();
     
@@ -85,8 +87,21 @@ export const SignUpPage: React.FC = () => {
                 googleUid: googleAuthData?.uid
             });
             navigate('/dashboard', { replace: true });
-        } catch (err) {
-            // Handled by context notifications
+        } catch (err: any) {
+            console.error("Signup failed:", err.code);
+            let message = "Account creation failed. Please try again.";
+            
+            if (err.code === 'auth/operation-not-allowed') {
+                message = "Email/Password sign-in is not enabled in Firebase. Please enable it in the Firebase Console.";
+            } else if (err.code === 'auth/email-already-in-use') {
+                message = "This email is already registered.";
+            } else if (err.code === 'auth/invalid-email') {
+                message = "Invalid email address format.";
+            } else if (err.code === 'auth/weak-password') {
+                message = "Password is too weak. Use at least 6 characters.";
+            }
+            
+            showNotification(message, "error");
         } finally {
             setLoading(false);
         }
@@ -247,3 +262,5 @@ export const SignUpPage: React.FC = () => {
         </div>
     );
 };
+
+// export default SignUpPage; (Removed to use named export)

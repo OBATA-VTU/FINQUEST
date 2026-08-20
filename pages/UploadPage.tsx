@@ -27,7 +27,7 @@ export const UploadPage: React.FC = () => {
     const [courseTitle, setCourseTitle] = useState('');
     const [lecturer, setLecturer] = useState('');
     const [level, setLevel] = useState<Level | string>(auth?.user?.level?.toString() || '100');
-    const [year, setYear] = useState(new Date().getFullYear());
+    const [year, setYear] = useState<number | ''>(new Date().getFullYear());
     const [semester, setSemester] = useState<'1' | '2' | 'N/A'>('N/A');
     const [category, setCategory] = useState("Past Question");
     const [difficulty, setDifficulty] = useState<'Beginner' | 'Intermediate' | 'Advanced'>('Beginner');
@@ -54,7 +54,7 @@ export const UploadPage: React.FC = () => {
 
     useEffect(() => {
         const checkDuplicates = async () => {
-            if (!courseCode || courseCode.length < 3) {
+            if (!courseCode || courseCode.length < 3 || !auth?.user) {
                 setExistingQuestions([]);
                 return;
             }
@@ -76,7 +76,7 @@ export const UploadPage: React.FC = () => {
 
         const timer = setTimeout(checkDuplicates, 500);
         return () => clearTimeout(timer);
-    }, [courseCode, year, category]);
+    }, [courseCode, year, category, auth?.user]);
 
     const resetForm = () => {
         setFile(null);
@@ -98,6 +98,12 @@ export const UploadPage: React.FC = () => {
             return;
         }
 
+        // Size check for documents
+        if (uploadType === 'document' && file && file.size > 30 * 1024 * 1024) {
+             showNotification('File is too large (max 30MB). Please compress it.', 'error');
+             return;
+        }
+
         setIsSubmitting(true);
         setUploadStatus('Connecting...');
         setUploadProgress(5);
@@ -108,7 +114,7 @@ export const UploadPage: React.FC = () => {
                 courseTitle: courseTitle.trim(),
                 lecturer: lecturer.trim(),
                 level: level === 'General' ? 'General' : Number(level),
-                year,
+                year: Number(year),
                 semester: semester === 'N/A' ? 'N/A' : Number(semester),
                 category,
                 difficulty,
@@ -159,19 +165,20 @@ export const UploadPage: React.FC = () => {
             } else if (uploadType === 'ai') {
                 if (!canUseAi) throw new Error("You don't have enough points for AI.");
                 setUploadStatus('AI helper is writing...');
-                const apiKey = process.env.GROQ_API_KEY || "";
-                if (!apiKey) throw new Error("AI helper is currently unavailable.");
-                const groq = new Groq({
-                    apiKey: apiKey,
-                    dangerouslyAllowBrowser: true,
-                });
+                
                 const prompt = `Generate comprehensive, university-level study notes/lecture material on the topic: "${courseTitle}". Format in clean Markdown. Include a summary, key concepts, detailed explanation, and conclusion.`;
-                const response = await groq.chat.completions.create({
-                    model: "llama-3.1-8b-instant",
-                    messages: [{ role: "user", content: prompt }],
+                
+                const response = await fetch('/api/ai/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt })
                 });
+                
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                
                 trackAiUsage();
-                const aiText = response.choices[0].message.content;
+                const aiText = data.content;
                 if (!aiText) throw new Error("AI failed to create content.");
                 questionData.textContent = aiText;
             }
@@ -494,7 +501,14 @@ export const UploadPage: React.FC = () => {
                             </div>
                             <div className="space-y-3">
                                 <label className="block text-sm font-black uppercase tracking-[0.2em] text-slate-400 ml-3">Calendar Year</label>
-                                <input type="number" className="w-full p-6 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-indigo-500 rounded-[2rem] font-bold text-lg outline-none dark:text-white shadow-sm" value={year} onChange={e => setYear(Number(e.target.value))} required />
+                                <input 
+                                    type="number" 
+                                    className="w-full p-6 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-indigo-500 rounded-[2rem] font-bold text-lg outline-none dark:text-white shadow-sm" 
+                                    value={year} 
+                                    onChange={e => setYear(e.target.value === '' ? '' : Number(e.target.value))} 
+                                    required 
+                                    placeholder="e.g. 2024"
+                                />
                             </div>
                         </div>
                     )}

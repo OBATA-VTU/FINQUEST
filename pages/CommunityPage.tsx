@@ -71,6 +71,8 @@ export const CommunityPage: React.FC = () => {
           const q = query(collection(db, 'community_messages'), orderBy('createdAt', 'asc'));
           const unsubscribe = onSnapshot(q, (snapshot) => {
               setMessages(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Message)));
+          }, (err) => {
+              console.error("Community chat listener error:", err);
           });
           return () => unsubscribe();
       }

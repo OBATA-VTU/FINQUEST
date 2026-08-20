@@ -34,6 +34,8 @@ export const SettingsProvider: React.FC<{children: ReactNode}> = ({ children }) 
              if (doc.exists()) {
                 setSocialLinks(prev => ({ ...prev, ...doc.data() }));
             }
+        }, (err) => {
+            console.error("Social links listener error:", err);
         });
 
         const settingsUnsub = onSnapshot(doc(db, 'content', 'site_settings'), (doc) => {
@@ -47,6 +49,8 @@ export const SettingsProvider: React.FC<{children: ReactNode}> = ({ children }) 
                     driveFolderId: data.driveFolderId || ''
                 }));
             }
+        }, (err) => {
+            console.error("Site settings listener error:", err);
         });
 
         return () => {

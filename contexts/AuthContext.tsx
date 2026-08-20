@@ -123,16 +123,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
-          const userData = userDoc.data() as User;
-          if (!userData.avatarUrl) {
-              const newAvatar = firebaseUser.photoURL || getRandomAvatar();
-              await updateDoc(userDocRef, { avatarUrl: newAvatar });
-              userData.avatarUrl = newAvatar;
-          }
+          let userData = userDoc.data() as User;
           const fullUser = { ...userData, id: firebaseUser.uid };
           setUser(fullUser);
-          await checkAndRefreshCredits(fullUser);
-          await updateDoc(userDocRef, { lastActive: new Date().toISOString() });
+          
+          // Parallelize background updates
+          const updates: any = { lastActive: new Date().toISOString() };
+          if (!userData.avatarUrl) {
+              updates.avatarUrl = firebaseUser.photoURL || getRandomAvatar();
+          }
+          
+          // Fire and forget updates to avoid blocking UI
+          updateDoc(userDocRef, updates).catch(e => console.error("Background update failed", e));
+          checkAndRefreshCredits(fullUser).catch(e => console.error("Credit refresh failed", e));
         }
       } else {
         setUser(null);

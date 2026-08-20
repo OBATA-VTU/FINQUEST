@@ -54,7 +54,9 @@ export const SignInPage: React.FC = () => {
             console.error("Login attempt failed:", err.code);
             let message = "Authentication failed. Please check your credentials.";
             
-            if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+            if (err.code === 'auth/operation-not-allowed') {
+                message = "Email/Password sign-in is not enabled in Firebase. Please enable it in the Firebase Console under Authentication > Sign-in method.";
+            } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
                 message = "Invalid credentials. Account not found or password incorrect.";
             } else if (err.code === 'auth/too-many-requests') {
                 message = "Too many failed attempts. Please try again later.";
@@ -202,3 +204,5 @@ export const SignInPage: React.FC = () => {
         </div>
     );
 };
+
+// export default SignInPage; (Removed to use named export)

@@ -125,7 +125,7 @@ export const AdminNewsPage: React.FC = () => {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
-                        <input className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold placeholder:text-slate-500" placeholder="Faculty Name (e.g. Dr. Adebayo)" value={hodData.name} onChange={e => setHodData({...hodData, name: e.target.value})} />
+                        <input className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold placeholder:text-slate-500" placeholder="Faculty Name (e.g. Dr. AWOSUSI)" value={hodData.name} onChange={e => setHodData({...hodData, name: e.target.value})} />
                         <input className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold placeholder:text-slate-500" placeholder="Title (e.g. Head of Department)" value={hodData.title} onChange={e => setHodData({...hodData, title: e.target.value})} />
                     </div>
                     <textarea className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold placeholder:text-slate-500 resize-none h-full" rows={3} placeholder="The message from the Desk of the H.O.D..." value={hodData.message} onChange={e => setHodData({...hodData, message: e.target.value})} />

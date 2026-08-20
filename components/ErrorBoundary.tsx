@@ -38,9 +38,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="min-h-[60vh] flex items-center justify-center p-6">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
+          <div 
             className="max-w-md w-full bg-white dark:bg-slate-900 p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-2xl text-center"
           >
             <div className="w-20 h-20 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 rounded-[2rem] flex items-center justify-center mx-auto mb-8">
@@ -77,7 +75,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 </div>
               </div>
             )}
-          </motion.div>
+          </div>
         </div>
       );
     }

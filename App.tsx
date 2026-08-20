@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
+// import { motion, AnimatePresence } from 'motion/react';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -19,6 +19,7 @@ import { HomePage } from './pages/HomePage';
 // Lazy Loaded Public/Student Pages
 const UserDashboardPage = lazy(() => import('./pages/UserDashboardPage').then(m => ({ default: m.UserDashboardPage })));
 const PastQuestionsPage = lazy(() => import('./pages/PastQuestionsPage').then(m => ({ default: m.PastQuestionsPage })));
+const ELibraryPage = lazy(() => import('./pages/ELibraryPage').then(m => ({ default: m.ELibraryPage })));
 const ExecutivesPage = lazy(() => import('./pages/ExecutivesPage').then(m => ({ default: m.ExecutivesPage })));
 const LecturersPage = lazy(() => import('./pages/LecturersPage').then(m => ({ default: m.LecturersPage })));
 const AnnouncementsPage = lazy(() => import('./pages/AnnouncementsPage').then(m => ({ default: m.AnnouncementsPage })));
@@ -101,7 +102,7 @@ const AppContent: React.FC = () => {
 
   // Monitor for global alerts/announcements to trigger PWA Browser Notifications
   useEffect(() => {
-      const q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'), limit(1));
+      const q = query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(1));
       let initialLoad = true;
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -152,15 +153,10 @@ const AppContent: React.FC = () => {
         <ScrollToTop />
         <NotificationHandler />
         <SEOMetadataUpdater />
-        <AnimatePresence mode="wait">
-            <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
-                className="min-h-screen"
-            >
+        <div
+            key={location.pathname}
+            className="min-h-screen"
+        >
                 <Routes location={location}>
                     <Route path="/login" element={<Suspense fallback={<PageLoader />}><SignInPage /></Suspense>} />
                     <Route path="/signup" element={<Suspense fallback={<PageLoader />}><SignUpPage /></Suspense>} />
@@ -176,6 +172,7 @@ const AppContent: React.FC = () => {
                         <Route path="/dashboard" element={<RequireAuth><Suspense fallback={<PageLoader />}><UserDashboardPage /></Suspense></RequireAuth>} />
                         <Route path="/ai" element={<RequireAuth><Suspense fallback={<PageLoader />}><AIPage /></Suspense></RequireAuth>} />
                         <Route path="/questions" element={<RequireAuth><Suspense fallback={<PageLoader />}><PastQuestionsPage /></Suspense></RequireAuth>} />
+                    <Route path="/library" element={<RequireAuth><Suspense fallback={<PageLoader />}><ELibraryPage /></Suspense></RequireAuth>} />
                         <Route path="/community" element={<RequireAuth><Suspense fallback={<PageLoader />}><CommunityPage /></Suspense></RequireAuth>} />
                         <Route path="/profile" element={<RequireAuth><Suspense fallback={<PageLoader />}><ProfilePage /></Suspense></RequireAuth>} />
                         <Route path="/test" element={<RequireAuth><Suspense fallback={<PageLoader />}><TestPage /></Suspense></RequireAuth>} />
@@ -208,8 +205,7 @@ const AppContent: React.FC = () => {
 
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
-            </motion.div>
-        </AnimatePresence>
+            </div>
     </ErrorBoundary>
   );
 };
