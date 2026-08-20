@@ -57,7 +57,7 @@ export const SignInPage: React.FC = () => {
             if (err.code === 'auth/operation-not-allowed') {
                 message = "Email/Password sign-in is not enabled in Firebase. Please enable it in the Firebase Console under Authentication > Sign-in method.";
             } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-                message = "Invalid credentials. Account not found or password incorrect.";
+                message = "Invalid credentials. If you previously used Google to sign in, please click 'Forgot Code' below to set a password for your account.";
             } else if (err.code === 'auth/too-many-requests') {
                 message = "Too many failed attempts. Please try again later.";
             }
